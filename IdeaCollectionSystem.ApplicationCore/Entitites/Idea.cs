@@ -1,7 +1,11 @@
-﻿namespace IdeaCollectionSystem.ApplicationCore.Entitites
+﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
+
+namespace IdeaCollectionSystem.ApplicationCore.Entitites
 {
 	public class Idea
 	{
+		[Key]
 		public Guid Id { get; set; }
 		public string Text { get; set; } = string.Empty;
 		public DateTime CreatedAt { get; set; } = DateTime.Now;
@@ -9,17 +13,22 @@
 		public DateTime? DeletedAt { get; set; } 
 		public bool IsAnonymous { get; set; }
 
+		[ForeignKey("UserId")]
 		public Guid UserId { get; set; }
 		public User? User { get; set; }
+
+		[ForeignKey("SubmissionId")]
 
 		public Guid SubmissionId { get; set; }
 		public Submission? Submission { get; set; }
 
 		public Guid DepartmentId { get; set; }
+		[ForeignKey("DepartmentId")]
 
 		public Department? Department { get; set; }
 
 		public Guid CategoryId { get; set; }
+		[ForeignKey("CategoryId")]
 		public Category? Category { get; set; }
 
 		public ICollection<Submission> Submissions { get; set; } = new List<Submission>();

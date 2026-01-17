@@ -20,6 +20,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\IdeaCollectionIdea.Common\IdeaCollectionSystem.Common.csproj" />
     <ProjectReference Include="..\IdeaCollectionSystem.ApplicationCore\IdeaCollectionSystem.ApplicationCore.csproj" />
   </ItemGroup>
 

@@ -1,6 +1,6 @@
 <Solution>
-  <Project Path="IdeaCollectionIdea.Common/IdeaCollectionIdea.Common.csproj" Id="55bbee80-ea0e-4d16-a19e-b7a55574cd96" />
+  <Project Path="IdeaCollectionIdea.Common/IdeaCollectionSystem.Common.csproj" Id="55bbee80-ea0e-4d16-a19e-b7a55574cd96" />
   <Project Path="IdeaCollectionSystem.ApplicationCore/IdeaCollectionSystem.ApplicationCore.csproj" Id="9fb5ade5-42e6-41ed-b156-5efe6cc7e0af" />
   <Project Path="IdeaCollectionSystem.Datalayer/IdeaCollectionSystem.Datalayer.csproj" Id="7f08990f-199b-49c2-b751-4aab7af42673" />
-  <Project Path="IdeaCollectionSystem/IdeaCollectionSystem.csproj" />
+  <Project Path="IdeaCollectionSystem/IdeaCollectionSystem.MVC.csproj" />
 </Solution>
