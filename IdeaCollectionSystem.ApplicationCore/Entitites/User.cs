@@ -31,6 +31,9 @@ namespace IdeaCollectionSystem.ApplicationCore.Entitites
 		public ICollection<Role> Roles { get; set; } = new List<Role>();
 		public ICollection<Department> Departments { get; set; } = new List<Department>();
 
+		public ICollection<Comment> Comments { get; set; } = new List<Comment>();
+		public ICollection<Idea> Ideas { get; set; } = new List<Idea>();
+
 
 
 	}

@@ -27,7 +27,7 @@ namespace IdeaCollectionSystem.ApplicationCore.Entitites
 		[ForeignKey("IdeaId")]
 		public Idea? Idea { get; set; }
 
-		public ICollection<User> Users { get; set; } = new List<User>();
-		public ICollection<Idea> Ideas { get; set; } = new List<Idea>();
+		//public ICollection<User> Users { get; set; } = new List<User>();
+		//public ICollection<Idea> Ideas { get; set; } = new List<Idea>();
 	}
 }

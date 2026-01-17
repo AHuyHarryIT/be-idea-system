@@ -35,6 +35,7 @@ namespace IdeaCollectionSystem.ApplicationCore.Entitites
 		public ICollection<User> Users { get; set; } = new List<User>();
 		public ICollection<Department> Departments { get; set; } = new List<Department>();
 		public ICollection<Category> Categories { get; set; } = new List<Category>();
+		public ICollection<Comment> Comments { get; set; } = new List<Comment>();
 
 
 	}
