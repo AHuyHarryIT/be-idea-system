@@ -17,8 +17,8 @@ namespace IdeaCollectionSystem.ApplicationCore.Entitites
 		public Guid UserId { get; set; }
 		public User? User { get; set; } 
 
-		public Guid TermId { get; set; }
 		[ForeignKey("TermId")]
+		public Guid TermId { get; set; }
 		public TermVersion? Term { get; set; }
 		public DateTime AcceptedAt { get; set; } = DateTime.Now;
 		public string  IpAddress { get; set; } = string.Empty;

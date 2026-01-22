@@ -22,13 +22,13 @@ namespace IdeaCollectionSystem.ApplicationCore.Entitites
 		public Guid SubmissionId { get; set; }
 		public Submission? Submission { get; set; }
 
-		public Guid DepartmentId { get; set; }
 		[ForeignKey("DepartmentId")]
+		public Guid DepartmentId { get; set; }
 
 		public Department? Department { get; set; }
 
-		public Guid CategoryId { get; set; }
 		[ForeignKey("CategoryId")]
+		public Guid CategoryId { get; set; }
 		public Category? Category { get; set; }
 
 		public ICollection<Submission> Submissions { get; set; } = new List<Submission>();

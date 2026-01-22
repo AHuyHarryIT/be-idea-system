@@ -18,12 +18,12 @@ namespace IdeaCollectionSystem.ApplicationCore.Entitites
 		public string LastName { get; set; } = string.Empty;
 		public string Avartar { get; set; } = string.Empty;
 
-		public Guid RoleId { get; set; }
 		[ForeignKey("RoleId")]
+		public Guid RoleId { get; set; }
 		public Role? Role { get; set; }
 
-		public Guid DepartmentId { get; set; }
 		[ForeignKey("DepartmentId")]
+		public Guid DepartmentId { get; set; }
 		public Department? Department { get; set; }
 		public DateTime CreatedAt { get; set; }	= DateTime.Now;
 		public DateTime UpdatedAt { get; set; }	= DateTime.Now;

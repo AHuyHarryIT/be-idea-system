@@ -13,12 +13,12 @@ namespace IdeaCollectionSystem.ApplicationCore.Entitites
 		[Key]
 		public Guid Id { get; set; }
 
-		public Guid IdeaId { get; set; }
 		[ForeignKey("IdeaId")]
+		public Guid IdeaId { get; set; }
 		public Idea? Idea { get; set; }
 
-		public Guid UserId { get; set; }
 		[ForeignKey("UserId")]
+		public Guid UserId { get; set; }
 		public User? User { get; set; }
 
 		public string Reaction { get; set; } = string.Empty;

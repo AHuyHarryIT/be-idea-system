@@ -1,73 +1,85 @@
-﻿using IdeaCollectionSystem.Datalayer;
+using IdeaCollectionSystem.ApplicationCore.Entitites.Identity;
+using IdeaCollectionSystem.Datalayer;
+using IdeaCollectionSystem.MVC.Areas.Identity.Data;
+using IdeaCollectionSystem.MVC.Services;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
+// =======================
+// DbContext (Business)
+// =======================
 builder.Services.AddDbContext<IdeaCollectionDbContext>(options =>
-	options.UseSqlServer(builder.Configuration.GetConnectionString("IdeaCollectionDbContext"))
-);
-//builder.Services.AddDbContext<VideoIdentityDbContext>(options =>
-//	options.UseSqlServer(builder.Configuration.GetConnectionString("VideoIdentityConnection"))
-//);
+	options.UseSqlServer(
+		builder.Configuration.GetConnectionString("IdeaCollectionDbContext")));
 
-//builder.Services.AddDefaultIdentity<VideoUser>(options =>
-//builder.Services.AddIdentity<VideoUser, VideoRole>(options =>
-//{
-//	options.SignIn.RequireConfirmedAccount = true;
-//	// Password settings 
-//	options.Password.RequireDigit = true;
-//	options.Password.RequiredLength = 8;
-//	options.Password.RequireNonAlphanumeric = false;
-//	options.Password.RequireUppercase = true;
-//	options.Password.RequireLowercase = true;
-//	// Lockout settings 
-//	options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(30);
-//	options.Lockout.MaxFailedAccessAttempts = 5;
-//	options.Lockout.AllowedForNewUsers = true;
-//	// User settings 
-//	options.User.RequireUniqueEmail = true;
-//	// Sign-in settings 
-//	options.SignIn.RequireConfirmedEmail = false;
-//	options.SignIn.RequireConfirmedPhoneNumber = false;
-//})
-//	.AddEntityFrameworkStores<VideoIdentityDbContext>()
-//	.AddDefaultTokenProviders();
+// =======================
+// DbContext (Identity)
+// =======================
+builder.Services.AddDbContext<IdeaCollectionIdentityDbContext>(options =>
+	options.UseSqlServer(
+		builder.Configuration.GetConnectionString("IdeaIdentityConnection")));
 
-//builder.Services.ConfigureApplicationCookie(options =>
-//{
-//	options.LoginPath = "/Identity/Account/Login";
-//	options.AccessDeniedPath = "/Identity/Account/AccessDenied";
-//});
+// =======================
+// Identity (CHUẨN)
+// =======================
+builder.Services.AddIdentity<IdeaUser, IdeaRole>(options =>
+{
+	// Password
+	options.Password.RequireDigit = true;
+	options.Password.RequiredLength = 8;
+	options.Password.RequireNonAlphanumeric = false;
+	options.Password.RequireUppercase = true;
+	options.Password.RequireLowercase = true;
 
-// 1. Memory Cache (bắt buộc cho Session)
-//builder.Services.AddDistributedMemoryCache();
-// 2. Add Session
-//builder.Services.AddSession(options =>
-//{
-//	options.IdleTimeout = TimeSpan.FromMinutes(60);
-//	options.Cookie.HttpOnly = true;
-//	options.Cookie.IsEssential = true;
-//});
+	// Lockout
+	options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(30);
+	options.Lockout.MaxFailedAccessAttempts = 5;
+	options.Lockout.AllowedForNewUsers = true;
+
+	// User
+	options.User.RequireUniqueEmail = true;
+
+	// Sign in
+	options.SignIn.RequireConfirmedAccount = false;
+	options.SignIn.RequireConfirmedEmail = false;
+	options.SignIn.RequireConfirmedPhoneNumber = false;
+})
+.AddEntityFrameworkStores<IdeaCollectionIdentityDbContext>()
+.AddDefaultTokenProviders();
+builder.Services.AddTransient<IEmailSender, EmailSender>();
+
+builder.Services.ConfigureApplicationCookie(options =>
+{
+	options.LoginPath = "/Identity/Account/Login";
+	options.AccessDeniedPath = "/Identity/Account/AccessDenied";
+});
+
+
+builder.Services.AddDistributedMemoryCache();
+
+builder.Services.AddSession(options =>
+{
+	options.IdleTimeout = TimeSpan.FromMinutes(60);
+	options.Cookie.HttpOnly = true;
+	options.Cookie.IsEssential = true;
+});
 
 
 builder.Services.AddRazorPages();
-
 builder.Services.AddControllersWithViews();
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())
 {
 	app.UseExceptionHandler("/Home/Error");
-	// The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
 	app.UseHsts();
 }
 
-// 3. Use Session (phải trước MapControllers)
-app.UseSession();
-
+app.UseSession();         
 app.UseHttpsRedirection();
 app.UseStaticFiles();
 

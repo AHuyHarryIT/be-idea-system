@@ -19,8 +19,8 @@ namespace IdeaCollectionSystem.ApplicationCore.Entitites
 		public DateTime UploadtedAt { get; set; } = DateTime.Now;
 		public DateTime DeletedAt { get; set; }
 
-		public Guid IdeaId { get; set; }
 		[ForeignKey("IdeaId")]
+		public Guid IdeaId { get; set; }
 		public Idea? Idea { get; set; }
 
 		public ICollection<Idea> Ideas { get; set; } = new List<Idea>();
