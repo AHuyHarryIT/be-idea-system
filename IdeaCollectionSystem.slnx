@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="IdeaCollectionIdea.Common/IdeaCollectionIdea.Common.csproj" />
+  <Project Path="IdeaCollectionSystem.ApplicationCore/IdeaCollectionSystem.ApplicationCore.csproj" />
+  <Project Path="IdeaCollectionSystem.Datalayer/IdeaCollectionSystem.Datalayer.csproj" Id="e09b8744-9774-456a-afbe-9028ab9aafbe" />
+  <Project Path="IdeaCollectionSystem/IdeaCollectionSystem.csproj" />
+</Solution>
