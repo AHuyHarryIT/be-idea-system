@@ -1,12 +1,10 @@
-using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-using IdeaCollectionSystem.Areas.Identity.Data;
 var builder = WebApplication.CreateBuilder(args);
 var connectionString = builder.Configuration.GetConnectionString("IdeaCollectionIdentityDbContextConnection") ?? throw new InvalidOperationException("Connection string 'IdeaCollectionIdentityDbContextConnection' not found.");
 
 builder.Services.AddDbContext<IdeaCollectionIdentityDbContext>(options => options.UseSqlServer(connectionString));
 
-builder.Services.AddDefaultIdentity<IdentityUser>(options => options.SignIn.RequireConfirmedAccount = true).AddEntityFrameworkStores<IdeaCollectionIdentityDbContext>();
+builder.Services.AddDefaultIdentity<IdeaUser>(options => options.SignIn.RequireConfirmedAccount = true).AddEntityFrameworkStores<IdeaCollectionIdentityDbContext>();
 
 // Add services to the container.
 builder.Services.AddControllersWithViews();
