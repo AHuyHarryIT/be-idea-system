@@ -235,11 +235,11 @@ static async Task EnsureDatabaseAsync(DbContext dbContext)
 	await dbContext.Database.EnsureCreatedAsync();
 }
 
-static readonly ConcurrentDictionary<Type, bool> MigrationPresence = new();
+static readonly ConcurrentDictionary<Type, bool> s_migrationPresence = new();
 
 static bool HasMigrations(DbContext dbContext)
 {
-	return MigrationPresence.GetOrAdd(dbContext.GetType(), _ => dbContext.Database.GetMigrations().Any());
+	return s_migrationPresence.GetOrAdd(dbContext.GetType(), _ => dbContext.Database.GetMigrations().Any());
 }
 
 static async Task SeedRolesAsync(RoleManager<IdeaRole> roleManager)
