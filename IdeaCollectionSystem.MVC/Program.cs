@@ -225,7 +225,8 @@ static async Task EnsureDatabaseAsync(DbContext dbContext)
 		return;
 	}
 
-	if (!dbContext.Database.GetMigrations().Any())
+	var appliedMigrations = (await dbContext.Database.GetAppliedMigrationsAsync()).ToList();
+	if (!appliedMigrations.Any())
 	{
 		// Some contexts (like Identity) don't include migrations, so fall back to EnsureCreated.
 		await dbContext.Database.EnsureCreatedAsync();
