@@ -15,7 +15,16 @@ var builder = WebApplication.CreateBuilder(args);
 
 // DbContext (Business)
 var ideaCollectionConnectionString = builder.Configuration.GetConnectionString("IdeaCollectionDbContext");
+if (string.IsNullOrWhiteSpace(ideaCollectionConnectionString))
+{
+	throw new InvalidOperationException("IdeaCollectionDbContext connection string is not configured.");
+}
+
 var ideaIdentityConnectionString = builder.Configuration.GetConnectionString("IdeaIdentityConnection");
+if (string.IsNullOrWhiteSpace(ideaIdentityConnectionString))
+{
+	throw new InvalidOperationException("IdeaIdentityConnection connection string is not configured.");
+}
 var databaseProvider = builder.Configuration.GetValue<string>("DatabaseProvider");
 var resolvedDatabaseProvider = string.IsNullOrWhiteSpace(databaseProvider) ? "Postgres" : databaseProvider;
 
@@ -193,13 +202,8 @@ app.Run();
 
 // SEEDING METHODS
 
-static void ConfigureDbContext(DbContextOptionsBuilder options, string? connectionString, string databaseProvider)
+static void ConfigureDbContext(DbContextOptionsBuilder options, string connectionString, string databaseProvider)
 {
-	if (string.IsNullOrWhiteSpace(connectionString))
-	{
-		throw new InvalidOperationException("Database connection string is not configured.");
-	}
-
 	if (string.Equals(databaseProvider, "Sqlite", StringComparison.OrdinalIgnoreCase))
 	{
 		options.UseSqlite(connectionString);
@@ -218,7 +222,8 @@ static void ConfigureDbContext(DbContextOptionsBuilder options, string? connecti
 
 static async Task EnsureDatabaseAsync(DbContext dbContext)
 {
-	if (dbContext.Database.GetMigrations().Any())
+	var hasMigrations = dbContext.Database.GetMigrations().Any();
+	if (hasMigrations)
 	{
 		// Migrate is idempotent and ensures the database schema is up-to-date.
 		await dbContext.Database.MigrateAsync();
