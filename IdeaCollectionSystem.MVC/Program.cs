@@ -17,14 +17,14 @@ var builder = WebApplication.CreateBuilder(args);
 var ideaCollectionConnectionString = builder.Configuration.GetConnectionString("IdeaCollectionDbContext");
 var ideaIdentityConnectionString = builder.Configuration.GetConnectionString("IdeaIdentityConnection");
 var databaseProvider = builder.Configuration.GetValue<string>("DatabaseProvider");
-databaseProvider = string.IsNullOrWhiteSpace(databaseProvider) ? "Postgres" : databaseProvider;
+var resolvedDatabaseProvider = string.IsNullOrWhiteSpace(databaseProvider) ? "Postgres" : databaseProvider;
 
 builder.Services.AddDbContext<IdeaCollectionDbContext>(options =>
-	ConfigureDbContext(options, ideaCollectionConnectionString, databaseProvider));
+	ConfigureDbContext(options, ideaCollectionConnectionString, resolvedDatabaseProvider));
 
 // DbContext (Identity)
 builder.Services.AddDbContext<IdeaCollectionIdentityDbContext>(options =>
-	ConfigureDbContext(options, ideaIdentityConnectionString, databaseProvider));
+	ConfigureDbContext(options, ideaIdentityConnectionString, resolvedDatabaseProvider));
 
 
 // Identity 
@@ -193,7 +193,7 @@ app.Run();
 
 // SEEDING METHODS
 
-static void ConfigureDbContext(DbContextOptionsBuilder options, string? connectionString, string? databaseProvider)
+static void ConfigureDbContext(DbContextOptionsBuilder options, string? connectionString, string databaseProvider)
 {
 	if (string.IsNullOrWhiteSpace(connectionString))
 	{
@@ -218,19 +218,17 @@ static void ConfigureDbContext(DbContextOptionsBuilder options, string? connecti
 
 static async Task EnsureDatabaseAsync(DbContext dbContext)
 {
-	var hasPendingMigrations = (await dbContext.Database.GetPendingMigrationsAsync()).Any();
-	// Apply migrations if any are pending to ensure schema matches the model.
-	if (hasPendingMigrations)
-	{
-		await dbContext.Database.MigrateAsync();
-		return;
-	}
+	var appliedMigrations = (await dbContext.Database.GetAppliedMigrationsAsync()).ToList();
+	var definedMigrations = dbContext.Database.GetMigrations().ToList();
 
-	// If no migrations are pending, check whether any were applied to decide on fallback creation.
-	var hasAppliedMigrations = (await dbContext.Database.GetAppliedMigrationsAsync()).Any();
-	// If migrations already ran, no further initialization is required.
-	if (hasAppliedMigrations)
+	// Apply migrations when defined migrations outnumber the applied set.
+	if (definedMigrations.Any())
 	{
+		if (appliedMigrations.Count < definedMigrations.Count)
+		{
+			await dbContext.Database.MigrateAsync();
+		}
+
 		return;
 	}
 
