@@ -218,22 +218,18 @@ static void ConfigureDbContext(DbContextOptionsBuilder options, string? connecti
 
 static async Task EnsureDatabaseAsync(DbContext dbContext)
 {
-	var appliedMigrations = (await dbContext.Database.GetAppliedMigrationsAsync()).ToList();
-	var definedMigrations = dbContext.Database.GetMigrations().ToList();
-
-	// Apply migrations when defined migrations outnumber the applied set.
-	if (definedMigrations.Any())
+	var pendingMigrations = (await dbContext.Database.GetPendingMigrationsAsync()).ToList();
+	if (pendingMigrations.Any())
 	{
-		if (appliedMigrations.Count < definedMigrations.Count)
-		{
-			await dbContext.Database.MigrateAsync();
-		}
-
+		await dbContext.Database.MigrateAsync();
 		return;
 	}
 
-	// Some contexts (like Identity) don't include migrations, so fall back to EnsureCreated.
-	await dbContext.Database.EnsureCreatedAsync();
+	if (!dbContext.Database.GetMigrations().Any())
+	{
+		// Some contexts (like Identity) don't include migrations, so fall back to EnsureCreated.
+		await dbContext.Database.EnsureCreatedAsync();
+	}
 }
 
 static async Task SeedRolesAsync(RoleManager<IdeaRole> roleManager)
