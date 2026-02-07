@@ -1,4 +1,5 @@
 
+using System.Collections.Concurrent;
 using IdeaCollectionIdea.Common.Constants;
 using IdeaCollectionSystem.ApplicationCore.Entitites;
 using IdeaCollectionSystem.ApplicationCore.Entitites.Identity;
@@ -14,14 +15,26 @@ var builder = WebApplication.CreateBuilder(args);
 
 
 // DbContext (Business)
+var ideaCollectionConnectionString = builder.Configuration.GetConnectionString("IdeaCollectionDbContext");
+if (string.IsNullOrWhiteSpace(ideaCollectionConnectionString))
+{
+	throw new InvalidOperationException("IdeaCollectionDbContext connection string is not configured.");
+}
+
+var ideaIdentityConnectionString = builder.Configuration.GetConnectionString("IdeaIdentityConnection");
+if (string.IsNullOrWhiteSpace(ideaIdentityConnectionString))
+{
+	throw new InvalidOperationException("IdeaIdentityConnection connection string is not configured.");
+}
+var databaseProvider = builder.Configuration.GetValue<string>("DatabaseProvider");
+var resolvedDatabaseProvider = string.IsNullOrWhiteSpace(databaseProvider) ? "Postgres" : databaseProvider;
+
 builder.Services.AddDbContext<IdeaCollectionDbContext>(options =>
-	options.UseNpgsql(
-		builder.Configuration.GetConnectionString("IdeaCollectionDbContext")));
+	ConfigureDbContext(options, ideaCollectionConnectionString, resolvedDatabaseProvider));
 
 // DbContext (Identity)
 builder.Services.AddDbContext<IdeaCollectionIdentityDbContext>(options =>
-	options.UseNpgsql(
-		builder.Configuration.GetConnectionString("IdeaIdentityConnection")));
+	ConfigureDbContext(options, ideaIdentityConnectionString, resolvedDatabaseProvider));
 
 
 // Identity 
@@ -125,8 +138,8 @@ using (var scope = app.Services.CreateScope())
 		var identityDbContext = services.GetRequiredService<IdeaCollectionIdentityDbContext>();
 
 		// Ensure databases are created
-		await dbContext.Database.MigrateAsync();
-		await identityDbContext.Database.MigrateAsync();
+		await EnsureDatabaseAsync(dbContext);
+		await EnsureDatabaseAsync(identityDbContext);
 
 		// Seed Roles
 		await SeedRolesAsync(roleManager);
@@ -189,6 +202,45 @@ app.Run();
 
 
 // SEEDING METHODS
+
+static void ConfigureDbContext(DbContextOptionsBuilder options, string connectionString, string databaseProvider)
+{
+	if (string.Equals(databaseProvider, "Sqlite", StringComparison.OrdinalIgnoreCase))
+	{
+		options.UseSqlite(connectionString);
+		return;
+	}
+
+	if (string.Equals(databaseProvider, "Postgres", StringComparison.OrdinalIgnoreCase) ||
+		string.Equals(databaseProvider, "PostgreSql", StringComparison.OrdinalIgnoreCase))
+	{
+		options.UseNpgsql(connectionString);
+		return;
+	}
+
+	throw new InvalidOperationException($"Unsupported DatabaseProvider '{databaseProvider}'.");
+}
+
+static async Task EnsureDatabaseAsync(DbContext dbContext)
+{
+	var hasMigrations = HasMigrations(dbContext);
+	if (hasMigrations)
+	{
+		// MigrateAsync safely applies pending migrations and ensures the database schema is up-to-date.
+		await dbContext.Database.MigrateAsync();
+		return;
+	}
+
+	// Fallback for contexts where migrations haven't been created yet.
+	await dbContext.Database.EnsureCreatedAsync();
+}
+
+static readonly ConcurrentDictionary<Type, bool> s_migrationPresence = new();
+
+static bool HasMigrations(DbContext dbContext)
+{
+	return s_migrationPresence.GetOrAdd(dbContext.GetType(), _ => dbContext.Database.GetMigrations().Any());
+}
 
 static async Task SeedRolesAsync(RoleManager<IdeaRole> roleManager)
 {
