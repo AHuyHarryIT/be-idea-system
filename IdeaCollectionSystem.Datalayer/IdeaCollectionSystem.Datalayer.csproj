@@ -21,8 +21,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\IdeaCollectionIdea.Common\IdeaCollectionSystem.Common.csproj" />
     <ProjectReference Include="..\IdeaCollectionSystem.ApplicationCore\IdeaCollectionSystem.ApplicationCore.csproj" />
+    <ProjectReference Include="..\IdeaCollectionSystem.Common\IdeaCollectionSystem.Common.csproj" />
   </ItemGroup>
 
 </Project>

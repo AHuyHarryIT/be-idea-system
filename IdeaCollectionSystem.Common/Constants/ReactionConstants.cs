@@ -1,5 +1,4 @@
-﻿// IdeaCollectionIdea.Common/Constants/ReactionConstants.cs
-namespace IdeaCollectionIdea.Common.Constants
+﻿namespace IdeaCollectionIdea.Common.Constants
 {
 	public static class ReactionConstants
 	{

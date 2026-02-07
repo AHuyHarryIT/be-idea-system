@@ -1,4 +1,4 @@
-// IdeaCollectionSystem/Program.cs
+
 using IdeaCollectionIdea.Common.Constants;
 using IdeaCollectionSystem.ApplicationCore.Entitites;
 using IdeaCollectionSystem.ApplicationCore.Entitites.Identity;
@@ -67,41 +67,37 @@ builder.Services.ConfigureApplicationCookie(options =>
 
 // AUTHORIZATION POLICIES
 
-builder.Services.AddAuthorization(options =>
-{
-	// Role-based policies
-	options.AddPolicy(PolicyConstants.AdminOnly, policy =>
-		policy.RequireRole(RoleConstants.Administrator));
-
-	options.AddPolicy(PolicyConstants.QAManagerOnly, policy =>
-		policy.RequireRole(RoleConstants.QAManager));
-
-	options.AddPolicy(PolicyConstants.QACoordinatorOnly, policy =>
-		policy.RequireRole(RoleConstants.QACoordinator));
-
-	options.AddPolicy(PolicyConstants.StaffOnly, policy =>
-		policy.RequireRole(RoleConstants.Staff));
-
-	// Combined policies
-	options.AddPolicy(PolicyConstants.QAManagement, policy =>
-		policy.RequireRole(RoleConstants.QAManager, RoleConstants.QACoordinator));
-
-	options.AddPolicy(PolicyConstants.AllStaff, policy =>
-		policy.RequireAuthenticatedUser());
-
-	// Feature-based policies
-	options.AddPolicy(PolicyConstants.CanManageCategories, policy =>
+builder.Services.AddAuthorizationBuilder()
+							 // AUTHORIZATION POLICIES
+							 .AddPolicy(PolicyConstants.AdminOnly, policy =>
+		policy.RequireRole(RoleConstants.Administrator))
+							 // AUTHORIZATION POLICIES
+							 .AddPolicy(PolicyConstants.QAManagerOnly, policy =>
+		policy.RequireRole(RoleConstants.QAManager))
+							 // AUTHORIZATION POLICIES
+							 .AddPolicy(PolicyConstants.QACoordinatorOnly, policy =>
+		policy.RequireRole(RoleConstants.QACoordinator))
+							 // AUTHORIZATION POLICIES
+							 .AddPolicy(PolicyConstants.StaffOnly, policy =>
+		policy.RequireRole(RoleConstants.Staff))
+							 // AUTHORIZATION POLICIES
+							 .AddPolicy(PolicyConstants.QAManagement, policy =>
+		policy.RequireRole(RoleConstants.QAManager, RoleConstants.QACoordinator))
+							 // AUTHORIZATION POLICIES
+							 .AddPolicy(PolicyConstants.AllStaff, policy =>
+		policy.RequireAuthenticatedUser())
+							 // AUTHORIZATION POLICIES
+							 .AddPolicy(PolicyConstants.CanManageCategories, policy =>
+		policy.RequireRole(RoleConstants.Administrator, RoleConstants.QAManager))
+							 // AUTHORIZATION POLICIES
+							 .AddPolicy(PolicyConstants.CanExportData, policy =>
+		policy.RequireRole(RoleConstants.Administrator, RoleConstants.QAManager))
+							 // AUTHORIZATION POLICIES
+							 .AddPolicy(PolicyConstants.CanManageUsers, policy =>
+		policy.RequireRole(RoleConstants.Administrator))
+							 // AUTHORIZATION POLICIES
+							 .AddPolicy(PolicyConstants.CanSetClosureDates, policy =>
 		policy.RequireRole(RoleConstants.Administrator, RoleConstants.QAManager));
-
-	options.AddPolicy(PolicyConstants.CanExportData, policy =>
-		policy.RequireRole(RoleConstants.Administrator, RoleConstants.QAManager));
-
-	options.AddPolicy(PolicyConstants.CanManageUsers, policy =>
-		policy.RequireRole(RoleConstants.Administrator));
-
-	options.AddPolicy(PolicyConstants.CanSetClosureDates, policy =>
-		policy.RequireRole(RoleConstants.Administrator, RoleConstants.QAManager));
-});
 
 builder.Services.AddDistributedMemoryCache();
 
