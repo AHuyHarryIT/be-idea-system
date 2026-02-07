@@ -9,6 +9,8 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Storage;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -228,8 +230,12 @@ static async Task EnsureDatabaseAsync(DbContext dbContext)
 	var appliedMigrations = (await dbContext.Database.GetAppliedMigrationsAsync()).ToList();
 	if (!appliedMigrations.Any())
 	{
-		// Some contexts (like Identity) don't include migrations, so fall back to EnsureCreated.
-		await dbContext.Database.EnsureCreatedAsync();
+		var databaseCreator = dbContext.Database.GetService<IRelationalDatabaseCreator>();
+		if (!await databaseCreator.HasTablesAsync())
+		{
+			// Fallback for contexts where migrations haven't been created yet.
+			await dbContext.Database.EnsureCreatedAsync();
+		}
 	}
 }
 
