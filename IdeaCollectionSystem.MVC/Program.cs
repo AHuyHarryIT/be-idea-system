@@ -198,7 +198,7 @@ static void ConfigureDbContext(DbContextOptionsBuilder options, string? connecti
 		throw new InvalidOperationException("Database connection string is not configured.");
 	}
 
-	if (connectionString.Contains("Data Source=", StringComparison.OrdinalIgnoreCase))
+	if (IsSqliteConnectionString(connectionString))
 	{
 		options.UseSqlite(connectionString);
 	}
@@ -206,6 +206,20 @@ static void ConfigureDbContext(DbContextOptionsBuilder options, string? connecti
 	{
 		options.UseNpgsql(connectionString);
 	}
+}
+
+static bool IsSqliteConnectionString(string connectionString)
+{
+	if (connectionString.Contains("Host=", StringComparison.OrdinalIgnoreCase) ||
+		connectionString.Contains("Server=", StringComparison.OrdinalIgnoreCase))
+	{
+		return false;
+	}
+
+	var trimmedConnectionString = connectionString.TrimStart();
+
+	return trimmedConnectionString.StartsWith("Data Source=", StringComparison.OrdinalIgnoreCase)
+		|| trimmedConnectionString.StartsWith("DataSource=", StringComparison.OrdinalIgnoreCase);
 }
 
 static async Task EnsureDatabaseAsync(DbContext dbContext)
