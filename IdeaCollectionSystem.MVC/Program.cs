@@ -227,15 +227,11 @@ static async Task EnsureDatabaseAsync(DbContext dbContext)
 		return;
 	}
 
-	var appliedMigrations = (await dbContext.Database.GetAppliedMigrationsAsync()).ToList();
-	if (!appliedMigrations.Any())
+	var databaseCreator = dbContext.Database.GetRequiredService<IRelationalDatabaseCreator>();
+	if (!await databaseCreator.HasTablesAsync())
 	{
-		var databaseCreator = dbContext.Database.GetService<IRelationalDatabaseCreator>();
-		if (!await databaseCreator.HasTablesAsync())
-		{
-			// Fallback for contexts where migrations haven't been created yet.
-			await dbContext.Database.EnsureCreatedAsync();
-		}
+		// Fallback for contexts where migrations haven't been created yet.
+		await dbContext.Database.EnsureCreatedAsync();
 	}
 }
 
