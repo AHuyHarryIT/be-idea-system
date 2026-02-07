@@ -220,8 +220,8 @@ static void ConfigureDbContext(DbContextOptionsBuilder options, string? connecti
 
 static async Task EnsureDatabaseAsync(DbContext dbContext)
 {
-	var pendingMigrations = (await dbContext.Database.GetPendingMigrationsAsync()).ToList();
-	if (pendingMigrations.Any())
+	var hasPendingMigrations = (await dbContext.Database.GetPendingMigrationsAsync()).Any();
+	if (hasPendingMigrations)
 	{
 		await dbContext.Database.MigrateAsync();
 		return;
@@ -230,6 +230,12 @@ static async Task EnsureDatabaseAsync(DbContext dbContext)
 	var databaseCreator = dbContext.Database.GetRequiredService<IRelationalDatabaseCreator>();
 	if (!await databaseCreator.HasTablesAsync())
 	{
+		if (dbContext.Database.GetMigrations().Any())
+		{
+			await dbContext.Database.MigrateAsync();
+			return;
+		}
+
 		// Fallback for contexts where migrations haven't been created yet.
 		await dbContext.Database.EnsureCreatedAsync();
 	}
