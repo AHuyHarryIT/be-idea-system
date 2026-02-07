@@ -17,6 +17,7 @@ var builder = WebApplication.CreateBuilder(args);
 var ideaCollectionConnectionString = builder.Configuration.GetConnectionString("IdeaCollectionDbContext");
 var ideaIdentityConnectionString = builder.Configuration.GetConnectionString("IdeaIdentityConnection");
 var databaseProvider = builder.Configuration.GetValue<string>("DatabaseProvider");
+databaseProvider = string.IsNullOrWhiteSpace(databaseProvider) ? "Postgres" : databaseProvider;
 
 builder.Services.AddDbContext<IdeaCollectionDbContext>(options =>
 	ConfigureDbContext(options, ideaCollectionConnectionString, databaseProvider));
@@ -205,12 +206,20 @@ static void ConfigureDbContext(DbContextOptionsBuilder options, string? connecti
 		return;
 	}
 
-	options.UseNpgsql(connectionString);
+	if (string.Equals(databaseProvider, "Postgres", StringComparison.OrdinalIgnoreCase) ||
+		string.Equals(databaseProvider, "PostgreSql", StringComparison.OrdinalIgnoreCase))
+	{
+		options.UseNpgsql(connectionString);
+		return;
+	}
+
+	throw new InvalidOperationException($"Unsupported DatabaseProvider '{databaseProvider}'.");
 }
 
 static async Task EnsureDatabaseAsync(DbContext dbContext)
 {
 	var pendingMigrations = await dbContext.Database.GetPendingMigrationsAsync();
+	// Apply migrations if any are pending.
 	if (pendingMigrations.Any())
 	{
 		await dbContext.Database.MigrateAsync();
@@ -218,6 +227,7 @@ static async Task EnsureDatabaseAsync(DbContext dbContext)
 	}
 
 	var appliedMigrations = await dbContext.Database.GetAppliedMigrationsAsync();
+	// If migrations already ran, no further initialization is required.
 	if (appliedMigrations.Any())
 	{
 		return;
