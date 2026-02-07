@@ -200,6 +200,11 @@ static void ConfigureDbContext(DbContextOptionsBuilder options, string? connecti
 		throw new InvalidOperationException("Database connection string is not configured.");
 	}
 
+	if (string.IsNullOrWhiteSpace(databaseProvider))
+	{
+		throw new InvalidOperationException("DatabaseProvider is not configured.");
+	}
+
 	if (string.Equals(databaseProvider, "Sqlite", StringComparison.OrdinalIgnoreCase))
 	{
 		options.UseSqlite(connectionString);
@@ -219,13 +224,14 @@ static void ConfigureDbContext(DbContextOptionsBuilder options, string? connecti
 static async Task EnsureDatabaseAsync(DbContext dbContext)
 {
 	var pendingMigrations = await dbContext.Database.GetPendingMigrationsAsync();
-	// Apply migrations if any are pending.
+	// Apply migrations if any are pending to ensure schema matches the model.
 	if (pendingMigrations.Any())
 	{
 		await dbContext.Database.MigrateAsync();
 		return;
 	}
 
+	// If no migrations are pending, check whether any were applied to decide on fallback creation.
 	var appliedMigrations = await dbContext.Database.GetAppliedMigrationsAsync();
 	// If migrations already ran, no further initialization is required.
 	if (appliedMigrations.Any())
