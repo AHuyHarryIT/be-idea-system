@@ -110,6 +110,7 @@ builder.Services.AddSession(options =>
 
 builder.Services.AddRazorPages();
 builder.Services.AddControllersWithViews();
+builder.Services.AddScoped<CategoryService>();
 
 var app = builder.Build();
 
@@ -167,6 +168,7 @@ app.UseRouting();
 app.UseAuthentication();
 app.UseAuthorization();
 
+app.MapControllers();
 app.MapControllerRoute(
 	name: "admin",
 	pattern: "Admin/{action=Dashboard}/{id?}",
