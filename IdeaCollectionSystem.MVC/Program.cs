@@ -14,14 +14,15 @@ var builder = WebApplication.CreateBuilder(args);
 
 
 // DbContext (Business)
+var ideaCollectionConnectionString = builder.Configuration.GetConnectionString("IdeaCollectionDbContext");
+var ideaIdentityConnectionString = builder.Configuration.GetConnectionString("IdeaIdentityConnection");
+
 builder.Services.AddDbContext<IdeaCollectionDbContext>(options =>
-	options.UseNpgsql(
-		builder.Configuration.GetConnectionString("IdeaCollectionDbContext")));
+	ConfigureDbContext(options, ideaCollectionConnectionString));
 
 // DbContext (Identity)
 builder.Services.AddDbContext<IdeaCollectionIdentityDbContext>(options =>
-	options.UseNpgsql(
-		builder.Configuration.GetConnectionString("IdeaIdentityConnection")));
+	ConfigureDbContext(options, ideaIdentityConnectionString));
 
 
 // Identity 
@@ -125,8 +126,8 @@ using (var scope = app.Services.CreateScope())
 		var identityDbContext = services.GetRequiredService<IdeaCollectionIdentityDbContext>();
 
 		// Ensure databases are created
-		await dbContext.Database.MigrateAsync();
-		await identityDbContext.Database.MigrateAsync();
+		await EnsureDatabaseAsync(dbContext);
+		await EnsureDatabaseAsync(identityDbContext);
 
 		// Seed Roles
 		await SeedRolesAsync(roleManager);
@@ -189,6 +190,34 @@ app.Run();
 
 
 // SEEDING METHODS
+
+static void ConfigureDbContext(DbContextOptionsBuilder options, string? connectionString)
+{
+	if (string.IsNullOrWhiteSpace(connectionString))
+	{
+		throw new InvalidOperationException("Database connection string is not configured.");
+	}
+
+	if (connectionString.Contains("Data Source=", StringComparison.OrdinalIgnoreCase))
+	{
+		options.UseSqlite(connectionString);
+	}
+	else
+	{
+		options.UseNpgsql(connectionString);
+	}
+}
+
+static async Task EnsureDatabaseAsync(DbContext dbContext)
+{
+	if (dbContext.Database.GetMigrations().Any())
+	{
+		await dbContext.Database.MigrateAsync();
+		return;
+	}
+
+	await dbContext.Database.EnsureCreatedAsync();
+}
 
 static async Task SeedRolesAsync(RoleManager<IdeaRole> roleManager)
 {
