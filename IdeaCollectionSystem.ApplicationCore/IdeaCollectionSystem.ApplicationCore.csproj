@@ -21,7 +21,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="DTO\" />
+    <ProjectReference Include="..\IdeaCollectionSystem.Common\IdeaCollectionSystem.Common.csproj" />
   </ItemGroup>
 
 </Project>
