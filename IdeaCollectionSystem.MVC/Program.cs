@@ -1,4 +1,5 @@
 
+using System.Collections.Concurrent;
 using IdeaCollectionIdea.Common.Constants;
 using IdeaCollectionSystem.ApplicationCore.Entitites;
 using IdeaCollectionSystem.ApplicationCore.Entitites.Identity;
@@ -222,16 +223,23 @@ static void ConfigureDbContext(DbContextOptionsBuilder options, string connectio
 
 static async Task EnsureDatabaseAsync(DbContext dbContext)
 {
-	var hasMigrations = dbContext.Database.GetMigrations().Any();
+	var hasMigrations = HasMigrations(dbContext);
 	if (hasMigrations)
 	{
-		// Migrate is idempotent and ensures the database schema is up-to-date.
+		// MigrateAsync safely applies pending migrations and ensures the database schema is up-to-date.
 		await dbContext.Database.MigrateAsync();
 		return;
 	}
 
 	// Fallback for contexts where migrations haven't been created yet.
 	await dbContext.Database.EnsureCreatedAsync();
+}
+
+static readonly ConcurrentDictionary<Type, bool> MigrationPresence = new();
+
+static bool HasMigrations(DbContext dbContext)
+{
+	return MigrationPresence.GetOrAdd(dbContext.GetType(), _ => dbContext.Database.GetMigrations().Any());
 }
 
 static async Task SeedRolesAsync(RoleManager<IdeaRole> roleManager)
