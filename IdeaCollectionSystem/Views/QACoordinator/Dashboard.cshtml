@@ -1,0 +1,44 @@
+﻿<!-- Views/QACoordinator/Dashboard.cshtml -->
+@{
+    ViewData["Title"] = "QA Coordinator Dashboard";
+}
+
+<div class="container mt-4">
+    <h2>QA Coordinator Dashboard</h2>
+    <hr />
+
+    <div class="row g-3">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-body">
+                    <h6 class="text-muted">Department Ideas</h6>
+                    <a asp-action="DepartmentIdeas" class="btn btn-sm btn-outline-primary w-100 mt-2">
+                        View Department Ideas
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-body">
+                    <h6 class="text-muted">Department Statistics</h6>
+                    <a asp-action="DepartmentStatistics" class="btn btn-sm btn-outline-success w-100 mt-2">
+                        View Statistics
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <h6 class="text-muted">Manage Staff</h6>
+                    <a asp-action="ManageStaff" class="btn btn-sm btn-outline-warning w-100 mt-2">
+                        Manage Department Staff
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

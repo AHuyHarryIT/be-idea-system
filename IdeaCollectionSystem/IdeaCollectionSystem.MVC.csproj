@@ -24,6 +24,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\IdeaCollectionIdea.Common\IdeaCollectionSystem.Common.csproj" />
     <ProjectReference Include="..\IdeaCollectionSystem.Datalayer\IdeaCollectionSystem.Datalayer.csproj" />
   </ItemGroup>
 

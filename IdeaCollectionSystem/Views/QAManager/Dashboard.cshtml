@@ -1,0 +1,66 @@
+﻿<!-- Views/QAManager/Dashboard.cshtml -->
+@{
+    ViewData["Title"] = "QA Manager Dashboard";
+}
+
+<div class="container mt-4">
+    <h2>QA Manager Dashboard</h2>
+    <hr />
+
+    <div class="row g-3">
+        <div class="col-md-6 col-lg-4">
+            <div class="card">
+                <div class="card-body">
+                    <h6 class="text-muted">All Ideas</h6>
+                    <a asp-action="AllIdeas" class="btn btn-sm btn-outline-primary w-100 mt-2">
+                        View All Ideas
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6 col-lg-4">
+            <div class="card">
+                <div class="card-body">
+                    <h6 class="text-muted">Statistics</h6>
+                    <a asp-action="Statistics" class="btn btn-sm btn-outline-success w-100 mt-2">
+                        View Statistics
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6 col-lg-4">
+            <div class="card">
+                <div class="card-body">
+                    <h6 class="text-muted">Export Data</h6>
+                    <a asp-action="ExportData" class="btn btn-sm btn-outline-warning w-100 mt-2">
+                        Export CSV/ZIP
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6 col-lg-4">
+            <div class="card">
+                <div class="card-body">
+                    <h6 class="text-muted">Categories</h6>
+                    <a asp-action="Categories" class="btn btn-sm btn-outline-info w-100 mt-2">
+                        Manage Categories
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6 col-lg-4">
+            <div class="card">
+                <div class="card-body">
+                    <h6 class="text-muted">Closure Dates</h6>
+                    <a asp-action="ClosureDates" class="btn btn-sm btn-outline-danger w-100 mt-2">
+                        Configure Dates
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

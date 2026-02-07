@@ -1,0 +1,55 @@
+﻿<!-- Views/Admin/Dashboard.cshtml -->
+@{
+    ViewData["Title"] = "Administrator Dashboard";
+}
+
+<div class="container mt-4">
+    <h2>Administrator Dashboard</h2>
+    <hr />
+
+    <div class="row g-3">
+        <div class="col-md-6 col-lg-3">
+            <div class="card">
+                <div class="card-body">
+                    <h6 class="text-muted">Users</h6>
+                    <a asp-action="Users" class="btn btn-sm btn-outline-primary w-100 mt-2">
+                        Manage Users
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6 col-lg-3">
+            <div class="card">
+                <div class="card-body">
+                    <h6 class="text-muted">Departments</h6>
+                    <a asp-action="Departments" class="btn btn-sm btn-outline-success w-100 mt-2">
+                        Manage Departments
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6 col-lg-3">
+            <div class="card">
+                <div class="card-body">
+                    <h6 class="text-muted">Settings</h6>
+                    <a asp-action="Settings" class="btn btn-sm btn-outline-warning w-100 mt-2">
+                        System Settings
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6 col-lg-3">
+            <div class="card">
+                <div class="card-body">
+                    <h6 class="text-muted">All Ideas</h6>
+                    <a asp-controller="Ideas" asp-action="Index" class="btn btn-sm btn-outline-secondary w-100 mt-2">
+                        View Ideas
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

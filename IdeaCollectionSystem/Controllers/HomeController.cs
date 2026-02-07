@@ -1,25 +1,41 @@
-using System.Diagnostics;
+using IdeaCollectionIdea.Common.Constants;
 using IdeaCollectionSystem.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Diagnostics;
 
-namespace IdeaCollectionSystem.Controllers
+namespace IdeaCollectionSystem.MVC.Controllers
 {
-    public class HomeController : Controller
-    {
-        public IActionResult Index()
-        {
-            return View();
-        }
+	public class HomeController : Controller
+	{
+		private readonly ILogger<HomeController> _logger;
 
-        public IActionResult Privacy()
-        {
-            return View();
-        }
+		public HomeController(ILogger<HomeController> logger)
+		{
+			_logger = logger;
+		}
 
-        [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
-        public IActionResult Error()
-        {
-            return View(new ErrorViewModel { RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier });
-        }
-    }
+		public IActionResult Index()
+		{
+			// Public homepage or Staff dashboard
+			return View();
+		}
+
+		[Authorize(Policy = PolicyConstants.AllStaff)]
+		public IActionResult MyIdeas()
+		{
+			return View();
+		}
+
+		public IActionResult Privacy()
+		{
+			return View();
+		}
+
+		[ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
+		public IActionResult Error()
+		{
+			return View(new ErrorViewModel { RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier });
+		}
+	}
 }
