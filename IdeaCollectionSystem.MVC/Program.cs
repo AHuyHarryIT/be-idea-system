@@ -8,6 +8,7 @@ using IdeaCollectionSystem.MVC.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.UI.Services;
+using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -210,16 +211,15 @@ static void ConfigureDbContext(DbContextOptionsBuilder options, string? connecti
 
 static bool IsSqliteConnectionString(string connectionString)
 {
-	if (connectionString.Contains("Host=", StringComparison.OrdinalIgnoreCase) ||
-		connectionString.Contains("Server=", StringComparison.OrdinalIgnoreCase))
+	try
+	{
+		var sqliteBuilder = new SqliteConnectionStringBuilder(connectionString);
+		return !string.IsNullOrWhiteSpace(sqliteBuilder.DataSource);
+	}
+	catch (ArgumentException)
 	{
 		return false;
 	}
-
-	var trimmedConnectionString = connectionString.TrimStart();
-
-	return trimmedConnectionString.StartsWith("Data Source=", StringComparison.OrdinalIgnoreCase)
-		|| trimmedConnectionString.StartsWith("DataSource=", StringComparison.OrdinalIgnoreCase);
 }
 
 static async Task EnsureDatabaseAsync(DbContext dbContext)
