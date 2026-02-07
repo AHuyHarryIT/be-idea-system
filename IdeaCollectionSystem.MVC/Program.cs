@@ -14,20 +14,17 @@ var builder = WebApplication.CreateBuilder(args);
 
 
 // DbContext (Business)
-
 builder.Services.AddDbContext<IdeaCollectionDbContext>(options =>
-	options.UseSqlServer(
+	options.UseNpgsql(
 		builder.Configuration.GetConnectionString("IdeaCollectionDbContext")));
 
-
 // DbContext (Identity)
-
 builder.Services.AddDbContext<IdeaCollectionIdentityDbContext>(options =>
-	options.UseSqlServer(
+	options.UseNpgsql(
 		builder.Configuration.GetConnectionString("IdeaIdentityConnection")));
 
 
-// Identity (CHUẨN)
+// Identity 
 
 builder.Services.AddIdentity<IdeaUser, IdeaRole>(options =>
 {

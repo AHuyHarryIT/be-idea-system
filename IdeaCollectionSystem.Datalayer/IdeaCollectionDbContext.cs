@@ -20,7 +20,7 @@ namespace IdeaCollectionSystem.Datalayer
 		public DbSet<Submission> Submissions { get; set; }
 		public DbSet<Idea> Ideas { get; set; }
 		public DbSet<EmailOutBox> EmailOutBoxes { get; set; }
-		#endregion
+		#endregion		#endregion
 
 		protected override void OnModelCreating(ModelBuilder modelBuilder)
 		{
