@@ -220,13 +220,22 @@ static bool IsSqliteConnectionString(string connectionString)
 	{
 		return false;
 	}
+	catch (FormatException)
+	{
+		return false;
+	}
 }
 
 static async Task EnsureDatabaseAsync(DbContext dbContext)
 {
 	if (dbContext.Database.GetMigrations().Any())
 	{
-		await dbContext.Database.MigrateAsync();
+		var pendingMigrations = await dbContext.Database.GetPendingMigrationsAsync();
+		if (pendingMigrations.Any())
+		{
+			await dbContext.Database.MigrateAsync();
+		}
+
 		return;
 	}
 
