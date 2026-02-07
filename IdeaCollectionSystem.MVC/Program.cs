@@ -9,8 +9,6 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Infrastructure;
-using Microsoft.EntityFrameworkCore.Storage;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -220,25 +218,15 @@ static void ConfigureDbContext(DbContextOptionsBuilder options, string? connecti
 
 static async Task EnsureDatabaseAsync(DbContext dbContext)
 {
-	var hasPendingMigrations = (await dbContext.Database.GetPendingMigrationsAsync()).Any();
-	if (hasPendingMigrations)
+	if (dbContext.Database.GetMigrations().Any())
 	{
+		// Migrate is idempotent and ensures the database schema is up-to-date.
 		await dbContext.Database.MigrateAsync();
 		return;
 	}
 
-	var databaseCreator = dbContext.Database.GetRequiredService<IRelationalDatabaseCreator>();
-	if (!await databaseCreator.HasTablesAsync())
-	{
-		if (dbContext.Database.GetMigrations().Any())
-		{
-			await dbContext.Database.MigrateAsync();
-			return;
-		}
-
-		// Fallback for contexts where migrations haven't been created yet.
-		await dbContext.Database.EnsureCreatedAsync();
-	}
+	// Fallback for contexts where migrations haven't been created yet.
+	await dbContext.Database.EnsureCreatedAsync();
 }
 
 static async Task SeedRolesAsync(RoleManager<IdeaRole> roleManager)
