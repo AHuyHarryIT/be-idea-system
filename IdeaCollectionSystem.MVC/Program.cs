@@ -10,6 +10,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -213,6 +214,18 @@ static bool IsSqliteConnectionString(string connectionString)
 {
 	try
 	{
+		var npgsqlBuilder = new NpgsqlConnectionStringBuilder(connectionString);
+		if (!string.IsNullOrWhiteSpace(npgsqlBuilder.Host))
+		{
+			return false;
+		}
+	}
+	catch (ArgumentException)
+	{
+	}
+
+	try
+	{
 		var sqliteBuilder = new SqliteConnectionStringBuilder(connectionString);
 		return !string.IsNullOrWhiteSpace(sqliteBuilder.DataSource);
 	}
@@ -228,14 +241,16 @@ static bool IsSqliteConnectionString(string connectionString)
 
 static async Task EnsureDatabaseAsync(DbContext dbContext)
 {
-	if (dbContext.Database.GetMigrations().Any())
+	var pendingMigrations = await dbContext.Database.GetPendingMigrationsAsync();
+	if (pendingMigrations.Any())
 	{
-		var pendingMigrations = await dbContext.Database.GetPendingMigrationsAsync();
-		if (pendingMigrations.Any())
-		{
-			await dbContext.Database.MigrateAsync();
-		}
+		await dbContext.Database.MigrateAsync();
+		return;
+	}
 
+	var appliedMigrations = await dbContext.Database.GetAppliedMigrationsAsync();
+	if (appliedMigrations.Any())
+	{
 		return;
 	}
 
