@@ -8,9 +8,7 @@ using IdeaCollectionSystem.MVC.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.UI.Services;
-using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
-using Npgsql;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -18,13 +16,14 @@ var builder = WebApplication.CreateBuilder(args);
 // DbContext (Business)
 var ideaCollectionConnectionString = builder.Configuration.GetConnectionString("IdeaCollectionDbContext");
 var ideaIdentityConnectionString = builder.Configuration.GetConnectionString("IdeaIdentityConnection");
+var databaseProvider = builder.Configuration.GetValue<string>("DatabaseProvider");
 
 builder.Services.AddDbContext<IdeaCollectionDbContext>(options =>
-	ConfigureDbContext(options, ideaCollectionConnectionString));
+	ConfigureDbContext(options, ideaCollectionConnectionString, databaseProvider));
 
 // DbContext (Identity)
 builder.Services.AddDbContext<IdeaCollectionIdentityDbContext>(options =>
-	ConfigureDbContext(options, ideaIdentityConnectionString));
+	ConfigureDbContext(options, ideaIdentityConnectionString, databaseProvider));
 
 
 // Identity 
@@ -193,50 +192,20 @@ app.Run();
 
 // SEEDING METHODS
 
-static void ConfigureDbContext(DbContextOptionsBuilder options, string? connectionString)
+static void ConfigureDbContext(DbContextOptionsBuilder options, string? connectionString, string? databaseProvider)
 {
 	if (string.IsNullOrWhiteSpace(connectionString))
 	{
 		throw new InvalidOperationException("Database connection string is not configured.");
 	}
 
-	if (IsSqliteConnectionString(connectionString))
+	if (string.Equals(databaseProvider, "Sqlite", StringComparison.OrdinalIgnoreCase))
 	{
 		options.UseSqlite(connectionString);
-	}
-	else
-	{
-		options.UseNpgsql(connectionString);
-	}
-}
-
-static bool IsSqliteConnectionString(string connectionString)
-{
-	try
-	{
-		var npgsqlBuilder = new NpgsqlConnectionStringBuilder(connectionString);
-		if (!string.IsNullOrWhiteSpace(npgsqlBuilder.Host))
-		{
-			return false;
-		}
-	}
-	catch (ArgumentException)
-	{
+		return;
 	}
 
-	try
-	{
-		var sqliteBuilder = new SqliteConnectionStringBuilder(connectionString);
-		return !string.IsNullOrWhiteSpace(sqliteBuilder.DataSource);
-	}
-	catch (ArgumentException)
-	{
-		return false;
-	}
-	catch (FormatException)
-	{
-		return false;
-	}
+	options.UseNpgsql(connectionString);
 }
 
 static async Task EnsureDatabaseAsync(DbContext dbContext)
@@ -254,6 +223,7 @@ static async Task EnsureDatabaseAsync(DbContext dbContext)
 		return;
 	}
 
+	// Some contexts (like Identity) don't include migrations, so fall back to EnsureCreated.
 	await dbContext.Database.EnsureCreatedAsync();
 }
 
