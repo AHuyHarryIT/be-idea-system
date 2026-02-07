@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace IdeaCollectionSystem.MVC.Services
 {
-	public class CategoryService
+	public class CategoryService : ICategoryService
 	{
 		private readonly IdeaCollectionDbContext _dbContext;
 
