@@ -1,0 +1,28 @@
+﻿@using IdeaCollectionSystem.Service.Models.DTOs
+@model IEnumerable<IdeaCollectionSystem.Service.Models.DTOs.IdeaInfoDto>
+
+<div class="container mt-4">
+    <h3>Staff Ideas</h3>
+    <div class="list-group">
+        @foreach (var item in Model)
+        {
+            <div class="list-group-item mb-3 shadow-sm">
+                <h5>@(item.IsAnonymous ? "Anonymous" : item.IsAnonymous) - @item.Title</h5>
+                <p>@item.Title</p>
+                <div class="d-flex justify-content-between align-items-center">
+                    <span class="badge bg-secondary">@item.CategoryName</span>
+                    <small>Submitted on: @item.CreatedDate.ToShortDateString()</small>
+                </div>
+                <div class="mt-2">
+                    <button class="btn btn-sm btn-outline-success">👍 @item.ThumbsUpCount</button>
+                    <button class="btn btn-sm btn-outline-danger">👎 @item.ThumbsDownCount</button>
+                </div>
+            </div>
+        }
+    </div>
+
+    <nav class="mt-4">
+        <ul class="pagination">
+        </ul>
+    </nav>
+</div>

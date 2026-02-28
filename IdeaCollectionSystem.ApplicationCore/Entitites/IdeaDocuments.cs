@@ -16,7 +16,7 @@ namespace IdeaCollectionSystem.ApplicationCore.Entitites
 		public string OriginalFileName { get; set; } = string.Empty;
 		public string MimeType { get; set; } = string.Empty;
 		public long FizeSize { get; set; }
-		public DateTime UploadtedAt { get; set; } = DateTime.Now;
+		public DateTime UploadtedAt { get; set; } = DateTime.UtcNow;
 		public DateTime DeletedAt { get; set; }
 
 		[ForeignKey("IdeaId")]

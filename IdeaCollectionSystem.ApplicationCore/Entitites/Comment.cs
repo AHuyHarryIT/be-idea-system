@@ -14,8 +14,8 @@ namespace IdeaCollectionSystem.ApplicationCore.Entitites
 		public Guid Id { get; set; } 
 		public string? Text { get; set; }
 
-		public DateTime CreatedAt { get; set; } = DateTime.Now;
-		public DateTime UpdatedAt { get; set; } = DateTime.Now;
+		public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+		public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 		public DateTime? DeletedAt { get; set; }
 		public bool IsAnonymous { get; set;  }
 

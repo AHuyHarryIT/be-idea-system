@@ -7,8 +7,21 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Folder Include="Interface\" />
-    <Folder Include="Implementations\" />
+    <Compile Remove="Implementations\**" />
+    <Compile Remove="Interface\**" />
+    <EmbeddedResource Remove="Implementations\**" />
+    <EmbeddedResource Remove="Interface\**" />
+    <None Remove="Implementations\**" />
+    <None Remove="Interface\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Hosting" Version="2.3.9" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="8.0.23" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\IdeaCollectionSystem.Datalayer\IdeaCollectionSystem.Datalayer.csproj" />
   </ItemGroup>
 
 </Project>

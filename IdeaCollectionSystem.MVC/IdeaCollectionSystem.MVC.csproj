@@ -26,6 +26,7 @@
   <ItemGroup>
     <ProjectReference Include="..\IdeaCollectionSystem.Common\IdeaCollectionSystem.Common.csproj" />
     <ProjectReference Include="..\IdeaCollectionSystem.Datalayer\IdeaCollectionSystem.Datalayer.csproj" />
+    <ProjectReference Include="..\IdeaCollectionSystem.Service\IdeaCollectionSystem.Service.csproj" />
   </ItemGroup>
 
 </Project>

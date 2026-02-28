@@ -1,0 +1,26 @@
+﻿@using IdeaCollectionSystem.Service.Models.DTOs
+@model IEnumerable<DepartmentStatDto>
+
+<h2>Department Contribution Statistics</h2>
+
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>Department</th>
+            <th>Idea Count</th>
+            <th>Contributor Count</th>
+            <th>Percentage</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var d in Model)
+        {
+            <tr>
+                <td>@d.DepartmentName</td>
+                <td>@d.IdeaCount</td>
+                <td>@d.ContributorCount</td>
+                <td>@d.Percentage.ToString("0.00") %</td>
+            </tr>
+        }
+    </tbody>
+</table>

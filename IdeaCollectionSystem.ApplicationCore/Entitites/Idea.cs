@@ -1,42 +1,35 @@
-﻿using System.ComponentModel.DataAnnotations;
-using System.ComponentModel.DataAnnotations.Schema;
+﻿using IdeaCollectionSystem.ApplicationCore.Entitites;
+using System.ComponentModel.DataAnnotations;
 
-namespace IdeaCollectionSystem.ApplicationCore.Entitites
+public class Idea
 {
-	public class Idea
-	{
-		[Key]
-		public Guid Id { get; set; }
-		public string Text { get; set; } = string.Empty;
-		public DateTime CreatedAt { get; set; } = DateTime.Now;
-		public DateTime UpdatedAt { get; set; } = DateTime.Now;
-		public DateTime? DeletedAt { get; set; } 
-		public bool IsAnonymous { get; set; }
+	[Key]
+	public Guid Id { get; set; }
 
-		[ForeignKey("UserId")]
-		public Guid UserId { get; set; }
-		public User? User { get; set; }
+	public string Text { get; set; } = string.Empty;
 
-		[ForeignKey("SubmissionId")]
+	public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+	public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+	public DateTime? DeletedAt { get; set; }
 
-		public Guid SubmissionId { get; set; }
-		public Submission? Submission { get; set; }
+	public bool IsAnonymous { get; set; }
 
-		[ForeignKey("DepartmentId")]
-		public Guid DepartmentId { get; set; }
-
-		public Department? Department { get; set; }
-
-		[ForeignKey("CategoryId")]
-		public Guid CategoryId { get; set; }
-		public Category? Category { get; set; }
-
-		public ICollection<Submission> Submissions { get; set; } = new List<Submission>();
-		public ICollection<User> Users { get; set; } = new List<User>();
-		public ICollection<Department> Departments { get; set; } = new List<Department>();
-		public ICollection<Category> Categories { get; set; } = new List<Category>();
-		public ICollection<Comment> Comments { get; set; } = new List<Comment>();
+	// USER (1 Idea - 1 User)
+	public Guid UserId { get; set; }
+	public User? User { get; set; }
 
 
-	}
+	public Guid SubmissionId { get; set; }
+	public Submission? Submission { get; set; }
+
+
+	public Guid DepartmentId { get; set; }
+	public Department? Department { get; set; }
+
+
+	public Guid CategoryId { get; set; }
+	public Category? Category { get; set; }
+
+
+	public ICollection<Comment> Comments { get; set; } = new List<Comment>();
 }

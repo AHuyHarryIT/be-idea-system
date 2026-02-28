@@ -12,7 +12,7 @@ namespace IdeaCollectionSystem.ApplicationCore.Entitites
 
 		[Key]
 		public Guid Id { get; set; } 
-		public DateTime VistiTime	{ get; set; } = DateTime.Now;
+		public DateTime VistiTime	{ get; set; } = DateTime.UtcNow;
 
 	}
 }

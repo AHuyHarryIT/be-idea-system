@@ -3,9 +3,8 @@ using IdeaCollectionIdea.Common.Constants;
 using IdeaCollectionSystem.ApplicationCore.Entitites;
 using IdeaCollectionSystem.ApplicationCore.Entitites.Identity;
 using IdeaCollectionSystem.Datalayer;
-using IdeaCollectionSystem.MVC.Areas.Identity.Data;
-using IdeaCollectionSystem.MVC.Services;
-using Microsoft.AspNetCore.Authorization;
+using IdeaCollectionSystem.Service.Interfaces;
+using IdeaCollectionSystem.Service.Services;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.EntityFrameworkCore;
@@ -51,7 +50,7 @@ builder.Services.AddIdentity<IdeaUser, IdeaRole>(options =>
 .AddEntityFrameworkStores<IdeaCollectionIdentityDbContext>()
 .AddDefaultTokenProviders();
 
-builder.Services.AddTransient<IEmailSender, EmailSender>();
+//builder.Services.AddTransient<IEmailSender, EmailSender>();
 
 builder.Services.ConfigureApplicationCookie(options =>
 {
@@ -61,38 +60,41 @@ builder.Services.ConfigureApplicationCookie(options =>
 	options.ExpireTimeSpan = TimeSpan.FromHours(2);
 });
 
+builder.Services.AddScoped<IIdeaService, IdeaService>();
+builder.Services.AddScoped<ICategoryService, CategoryService>();
+builder.Services.AddScoped<IQAManagerService, QAManagerService>();
 
-// AUTHORIZATION POLICIES
 
+// Authorization policies
 builder.Services.AddAuthorizationBuilder()
-							 // AUTHORIZATION POLICIES
+							
 							 .AddPolicy(PolicyConstants.AdminOnly, policy =>
 		policy.RequireRole(RoleConstants.Administrator))
-							 // AUTHORIZATION POLICIES
+							
 							 .AddPolicy(PolicyConstants.QAManagerOnly, policy =>
 		policy.RequireRole(RoleConstants.QAManager))
-							 // AUTHORIZATION POLICIES
+							
 							 .AddPolicy(PolicyConstants.QACoordinatorOnly, policy =>
 		policy.RequireRole(RoleConstants.QACoordinator))
-							 // AUTHORIZATION POLICIES
+							
 							 .AddPolicy(PolicyConstants.StaffOnly, policy =>
 		policy.RequireRole(RoleConstants.Staff))
-							 // AUTHORIZATION POLICIES
+							
 							 .AddPolicy(PolicyConstants.QAManagement, policy =>
 		policy.RequireRole(RoleConstants.QAManager, RoleConstants.QACoordinator))
-							 // AUTHORIZATION POLICIES
+							
 							 .AddPolicy(PolicyConstants.AllStaff, policy =>
 		policy.RequireAuthenticatedUser())
-							 // AUTHORIZATION POLICIES
+							
 							 .AddPolicy(PolicyConstants.CanManageCategories, policy =>
 		policy.RequireRole(RoleConstants.Administrator, RoleConstants.QAManager))
-							 // AUTHORIZATION POLICIES
+							
 							 .AddPolicy(PolicyConstants.CanExportData, policy =>
 		policy.RequireRole(RoleConstants.Administrator, RoleConstants.QAManager))
-							 // AUTHORIZATION POLICIES
+							
 							 .AddPolicy(PolicyConstants.CanManageUsers, policy =>
 		policy.RequireRole(RoleConstants.Administrator))
-							 // AUTHORIZATION POLICIES
+							
 							 .AddPolicy(PolicyConstants.CanSetClosureDates, policy =>
 		policy.RequireRole(RoleConstants.Administrator, RoleConstants.QAManager));
 
@@ -111,7 +113,7 @@ builder.Services.AddControllersWithViews();
 var app = builder.Build();
 
 
-// SEED DATA
+// seeding data
 
 using (var scope = app.Services.CreateScope())
 {
@@ -137,17 +139,17 @@ using (var scope = app.Services.CreateScope())
 		// Seed Demo Users
 		await SeedDemoUsersAsync(userManager, dbContext);
 
-		Console.WriteLine("✅ Database seeding completed successfully!");
+		Console.WriteLine(" Database seeding completed successfully!");
 	}
 	catch (Exception ex)
 	{
 		var logger = services.GetRequiredService<ILogger<Program>>();
-		logger.LogError(ex, "❌ An error occurred while seeding the database.");
+		logger.LogError(ex, " An error occurred while seeding the database.");
 	}
 }
 
 
-// MIDDLEWARE
+// midelware configuration
 
 if (!app.Environment.IsDevelopment())
 {
@@ -188,7 +190,7 @@ app.MapRazorPages();
 app.Run();
 
 
-// SEEDING METHODS
+// seeding methods
 
 static async Task SeedRolesAsync(RoleManager<IdeaRole> roleManager)
 {
@@ -206,6 +208,7 @@ static async Task SeedRolesAsync(RoleManager<IdeaRole> roleManager)
 		}
 	}
 }
+
 
 static async Task SeedDepartmentsAsync(IdeaCollectionDbContext context)
 {

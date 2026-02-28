@@ -1,5 +1,5 @@
-﻿// IdeaCollectionSystem/Controllers/QAManagerController.cs
-using IdeaCollectionIdea.Common.Constants;
+﻿using IdeaCollectionIdea.Common.Constants;
+using IdeaCollectionSystem.Service.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -8,35 +8,73 @@ namespace IdeaCollectionSystem.MVC.Controllers
 	[Authorize(Policy = PolicyConstants.QAManagerOnly)]
 	public class QAManagerController : Controller
 	{
-		public IActionResult Dashboard()
+		private readonly IQAManagerService _qaService;
+		private readonly ICategoryService _categoryService;
+
+		public QAManagerController(
+			IQAManagerService qaService,
+			ICategoryService categoryService)
 		{
-			ViewBag.PageTitle = "QA Manager Dashboard";
+			_qaService = qaService;
+			_categoryService = categoryService;
+		}
+
+		public async Task<IActionResult> Dashboard()
+		{
+			var stats = await _qaService.GetDashboardStatsAsync();
+			return View(stats);
+		}
+
+		public async Task<IActionResult> Categories()
+		{
+			var categories = await _categoryService.GetAllActiveAsync();
+			return View(categories);
+		}
+
+		[HttpPost]
+		public async Task<IActionResult> Create(string name)
+		{
+			await _categoryService.CreateAsync(name);
+			return RedirectToAction(nameof(Categories));
+		}
+
+		[HttpPost]
+		public async Task<IActionResult> DeleteCategory(Guid id)
+		{
+			var success = await _categoryService.DeleteIfUnusedAsync(id);
+
+			if (!success)
+				TempData["Error"] = "Category is in use and cannot be deleted.";
+
+			return RedirectToAction(nameof(Categories));
+		}
+
+		public async Task<IActionResult> Export()
+		{
 			return View();
 		}
 
-		public IActionResult AllIdeas()
+		public async Task<IActionResult> ExportCsv()
 		{
-			return View();
+			var data = await _qaService.ExportIdeasToCsvAsync();
+			return File(data, "text/csv", "Ideas.csv");
 		}
 
-		public IActionResult Statistics()
+		public async Task<IActionResult> ExportZip()
 		{
-			return View();
+			var data = await _qaService.ExportDocumentsToZipAsync();
+			return File(data, "application/zip", "Documents.zip");
 		}
 
-		public IActionResult ExportData()
+		public async Task<IActionResult> DepartmentStats()
 		{
-			return View();
+			var stats = await _qaService.GetDepartmentStatisticsAsync();
+			return View(stats);
 		}
-
-		public IActionResult Categories()
+		public async Task<IActionResult> IdeasWithoutComments()
 		{
-			return View();
-		}
-
-		public IActionResult ClosureDates()
-		{
-			return View();
+			var ideas = await _qaService.GetIdeasWithoutCommentsAsync();
+			return View(ideas);
 		}
 	}
 }

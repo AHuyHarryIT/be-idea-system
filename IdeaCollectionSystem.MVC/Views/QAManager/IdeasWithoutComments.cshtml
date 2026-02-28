@@ -1,0 +1,56 @@
+﻿@using IdeaCollectionSystem.Service.Models.DTOs
+@model IEnumerable<IdeaInfoDto>
+
+@{
+    ViewData["Title"] = "Ideas Without Comments";
+}
+
+<h2 class="mb-4">Ideas Without Comments</h2>
+
+@if (!Model.Any())
+{
+    <div class="alert alert-success">
+        🎉 All ideas have comments. Great engagement!
+    </div>
+}
+else
+{
+    <div class="alert alert-warning">
+        There are <strong>@Model.Count()</strong> ideas without comments.
+    </div>
+
+    <table class="table table-bordered table-hover">
+        <thead class="table-dark">
+            <tr>
+                <th>Title</th>
+                <th>Category</th>
+                <th>Created Date</th>
+                <th>Anonymous</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var idea in Model)
+            {
+                <tr>
+                    <td>@idea.Title</td>
+                    <td>@idea.CategoryName</td>
+                    <td>@idea.CreatedDate.ToString("dd/MM/yyyy HH:mm")</td>
+                    <td>
+                        @if (idea.IsAnonymous)
+                        {
+                            <span class="badge bg-secondary">Yes</span>
+                        }
+                        else
+                        {
+                            <span class="badge bg-success">No</span>
+                        }
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+<a asp-action="Dashboard" class="btn btn-outline-primary mt-3">
+    ← Back to Dashboard
+</a>

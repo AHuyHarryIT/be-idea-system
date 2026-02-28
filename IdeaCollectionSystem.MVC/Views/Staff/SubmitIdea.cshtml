@@ -1,0 +1,58 @@
+﻿@model IdeaCollectionSystem.Models.IdeaViewModel
+
+<div class="container mt-4">
+    <h2>Submit New Idea</h2>
+
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert alert-success">@TempData["SuccessMessage"]</div>
+    }
+
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <div class="alert alert-danger">@TempData["ErrorMessage"]</div>
+    }
+
+    <form asp-action="SubmitIdea" method="post" enctype="multipart/form-data">
+        <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+
+        <div class="mb-3">
+            <label asp-for="Title" class="form-label">Title</label>
+            <input asp-for="Title" class="form-control" />
+            <span asp-validation-for="Title" class="text-danger"></span>
+        </div>
+
+        <div class="mb-3">
+            <label asp-for="Description" class="form-label">Description</label>
+            <textarea asp-for="Description" class="form-control" rows="4"></textarea>
+            <span asp-validation-for="Description" class="text-danger"></span>
+        </div>
+
+        <div class="mb-3">
+            <label asp-for="CategoryId" class="form-label">Category</label>
+            <select asp-for="CategoryId" class="form-select" asp-items="ViewBag.Categories">
+                <option value="">-- Select Category --</option>
+            </select>
+            <span asp-validation-for="CategoryId" class="text-danger"></span>
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Support Documents (Optional)</label>
+            <input type="file" name="SupportingFiles" class="form-control" multiple />
+            <small class="text-muted">Max file size: 10MB. Allowed: .pdf, .doc, .docx, .jpg, .png</small>
+        </div>
+
+        <div class="form-check mb-3">
+            <input asp-for="IsAnonymous" class="form-check-input" />
+            <label class="form-check-label">Post Anonymously</label>
+            <small class="d-block text-muted">Your identity is hidden but stored for security.</small>
+        </div>
+
+        <button type="submit" class="btn btn-primary">Submit Idea</button>
+        <a asp-action="Dashboard" class="btn btn-secondary">Cancel</a>
+    </form>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}
