@@ -8,39 +8,29 @@ namespace IdeaCollectionSystem.API.Controllers
 	public class CategoriesController : ControllerBase
 	{
 		private static readonly List<CategoryDto> Categories = new();
+		private static readonly object CategoriesLock = new();
 
 		[HttpGet]
 		public ActionResult<IEnumerable<CategoryDto>> GetAll()
 		{
-			return Ok(Categories);
+			List<CategoryDto> categoriesSnapshot;
+			lock (CategoriesLock)
+			{
+				categoriesSnapshot = Categories.ToList();
+			}
+
+			return Ok(categoriesSnapshot);
 		}
 
 		[HttpGet("{id:guid}")]
 		public ActionResult<CategoryDto> GetById(Guid id)
 		{
-			var category = Categories.FirstOrDefault(c => c.Id == id);
-			return category is null ? NotFound() : Ok(category);
-		}
-
-		[HttpPost]
-		public ActionResult<CategoryDto> Create([FromBody] CategoryDto dto)
-		{
-			if (string.IsNullOrWhiteSpace(dto.Name))
+			CategoryDto? category;
+			lock (CategoriesLock)
 			{
-				return BadRequest("Name is required.");
+				category = Categories.FirstOrDefault(c => c.Id == id);
 			}
-
-			var category = new CategoryDto
-			{
-				Id = Guid.NewGuid(),
-				Name = dto.Name.Trim(),
-				CreatedAt = DateTime.UtcNow,
-				UpdateAt = DateTime.UtcNow
-			};
-
-			Categories.Add(category);
-
-			return CreatedAtAction(nameof(GetById), new { id = category.Id }, category);
+			return category is null ? NotFound() : Ok(category);
 		}
 	}
 }
