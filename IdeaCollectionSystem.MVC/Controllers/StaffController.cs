@@ -90,6 +90,7 @@ namespace IdeaCollectionSystem.MVC.Controllers
 			// Lấy claims từ user
 			var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
 			var departmentIdClaim = User.FindFirstValue("DepartmentId");
+			var departmentId = 0;
 
 			// Kiểm tra claims
 			if (string.IsNullOrEmpty(userIdClaim))
@@ -97,16 +98,14 @@ namespace IdeaCollectionSystem.MVC.Controllers
 				ModelState.AddModelError("", "User not found.");
 			}
 
-			if (string.IsNullOrEmpty(departmentIdClaim))
+			if (!string.IsNullOrEmpty(departmentIdClaim))
 			{
-				ModelState.AddModelError("", "Department not found. Please contact admin.");
+				int.TryParse(departmentIdClaim, out departmentId);
 			}
 
 			// Kiểm tra ModelState sau khi đã kiểm tra claims
 			if (ModelState.IsValid)
 			{
-				int departmentId = int.Parse(departmentIdClaim!);
-
 				// Xử lý file upload nếu có
 				List<string>? filePaths = null;
 				if (Request.Form.Files.Count > 0)
@@ -123,7 +122,7 @@ namespace IdeaCollectionSystem.MVC.Controllers
 				{
 					Title = model.Title,
 					Description = model.Description,
-					CategoryId = Guid.Parse(model.CategoryId.ToString()),
+					CategoryId = model.CategoryId,
 					DepartmentId = departmentId,
 					IsAnonymous = model.IsAnonymous,
 					FilePaths = filePaths // Gán file paths nếu có
