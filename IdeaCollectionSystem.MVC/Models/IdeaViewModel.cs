@@ -13,7 +13,7 @@ namespace IdeaCollectionSystem.Models
 		public string Description { get; set; }
 
 		[Required(ErrorMessage = "Please select a category")]
-		public int CategoryId { get; set; }
+		public Guid CategoryId { get; set; }
 
 		public bool IsAnonymous { get; set; }
 
