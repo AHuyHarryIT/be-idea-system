@@ -20,18 +20,23 @@ namespace IdeaCollectionSystem.ApplicationCore.Entitites
 
 		[ForeignKey("RoleId")]
 		public Guid RoleId { get; set; }
+		[NotMapped]
 		public Role? Role { get; set; }
 
 		[ForeignKey("DepartmentId")]
 		public Guid DepartmentId { get; set; }
+		[NotMapped]
 		public Department? Department { get; set; }
 		public DateTime CreatedAt { get; set; } = DateTime.UtcNow;  
 		public DateTime UpdatedAt { get; set; } = DateTime.UtcNow; 
 		public DateTime? DeletedAt { get; set; }
+		[NotMapped]
 		public ICollection<Role> Roles { get; set; } = new List<Role>();
+		[NotMapped]
 		public ICollection<Department> Departments { get; set; } = new List<Department>();
-
+		[NotMapped]
 		public ICollection<Comment> Comments { get; set; } = new List<Comment>();
+		[NotMapped]
 		public ICollection<Idea> Ideas { get; set; } = new List<Idea>();
 
 
