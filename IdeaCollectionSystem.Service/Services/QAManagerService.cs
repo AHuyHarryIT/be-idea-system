@@ -106,7 +106,7 @@ namespace IdeaCollectionSystem.Service.Services
 				.Select(i => new IdeaInfoDto
 				{
 					Id = i.Id.GetHashCode(),
-					Title = i.Text,
+					Text = i.Text,
 					CategoryName = i.Category != null ? i.Category.Name : "No Category",
 					CreatedDate = i.CreatedAt,
 					IsAnonymous = i.IsAnonymous

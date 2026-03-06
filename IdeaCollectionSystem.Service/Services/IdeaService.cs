@@ -33,45 +33,40 @@ namespace IdeaCollectionSystem.Service.Services
 		//  Create idea — tất cả 4 role đều submit được
 		public async Task<bool> CreateIdeaAsync(IdeaCreateDto dto, string userId)
 		{
-			// userId đến từ ASP.NET Identity (IdeaUser.Id — string)
-			var ideaUser = await _userManager.FindByIdAsync(userId);
-			if (ideaUser == null) return false;
+			if (!Guid.TryParse(userId, out var userGuid))
+				return false;
 
-			// Tìm bản ghi User tương ứng trong bảng Users (custom) theo Email
-			var user = await _context.Users
-				.FirstOrDefaultAsync(u => u.UserName == ideaUser.UserName);
+			var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == userGuid);
+			if (user == null) return false;
 
-			// Nếu không có bản ghi custom User, vẫn cho phép submit
-			// nhưng cần có DepartmentId — dùng Guid.Empty nếu chưa có
-			var departmentId = user?.DepartmentId ?? Guid.Empty;
+			//  Xác định DepartmentId: ưu tiên từ dto, fallback về user's department
+			var departmentId = dto.DepartmentId != Guid.Empty ? dto.DepartmentId : user.DepartmentId;
 
-			// Find active submission
+			//  Validate DepartmentId tồn tại trong DB trước khi insert
+			var departmentExists = await _context.Departments.AnyAsync(d => d.Id == departmentId);
+			if (!departmentExists) return false;
+
 			var submission = await _context.Submissions
 				.OrderByDescending(s => s.ClousureDate)
 				.FirstOrDefaultAsync();
 
 			if (submission == null) return false;
 
-			// Validate CategoryId
-			if (dto.CategoryId == Guid.Empty) return false;
-
 			var idea = new Idea
 			{
 				Id = Guid.NewGuid(),
-				Text = dto.Text,
+				Text = dto.Text,          
 				Description = dto.Description,
 				CategoryId = dto.CategoryId,
-				DepartmentId = departmentId,
-				UserId = user?.Id ?? Guid.Empty,
+				DepartmentId = departmentId, 
+				UserId = userGuid,
 				SubmissionId = submission.Id,
 				IsAnonymous = dto.IsAnonymous,
-				CreatedAt = DateTime.UtcNow,
-				UpdatedAt = DateTime.UtcNow
+				CreatedAt = DateTime.UtcNow
 			};
 
 			await _context.Ideas.AddAsync(idea);
 
-			// Lưu file documents nếu có
 			if (dto.FilePaths != null && dto.FilePaths.Any())
 			{
 				foreach (var path in dto.FilePaths)
@@ -105,7 +100,7 @@ namespace IdeaCollectionSystem.Service.Services
 				.Select(i => new IdeaInfoDto
 				{
 					Id = i.Id.GetHashCode(),
-					Title = i.Text,
+					Text = i.Text,
 					CategoryName = i.Category != null ? i.Category.Name : "No Category",
 					DepartmentName = i.Department != null ? i.Department.Name : "",
 					AuthorName = i.IsAnonymous ? "Anonymous" : (i.User != null ? i.User.FirstName + " " + i.User.LastName : "Unknown"),
@@ -135,7 +130,7 @@ namespace IdeaCollectionSystem.Service.Services
 				.Select(i => new IdeaInfoDto
 				{
 					Id = i.Id.GetHashCode(),
-					Title = i.Text,
+					Text = i.Text,
 					CategoryName = i.Category != null ? i.Category.Name : "No Category",
 					DepartmentName = i.Department != null ? i.Department.Name : "",
 					AuthorName = i.IsAnonymous ? "Anonymous" : (i.User != null ? i.User.FirstName + " " + i.User.LastName : "Unknown"),
@@ -175,7 +170,7 @@ namespace IdeaCollectionSystem.Service.Services
 				.Select(i => new IdeaInfoDto
 				{
 					Id = i.Id.GetHashCode(),
-					Title = i.Text,
+					Text = i.Text,
 					CategoryName = i.Category != null ? i.Category.Name : "No Category",
 					CreatedDate = i.CreatedAt,
 					IsAnonymous = i.IsAnonymous,
@@ -201,7 +196,7 @@ namespace IdeaCollectionSystem.Service.Services
 			return new IdeaInfoDto
 			{
 				Id = idea.Id.GetHashCode(),
-				Title = idea.Text,
+				Text = idea.Text,
 				CategoryName = idea.Category?.Name ?? "No Category",
 				DepartmentName = idea.Department?.Name ?? "",
 				AuthorName = idea.IsAnonymous ? "Anonymous" : (idea.User != null ? idea.User.FirstName + " " + idea.User.LastName : "Unknown"),

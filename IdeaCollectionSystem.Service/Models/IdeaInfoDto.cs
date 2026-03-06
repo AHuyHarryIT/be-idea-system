@@ -3,7 +3,7 @@
 	public class IdeaInfoDto
 	{
 		public int Id { get; set; }
-		public string Title { get; set; } = string.Empty;
+		public string Text { get; set; } = string.Empty;
 		public string CategoryName { get; set; } = string.Empty;
 		public string DepartmentName { get; set; } = string.Empty;
 		public string AuthorName { get; set; } = string.Empty;
