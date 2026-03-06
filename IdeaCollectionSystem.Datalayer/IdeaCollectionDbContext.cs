@@ -1,6 +1,7 @@
 ﻿using IdeaCollectionIdea.Common.Constants;
 using IdeaCollectionSystem.ApplicationCore.Entitites;
 using Microsoft.EntityFrameworkCore;
+using System;
 
 namespace IdeaCollectionSystem.Datalayer
 {
@@ -21,6 +22,7 @@ namespace IdeaCollectionSystem.Datalayer
 		public DbSet<Idea> Ideas { get; set; }
 		public DbSet<IdeaReactions> IdeaReactions { get; set; }
 		public DbSet<EmailOutBox> EmailOutBoxes { get; set; }
+		public DbSet<IdeaDocuments> IdeaDocuments { get; set; }
 		#endregion
 
 		protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -122,10 +124,9 @@ namespace IdeaCollectionSystem.Datalayer
 			{
 				entity.ToTable("IdeaReactions");
 
-				// Khóa chính phức hợp
 				entity.HasKey(x => new { x.UserId, x.IdeaId });
 
-				// Quan hệ với Idea
+			
 				entity.HasOne(x => x.Idea)
 					.WithMany(x => x.IdeaReactions)
 					.HasForeignKey(x => x.IdeaId)

@@ -22,7 +22,7 @@ namespace IdeaCollectionSystem.Service.Services
 				.OrderByDescending(s => s.ClousureDate)
 				.FirstOrDefaultAsync();
 
-			if (latestSubmission == null) return false;
+			if (latestSubmission == null) return true; 
 			return DateTime.UtcNow > latestSubmission.ClousureDate;
 		}
 
@@ -46,6 +46,7 @@ namespace IdeaCollectionSystem.Service.Services
 			{
 				Id = Guid.NewGuid(),
 				Text = dto.Text,
+				Description = dto.Description, // ← THÊM
 				CategoryId = dto.CategoryId,
 				DepartmentId = user.DepartmentId,
 				UserId = userGuid,
@@ -55,11 +56,31 @@ namespace IdeaCollectionSystem.Service.Services
 			};
 
 			await _context.Ideas.AddAsync(idea);
+
+			// Lưu file documents nếu có
+			if (dto.FilePaths != null && dto.FilePaths.Any())
+			{
+				foreach (var path in dto.FilePaths)
+				{
+					var doc = new IdeaDocuments
+					{
+						Id = Guid.NewGuid(),
+						IdeaId = idea.Id,
+						StoredPath = path,
+						OriginalFileName = Path.GetFileName(path),
+						MimeType = "",
+						FizeSize = 0,
+						UploadtedAt = DateTime.UtcNow
+					};
+					await _context.IdeaDocuments.AddAsync(doc);
+				}
+			}
+
 			await _context.SaveChangesAsync();
 			return true;
 		}
 
-		//  Get all ideas (Admin + QAManager) ─
+		//  Get all ideas (Admin + QAManager) 
 		public async Task<IEnumerable<IdeaInfoDto>> GetAllIdeasAsync()
 		{
 			return await _context.Ideas

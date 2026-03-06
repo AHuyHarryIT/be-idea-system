@@ -25,8 +25,8 @@ namespace IdeaCollectionSystem.ApplicationCore.Entitites
 		[ForeignKey("DepartmentId")]
 		public Guid DepartmentId { get; set; }
 		public Department? Department { get; set; }
-		public DateTime CreatedAt { get; set; }	= DateTime.Now;
-		public DateTime UpdatedAt { get; set; }	= DateTime.Now;
+		public DateTime CreatedAt { get; set; } = DateTime.UtcNow;  
+		public DateTime UpdatedAt { get; set; } = DateTime.UtcNow; 
 		public DateTime? DeletedAt { get; set; }
 		public ICollection<Role> Roles { get; set; } = new List<Role>();
 		public ICollection<Department> Departments { get; set; } = new List<Department>();

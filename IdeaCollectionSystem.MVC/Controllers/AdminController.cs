@@ -99,14 +99,14 @@ namespace IdeaCollectionSystem.MVC.Controllers
 		public async Task<IActionResult> ExportCsv()
 		{
 			var data = await _qaService.ExportIdeasToCsvAsync();
-			return File(data, "text/csv", $"Ideas_{DateTime.Now:yyyyMMdd}.csv");
+			return File(data, "text/csv", $"Ideas_{DateTime.UtcNow:yyyyMMdd}.csv");
 		}
 
 		[Authorize(Policy = PolicyConstants.CanExportData)]
 		public async Task<IActionResult> ExportZip()
 		{
 			var data = await _qaService.ExportDocumentsToZipAsync();
-			return File(data, "application/zip", $"Documents_{DateTime.Now:yyyyMMdd}.zip");
+			return File(data, "application/zip", $"Documents_{DateTime.UtcNow:yyyyMMdd}.zip");
 		}
 
 		//  Closure Dates 

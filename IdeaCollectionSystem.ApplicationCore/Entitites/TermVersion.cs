@@ -14,6 +14,6 @@ namespace IdeaCollectionSystem.ApplicationCore.Entitites
 		public string Version { get; set; } = string.Empty;
 		public string Content { get; set; } = string.Empty;
 		public bool IsActive { get; set; } = false;
-		public DateTime CreatedAt { get; set; } = DateTime.Now;
+		public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 	}
 }

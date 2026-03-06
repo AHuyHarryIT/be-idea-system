@@ -116,7 +116,7 @@ namespace IdeaCollectionSystem.MVC.Controllers
 
 				var dto = new IdeaCreateDto
 				{
-					Text = model.Title,
+					Text = model.Text,
 					Description = model.Description,
 					CategoryId = model.CategoryId,
 					IsAnonymous = model.IsAnonymous,

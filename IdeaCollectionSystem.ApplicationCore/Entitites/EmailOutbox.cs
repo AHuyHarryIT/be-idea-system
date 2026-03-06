@@ -18,8 +18,9 @@ namespace IdeaCollectionSystem.ApplicationCore.Entitites
 			FAILED = 2
 		}
 
-		public DateTime CreatedAt { get; set; } = DateTime.Now;
-		public DateTime SentAt { get; set; } = DateTime.Now;
+		public DateTime CreatedAt { get; set; } = DateTime.UtcNow;  
+		public DateTime SentAt { get; set; } = DateTime.UtcNow;    
+
 		public string Error { get; set; } = string.Empty;
 
 		public Guid IdeaId { get; set; }

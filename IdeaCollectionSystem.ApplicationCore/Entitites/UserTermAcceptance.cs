@@ -20,7 +20,7 @@ namespace IdeaCollectionSystem.ApplicationCore.Entitites
 		[ForeignKey("TermId")]
 		public Guid TermId { get; set; }
 		public TermVersion? Term { get; set; }
-		public DateTime AcceptedAt { get; set; } = DateTime.Now;
+		public DateTime AcceptedAt { get; set; } = DateTime.UtcNow;
 		public string  IpAddress { get; set; } = string.Empty;
 		public string UserAgent { get; set; } = string.Empty; 
 		public ICollection<User> Users { get; set; } = new List<User>();
