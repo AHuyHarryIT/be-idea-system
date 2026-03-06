@@ -1,70 +1,100 @@
 ﻿@using IdeaCollectionSystem.Service.Models.DTOs
-@model QADashboardDto
-
+@model QaDashboardDto
 @{
-    ViewData["Title"] = "QA Dashboard";
+    ViewData["Title"] = "QA Manager Dashboard";
 }
 
-<h2 class="mb-4">QA Manager Dashboard</h2>
+<div class="container-fluid mt-4">
+    <h2 class="mb-4"><i class="fas fa-chart-bar text-primary me-2"></i>QA Manager Dashboard</h2>
 
-<div class="row">
-    <div class="col-md-3">
-        <div class="card text-white bg-primary mb-3">
-            <div class="card-body">
-                <h5>Total Ideas</h5>
-                <h3>@Model.TotalIdeas</h3>
+    <!-- Stats -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-2">
+            <div class="card bg-primary text-white">
+                <div class="card-body text-center">
+                    <i class="fas fa-lightbulb fa-2x mb-1"></i><h3>@Model.TotalIdeas</h3><small>Total Ideas</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card bg-success text-white">
+                <div class="card-body text-center">
+                    <i class="fas fa-tags fa-2x mb-1"></i><h3>@Model.TotalCategories</h3><small>Categories</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card bg-warning text-white">
+                <div class="card-body text-center">
+                    <i class="fas fa-building fa-2x mb-1"></i><h3>@Model.TotalDepartments</h3><small>Departments</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card bg-danger text-white">
+                <div class="card-body text-center">
+                    <i class="fas fa-comment-slash fa-2x mb-1"></i><h3>@Model.IdeasWithoutComments</h3><small>No Comments</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card bg-info text-white">
+                <div class="card-body text-center">
+                    <i class="fas fa-calendar fa-2x mb-1"></i><h3>@Model.IdeasThisMonth</h3><small>This Month</small>
+                </div>
             </div>
         </div>
     </div>
 
-    <div class="col-md-3">
-        <div class="card text-white bg-success mb-3">
-            <div class="card-body">
-                <h5>Total Categories</h5>
-                <h3>@Model.TotalCategories</h3>
+    <!-- Quick Actions -->
+    <div class="row g-3">
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body text-center py-4">
+                    <i class="fas fa-lightbulb fa-3x text-primary mb-3"></i><h6>All Ideas</h6>
+                    <a asp-action="AllIdeas" class="btn btn-outline-primary w-100">View All Ideas</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body text-center py-4">
+                    <i class="fas fa-tags fa-3x text-success mb-3"></i><h6>Categories</h6>
+                    <a asp-action="Categories" class="btn btn-outline-success w-100">Manage Categories</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body text-center py-4">
+                    <i class="fas fa-calendar-check fa-3x text-warning mb-3"></i><h6>Closure Dates</h6>
+                    <a asp-action="ClosureDates" class="btn btn-outline-warning w-100">Set Closure Dates</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body text-center py-4">
+                    <i class="fas fa-file-export fa-3x text-info mb-3"></i><h6>Export</h6>
+                    <a asp-action="Export" class="btn btn-outline-info w-100">Export CSV/ZIP</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body text-center py-4">
+                    <i class="fas fa-chart-pie fa-3x text-danger mb-3"></i><h6>Statistics</h6>
+                    <a asp-action="Statistics" class="btn btn-outline-danger w-100">View Stats</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body text-center py-4">
+                    <i class="fas fa-comment-slash fa-3x text-secondary mb-3"></i><h6>Ideas w/o Comments</h6>
+                    <a asp-action="IdeasWithoutComments" class="btn btn-outline-secondary w-100">View</a>
+                </div>
             </div>
         </div>
     </div>
-
-    <div class="col-md-3">
-        <div class="card text-white bg-warning mb-3">
-            <div class="card-body">
-                <h5>Total Departments</h5>
-                <h3>@Model.TotalDepartments</h3>
-            </div>
-        </div>
-    </div>
-
-    <div class="col-md-3">
-        <div class="card text-white bg-danger mb-3">
-            <div class="card-body">
-                <h5>Ideas Without Comments</h5>
-                <h3>@Model.IdeasWithoutComments</h3>
-            </div>
-        </div>
-    </div>
-</div>
-
-<hr />
-
-<div class="mt-4">
-    <a asp-action="ExportCsv" class="btn btn-outline-primary">
-        Export Ideas to CSV
-    </a>
-
-    <a asp-action="ExportZip" class="btn btn-outline-success">
-        Download All Documents (ZIP)
-    </a>
-
-    <a asp-action="DepartmentStats" class="btn btn-outline-info">
-        View Department Statistics
-    </a>
-
-    <a asp-action="IdeasWithoutComments" class="btn btn-outline-danger">
-        View Ideas Without Comments
-    </a>
-
-    <a asp-action="Categories" class="btn btn-outline-dark">
-        Manage Categories
-    </a>
 </div>

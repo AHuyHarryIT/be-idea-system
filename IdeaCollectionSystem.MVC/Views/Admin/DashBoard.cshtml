@@ -1,53 +1,132 @@
-﻿<!-- Views/Admin/Dashboard.cshtml -->
+﻿@using IdeaCollectionSystem.Service.Models.DTOs
+@model QaDashboardDto
 @{
     ViewData["Title"] = "Administrator Dashboard";
 }
 
-<div class="container mt-4">
-    <h2>Administrator Dashboard</h2>
-    <hr />
+<div class="container-fluid mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="fas fa-tachometer-alt text-primary me-2"></i>Administrator Dashboard</h2>
+        <span class="text-muted">@DateTime.Now.ToString("dddd, dd MMMM yyyy")</span>
+    </div>
 
+    @if (TempData["Success"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show">@TempData["Success"]<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+    }
+
+    <!-- Stats Cards -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-2">
+            <div class="card bg-primary text-white h-100">
+                <div class="card-body text-center">
+                    <i class="fas fa-lightbulb fa-2x mb-2"></i>
+                    <h3 class="mb-0">@Model.TotalIdeas</h3>
+                    <small>Total Ideas</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card bg-success text-white h-100">
+                <div class="card-body text-center">
+                    <i class="fas fa-users fa-2x mb-2"></i>
+                    <h3 class="mb-0">@Model.TotalUsers</h3>
+                    <small>Total Users</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card bg-warning text-white h-100">
+                <div class="card-body text-center">
+                    <i class="fas fa-tags fa-2x mb-2"></i>
+                    <h3 class="mb-0">@Model.TotalCategories</h3>
+                    <small>Categories</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card bg-info text-white h-100">
+                <div class="card-body text-center">
+                    <i class="fas fa-building fa-2x mb-2"></i>
+                    <h3 class="mb-0">@Model.TotalDepartments</h3>
+                    <small>Departments</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card bg-danger text-white h-100">
+                <div class="card-body text-center">
+                    <i class="fas fa-comment-slash fa-2x mb-2"></i>
+                    <h3 class="mb-0">@Model.IdeasWithoutComments</h3>
+                    <small>No Comments</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card bg-secondary text-white h-100">
+                <div class="card-body text-center">
+                    <i class="fas fa-calendar-alt fa-2x mb-2"></i>
+                    <h3 class="mb-0">@Model.IdeasThisMonth</h3>
+                    <small>This Month</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <h5 class="text-muted mb-3">Quick Actions</h5>
     <div class="row g-3">
-        <div class="col-md-6 col-lg-3">
-            <div class="card">
-                <div class="card-body">
-                    <h6 class="text-muted">Users</h6>
-                    <a asp-action="Users" class="btn btn-sm btn-outline-primary w-100 mt-2">
-                        Manage Users
-                    </a>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body text-center py-4">
+                    <i class="fas fa-users fa-3x text-primary mb-3"></i>
+                    <h6>Manage Users</h6>
+                    <a asp-action="Users" class="btn btn-outline-primary w-100 mt-2">Go to Users</a>
                 </div>
             </div>
         </div>
-
-        <div class="col-md-6 col-lg-3">
-            <div class="card">
-                <div class="card-body">
-                    <h6 class="text-muted">Departments</h6>
-                    <a asp-action="Departments" class="btn btn-sm btn-outline-success w-100 mt-2">
-                        Manage Departments
-                    </a>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body text-center py-4">
+                    <i class="fas fa-tags fa-3x text-success mb-3"></i>
+                    <h6>Manage Categories</h6>
+                    <a asp-action="Categories" class="btn btn-outline-success w-100 mt-2">Go to Categories</a>
                 </div>
             </div>
         </div>
-
-        <div class="col-md-6 col-lg-3">
-            <div class="card">
-                <div class="card-body">
-                    <h6 class="text-muted">Settings</h6>
-                    <a asp-action="Settings" class="btn btn-sm btn-outline-warning w-100 mt-2">
-                        System Settings
-                    </a>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body text-center py-4">
+                    <i class="fas fa-calendar-check fa-3x text-warning mb-3"></i>
+                    <h6>Set Closure Dates</h6>
+                    <a asp-action="ClosureDates" class="btn btn-outline-warning w-100 mt-2">Manage Submissions</a>
                 </div>
             </div>
         </div>
-
-        <div class="col-md-6 col-lg-3">
-            <div class="card">
-                <div class="card-body">
-                    <h6 class="text-muted">All Ideas</h6>
-                    <a asp-controller="Ideas" asp-action="Index" class="btn btn-sm btn-outline-secondary w-100 mt-2">
-                        View Ideas
-                    </a>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body text-center py-4">
+                    <i class="fas fa-file-export fa-3x text-info mb-3"></i>
+                    <h6>Export Data</h6>
+                    <a asp-action="Export" class="btn btn-outline-info w-100 mt-2">Export CSV/ZIP</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body text-center py-4">
+                    <i class="fas fa-lightbulb fa-3x text-secondary mb-3"></i>
+                    <h6>All Ideas</h6>
+                    <a asp-action="AllIdeas" class="btn btn-outline-secondary w-100 mt-2">Browse Ideas</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body text-center py-4">
+                    <i class="fas fa-chart-bar fa-3x text-danger mb-3"></i>
+                    <h6>Statistics</h6>
+                    <a asp-action="Statistics" class="btn btn-outline-danger w-100 mt-2">View Stats</a>
                 </div>
             </div>
         </div>

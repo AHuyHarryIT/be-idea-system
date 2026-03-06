@@ -1,9 +1,4 @@
-﻿<h2>Export Data</h2>
-
-<a asp-action="ExportCsv" class="btn btn-success">
-    Download Ideas CSV
-</a>
-
-<a asp-action="ExportZip" class="btn btn-warning">
-    Download Documents ZIP
-</a>
+﻿@{
+    ViewData["Title"] = "Export Data";
+}
+<partial name="~/Views/Admin/Export.cshtml" />

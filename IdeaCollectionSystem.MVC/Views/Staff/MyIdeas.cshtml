@@ -1,28 +1,86 @@
 ﻿@using IdeaCollectionSystem.Service.Models.DTOs
-@model IEnumerable<IdeaCollectionSystem.Service.Models.DTOs.IdeaInfoDto>
+@model IEnumerable<IdeaInfoDto>
+@{
+    ViewData["Title"] = "My Ideas";
+}
 
 <div class="container mt-4">
-    <h3>Staff Ideas</h3>
-    <div class="list-group">
-        @foreach (var item in Model)
-        {
-            <div class="list-group-item mb-3 shadow-sm">
-                <h5>@(item.IsAnonymous ? "Anonymous" : item.IsAnonymous) - @item.Title</h5>
-                <p>@item.Title</p>
-                <div class="d-flex justify-content-between align-items-center">
-                    <span class="badge bg-secondary">@item.CategoryName</span>
-                    <small>Submitted on: @item.CreatedDate.ToShortDateString()</small>
-                </div>
-                <div class="mt-2">
-                    <button class="btn btn-sm btn-outline-success">👍 @item.ThumbsUpCount</button>
-                    <button class="btn btn-sm btn-outline-danger">👎 @item.ThumbsDownCount</button>
-                </div>
-            </div>
-        }
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h3><i class="fas fa-lightbulb text-warning me-2"></i>My Ideas</h3>
+        <div>
+            <a asp-action="Terms" class="btn btn-primary me-2">
+                <i class="fas fa-plus me-1"></i>Submit New
+            </a>
+            <a asp-action="Dashboard" class="btn btn-outline-secondary">Back</a>
+        </div>
     </div>
 
-    <nav class="mt-4">
-        <ul class="pagination">
-        </ul>
-    </nav>
+    @if (!Model.Any())
+    {
+        <div class="alert alert-info text-center">
+            <i class="fas fa-info-circle me-2"></i>You haven't submitted any ideas yet.
+            <a asp-action="Terms" class="alert-link">Submit your first idea!</a>
+        </div>
+    }
+    else
+    {
+        <div class="row g-3">
+            @foreach (var idea in Model)
+            {
+                <div class="col-12">
+                    <div class="card shadow-sm border-0">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <h5 class="mb-1">
+                                        @idea.Title
+                                        @if (idea.IsAnonymous)
+                                        {
+                                            <span class="badge bg-secondary ms-1">Anonymous</span>
+                                        }
+                                    </h5>
+                                    <div class="text-muted small">
+                                        <span class="badge bg-light text-dark border me-2">@idea.CategoryName</span>
+                                        <i class="fas fa-clock me-1"></i>@idea.CreatedDate.ToString("dd/MM/yyyy HH:mm")
+                                    </div>
+                                </div>
+                                <!-- Vote Buttons -->
+                                <div class="d-flex align-items-center gap-2">
+                                    <button class="btn btn-sm btn-outline-success vote-btn"
+                                            data-idea-id="@idea.Id" data-is-thumbsup="true">
+                                        <i class="fas fa-thumbs-up"></i> @idea.ThumbsUpCount
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-danger vote-btn"
+                                            data-idea-id="@idea.Id" data-is-thumbsup="false">
+                                        <i class="fas fa-thumbs-down"></i> @idea.ThumbsDownCount
+                                    </button>
+                                    <span class="badge bg-light text-dark border">
+                                        <i class="fas fa-comment me-1"></i>@idea.CommentCount
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
 </div>
+
+@section Scripts {
+    <script>
+        document.querySelectorAll('.vote-btn').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                var ideaId = this.dataset.ideaId;
+                var isThumbsUp = this.dataset.isThumbsup === 'true';
+                fetch('/Staff/Vote', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: 'ideaId=' + ideaId + '&isThumbsUp=' + isThumbsUp
+                })
+                .then(r => r.json())
+                .then(data => { if (data.success) location.reload(); });
+            });
+        });
+    </script>
+}

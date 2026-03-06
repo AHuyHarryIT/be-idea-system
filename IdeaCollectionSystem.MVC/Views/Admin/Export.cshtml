@@ -1,0 +1,41 @@
+﻿@{
+    ViewData["Title"] = "Export Data";
+    var isAdmin = User.IsInRole("Administrator");
+    var ctrl = isAdmin ? "Admin" : "QAManager";
+}
+
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="fas fa-file-export text-info me-2"></i>Export Data</h2>
+        <a asp-controller="@ctrl" asp-action="Dashboard" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-1"></i>Back
+        </a>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-md-5">
+            <div class="card border-0 shadow h-100">
+                <div class="card-body text-center py-5">
+                    <i class="fas fa-file-csv fa-4x text-success mb-3"></i>
+                    <h4>Export Ideas to CSV</h4>
+                    <p class="text-muted">Download all ideas with metadata (title, author, category, department, votes, comments) as a CSV file.</p>
+                    <a asp-controller="@ctrl" asp-action="ExportCsv" class="btn btn-success btn-lg mt-2">
+                        <i class="fas fa-download me-2"></i>Download CSV
+                    </a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-5">
+            <div class="card border-0 shadow h-100">
+                <div class="card-body text-center py-5">
+                    <i class="fas fa-file-archive fa-4x text-warning mb-3"></i>
+                    <h4>Export Documents to ZIP</h4>
+                    <p class="text-muted">Download all uploaded supporting documents as a ZIP archive.</p>
+                    <a asp-controller="@ctrl" asp-action="ExportZip" class="btn btn-warning btn-lg mt-2">
+                        <i class="fas fa-download me-2"></i>Download ZIP
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

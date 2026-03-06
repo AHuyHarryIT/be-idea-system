@@ -1,22 +1,48 @@
-﻿<div class="container py-4">
-    <h3>Staff Workspace</h3>
+﻿@{
+    ViewData["Title"] = "Staff Dashboard";
+}
+
+<div class="container py-4">
+    <h3><i class="fas fa-user-circle text-primary me-2"></i>Staff Workspace</h3>
+    <p class="text-muted">Welcome back, @User.Identity!.Name</p>
+
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <div class="alert alert-danger">@TempData["ErrorMessage"]</div>
+    }
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert alert-success">@TempData["SuccessMessage"]</div>
+    }
+
     <div class="row g-4 mt-2">
         <div class="col-md-4">
-            <div class="card border-primary h-100">
-                <div class="card-body text-center">
-                    <i class="bi bi-lightbulb fs-1 text-primary"></i>
-                    <h5 class="mt-3">New Idea</h5>
-                    <p class="small text-muted">Contribute to University improvements.</p>
+            <div class="card border-primary h-100 shadow-sm">
+                <div class="card-body text-center py-4">
+                    <i class="fas fa-plus-circle fa-3x text-primary mb-3"></i>
+                    <h5>Submit New Idea</h5>
+                    <p class="small text-muted">Contribute your ideas for university improvement.</p>
                     <a asp-action="Terms" class="btn btn-primary w-100">Submit Now</a>
                 </div>
             </div>
         </div>
         <div class="col-md-4">
-            <div class="card h-100">
-                <div class="card-body text-center">
-                    <i class="bi bi-person-badge fs-1"></i>
-                    <h5 class="mt-3">My Contributions</h5>
-                    <a asp-action="MyIdeas" class="btn btn-outline-secondary w-100">View My Ideas</a>
+            <div class="card h-100 shadow-sm">
+                <div class="card-body text-center py-4">
+                    <i class="fas fa-list fa-3x text-info mb-3"></i>
+                    <h5>My Ideas</h5>
+                    <p class="small text-muted">View and track your submitted ideas.</p>
+                    <a asp-action="MyIdeas" class="btn btn-outline-info w-100">View My Ideas</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card h-100 shadow-sm">
+                <div class="card-body text-center py-4">
+                    <i class="fas fa-search fa-3x text-success mb-3"></i>
+                    <h5>Browse All Ideas</h5>
+                    <p class="small text-muted">Explore and vote on ideas from all colleagues.</p>
+                    <a asp-action="BrowseIdeas" class="btn btn-outline-success w-100">Browse Ideas</a>
                 </div>
             </div>
         </div>

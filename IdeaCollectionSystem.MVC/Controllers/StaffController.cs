@@ -1,5 +1,4 @@
 ﻿using IdeaCollectionIdea.Common.Constants;
-using IdeaCollectionSystem.ApplicationCore.Entitites;
 using IdeaCollectionSystem.Models;
 using IdeaCollectionSystem.Service.Interfaces;
 using IdeaCollectionSystem.Service.Models.DTOs;
@@ -22,17 +21,12 @@ namespace IdeaCollectionSystem.MVC.Controllers
 			_categoryService = categoryService;
 		}
 
-		public IActionResult Dashboard()
-		{
-			return View();
-		}
+		// GET /Staff/Dashboard
+		public IActionResult Dashboard() => View();
 
-		// Terms
+		// ─── Terms ────────────────────────────────────────────────────────────
 		[HttpGet]
-		public IActionResult Terms()
-		{
-			return View();
-		}
+		public IActionResult Terms() => View();
 
 		[HttpPost]
 		public IActionResult AcceptTerms(bool agree)
@@ -42,29 +36,31 @@ namespace IdeaCollectionSystem.MVC.Controllers
 				HttpContext.Session.SetString("AgreedTerms", "true");
 				return RedirectToAction(nameof(SubmitIdea));
 			}
-			ModelState.AddModelError("", "You must agree to the Terms and Conditions to proceed.");
+			ModelState.AddModelError("", "You must agree to the Terms and Conditions.");
 			return View("Terms");
 		}
 
-		// My Ideas
+		//  My Ideas 
 		public async Task<IActionResult> MyIdeas()
 		{
 			var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-
 			var ideas = await _ideaService.GetIdeasByStaffAsync(userId!);
-
 			return View(ideas ?? new List<IdeaInfoDto>());
 		}
 
-		// Submit Idea
+		//  Browse All Ideas 
+		public async Task<IActionResult> BrowseIdeas()
+		{
+			var ideas = await _ideaService.GetAllIdeasAsync();
+			return View(ideas);
+		}
+
+		//  Submit Idea 
 		[HttpGet]
 		public async Task<IActionResult> SubmitIdea()
 		{
-		
 			if (HttpContext.Session.GetString("AgreedTerms") != "true")
-			{
 				return RedirectToAction(nameof(Terms));
-			}
 
 			if (await _ideaService.IsClosureDatePassedAsync())
 			{
@@ -74,7 +70,6 @@ namespace IdeaCollectionSystem.MVC.Controllers
 
 			var categories = await _categoryService.GetAllActiveAsync();
 			ViewBag.Categories = new SelectList(categories, "Id", "Name");
-
 			return View();
 		}
 
@@ -83,14 +78,10 @@ namespace IdeaCollectionSystem.MVC.Controllers
 		public async Task<IActionResult> SubmitIdea(IdeaViewModel model)
 		{
 			if (!User.Identity!.IsAuthenticated)
-			{
 				return RedirectToAction("Login", "Account");
-			}
 
 			if (HttpContext.Session.GetString("AgreedTerms") != "true")
-			{
 				return RedirectToAction(nameof(Terms));
-			}
 
 			if (await _ideaService.IsClosureDatePassedAsync())
 			{
@@ -99,11 +90,8 @@ namespace IdeaCollectionSystem.MVC.Controllers
 			}
 
 			var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-
 			if (string.IsNullOrEmpty(userId))
-			{
 				ModelState.AddModelError("", "User not found.");
-			}
 
 			if (ModelState.IsValid)
 			{
@@ -112,24 +100,17 @@ namespace IdeaCollectionSystem.MVC.Controllers
 				if (Request.Form.Files.Count > 0)
 				{
 					filePaths = new List<string>();
+					var uploadsFolder = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads");
+					if (!Directory.Exists(uploadsFolder))
+						Directory.CreateDirectory(uploadsFolder);
 
 					foreach (var file in Request.Form.Files)
 					{
-						// Save the file to a location and get the saved path
-						var uploadsFolder = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads");
-						if (!Directory.Exists(uploadsFolder))
-						{
-							Directory.CreateDirectory(uploadsFolder);
-						}
-						var uniqueFileName = Guid.NewGuid().ToString() + Path.GetExtension(file.FileName);
+						var uniqueFileName = Guid.NewGuid() + Path.GetExtension(file.FileName);
 						var filePath = Path.Combine(uploadsFolder, uniqueFileName);
-
-						using (var stream = new FileStream(filePath, FileMode.Create))
-						{
-							await file.CopyToAsync(stream);
-						}
-						var savedPath = Path.Combine("uploads", uniqueFileName);
-						filePaths.Add(savedPath);
+						using var stream = new FileStream(filePath, FileMode.Create);
+						await file.CopyToAsync(stream);
+						filePaths.Add(Path.Combine("uploads", uniqueFileName));
 					}
 				}
 
@@ -142,8 +123,7 @@ namespace IdeaCollectionSystem.MVC.Controllers
 					FilePaths = filePaths
 				};
 
-				var result = await _ideaService.CreateIdeaAsync(dto, userId);
-
+				var result = await _ideaService.CreateIdeaAsync(dto, userId!);
 				if (result)
 				{
 					TempData["SuccessMessage"] = "Idea submitted successfully!";
@@ -155,9 +135,19 @@ namespace IdeaCollectionSystem.MVC.Controllers
 
 			var categories = await _categoryService.GetAllActiveAsync();
 			ViewBag.Categories = new SelectList(categories, "Id", "Name", model.CategoryId);
-
 			return View(model);
 		}
 
+		//  Vote (Thumbs Up/Down) via AJAX 
+		[HttpPost]
+		public async Task<IActionResult> Vote(int ideaId, bool isThumbsUp)
+		{
+			var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+			if (string.IsNullOrEmpty(userId))
+				return Json(new { success = false });
+
+			var result = await _ideaService.VoteIdeaAsync(ideaId, userId, isThumbsUp);
+			return Json(new { success = result });
+		}
 	}
 }

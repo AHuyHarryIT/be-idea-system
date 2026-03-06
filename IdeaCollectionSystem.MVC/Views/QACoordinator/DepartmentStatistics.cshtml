@@ -1,0 +1,15 @@
+﻿@using IdeaCollectionSystem.Service.Models.DTOs
+@model IEnumerable<DepartmentStatDto>
+@{
+    ViewData["Title"] = "Department Statistics";
+}
+
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="fas fa-chart-pie text-success me-2"></i>Department Statistics</h2>
+        <a asp-action="Dashboard" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-1"></i>Back
+        </a>
+    </div>
+    <partial name="~/Views/Admin/Statistics.cshtml" model="Model" />
+</div>

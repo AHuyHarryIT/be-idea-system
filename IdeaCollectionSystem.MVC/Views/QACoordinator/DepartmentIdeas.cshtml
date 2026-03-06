@@ -1,0 +1,31 @@
+﻿@using IdeaCollectionSystem.Service.Models.DTOs
+@model IEnumerable<IdeaInfoDto>
+@{
+    ViewData["Title"] = "Department Ideas";
+}
+
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2><i class="fas fa-building text-info me-2"></i>Department Ideas</h2>
+        <a asp-action="Dashboard" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-1"></i>Back
+        </a>
+    </div>
+    <partial name="_AllIdeasPartial" model="Model" />
+</div>
+
+@section Scripts {
+    <script>
+        document.querySelectorAll('.vote-btn').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                var ideaId = this.dataset.ideaId;
+                var isThumbsUp = this.dataset.isThumbsup === 'true';
+                fetch('/QACoordinator/Vote', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: 'ideaId=' + ideaId + '&isThumbsUp=' + isThumbsUp
+                }).then(r => r.json()).then(d => { if (d.success) location.reload(); });
+            });
+        });
+    </script>
+}
