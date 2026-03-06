@@ -15,6 +15,7 @@ namespace IdeaCollectionSystem.ApplicationCore.Entitites
 		public string Name { get; set; } = string.Empty;
 		public string Description { get; set; } = string.Empty;
 
-		public ICollection<Idea> Ideas { get; set; } = new List<Idea>();
+		public virtual ICollection<User> Users { get; set; } = new List<User>();
+		public virtual ICollection<Idea> Ideas { get; set; } = new List<Idea>();
 	}
 }

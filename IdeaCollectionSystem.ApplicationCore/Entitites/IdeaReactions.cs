@@ -18,7 +18,7 @@ namespace IdeaCollectionSystem.ApplicationCore.Entitites
 		public Idea? Idea { get; set; }
 
 		[ForeignKey("UserId")]
-		public Guid UserId { get; set; }
+		public Guid UserId { get; set; } = Guid.Empty;
 		public User? User { get; set; }
 
 		public string Reaction { get; set; } = string.Empty;

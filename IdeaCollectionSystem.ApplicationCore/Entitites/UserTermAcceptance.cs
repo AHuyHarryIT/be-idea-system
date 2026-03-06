@@ -15,7 +15,7 @@ namespace IdeaCollectionSystem.ApplicationCore.Entitites
 
 		[ForeignKey("UserId")]
 		public Guid UserId { get; set; }
-		public User? User { get; set; } 
+		public User? User { get; set; } = null;
 
 		[ForeignKey("TermId")]
 		public Guid TermId { get; set; }

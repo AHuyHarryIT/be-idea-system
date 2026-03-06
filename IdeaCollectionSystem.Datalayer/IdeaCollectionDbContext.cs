@@ -20,134 +20,129 @@ namespace IdeaCollectionSystem.Datalayer
 		public DbSet<Submission> Submissions { get; set; }
 		public DbSet<Idea> Ideas { get; set; }
 		public DbSet<EmailOutBox> EmailOutBoxes { get; set; }
-
-		#endregion		#endregion
+		#endregion
 
 		protected override void OnModelCreating(ModelBuilder modelBuilder)
 		{
 			base.OnModelCreating(modelBuilder);
 
-			#region User
-			modelBuilder.Entity<User>(entity =>
-			{
-				entity.ToTable("Users");
-
-				entity.Property(x => x.UserName)
-					  .HasMaxLength(MaxLengths.NAME)
-					  .IsRequired();
-
-				entity.Property(x => x.FirstName)
-					  .HasMaxLength(MaxLengths.NAME)
-					  .IsRequired();
-
-				entity.Property(x => x.LastName)
-					  .HasMaxLength(MaxLengths.NAME)
-					  .IsRequired();
-
-				entity.Property(x => x.HashPassword)
-					  .HasMaxLength(MaxLengths.HASH_PASSWORD)
-					  .IsRequired();
-
-				entity.Property(x => x.Avartar)
-					  .HasMaxLength(MaxLengths.FILE_PATH)
-					  .IsRequired();
-			});
-			#endregion
-
-			#region Category
-			modelBuilder.Entity<Category>(entity =>
-			{
-				entity.ToTable("Categories");
-
-				entity.Property(x => x.Name)
-					  .HasMaxLength(MaxLengths.NAME)
-					  .IsRequired();
-			});
-			#endregion
-
-			#region Department
-			modelBuilder.Entity<Department>(entity =>
-			{
-				entity.ToTable("Departments");
-
-				entity.Property(x => x.Name)
-					  .HasMaxLength(MaxLengths.NAME)
-					  .IsRequired();
-
-				entity.Property(x => x.Description)
-					  .HasMaxLength(MaxLengths.DESCRIPTION);
-			});
-			#endregion
-
-			#region Role
+			#region Master Entities: Role, Department, Category, Submission
 			modelBuilder.Entity<Role>(entity =>
 			{
 				entity.ToTable("Roles");
-
-				entity.Property(x => x.Name)
-					  .HasMaxLength(MaxLengths.NAME)
-					  .IsRequired();
+				entity.HasKey(x => x.Id);
+				entity.Property(x => x.Name).HasMaxLength(MaxLengths.NAME).IsRequired();
 			});
-			#endregion
 
-			#region Submission
+			modelBuilder.Entity<Department>(entity =>
+			{
+				entity.ToTable("Departments");
+				entity.HasKey(x => x.Id);
+				entity.Property(x => x.Name).HasMaxLength(MaxLengths.NAME).IsRequired();
+				entity.Property(x => x.Description).HasMaxLength(MaxLengths.DESCRIPTION);
+			});
+
+			modelBuilder.Entity<Category>(entity =>
+			{
+				entity.ToTable("Categories");
+				entity.HasKey(x => x.Id);
+				entity.Property(x => x.Name).HasMaxLength(MaxLengths.NAME).IsRequired();
+			});
+
 			modelBuilder.Entity<Submission>(entity =>
 			{
 				entity.ToTable("Submissions");
-
-				entity.Property(x => x.Name)
-					  .HasMaxLength(MaxLengths.NAME)
-					  .IsRequired();
+				entity.HasKey(x => x.Id);
+				entity.Property(x => x.Name).HasMaxLength(MaxLengths.NAME).IsRequired();
+				entity.Property(x => x.ClousureDate).IsRequired();
+				entity.Property(x => x.FinalClousureDate).IsRequired();
 			});
 			#endregion
 
-			#region Idea
+			#region User (Master/Security Entity)
+			modelBuilder.Entity<User>(entity =>
+			{
+				entity.ToTable("Users");
+				entity.HasKey(x => x.Id);
+				entity.Property(x => x.UserName).HasMaxLength(MaxLengths.NAME).IsRequired();
+				entity.Property(x => x.HashPassword).HasMaxLength(MaxLengths.HASH_PASSWORD).IsRequired();
+
+				
+				entity.HasOne(x => x.Role)
+					.WithMany(x => x.Users)
+					.HasForeignKey(x => x.RoleId)
+					.OnDelete(DeleteBehavior.Restrict);
+
+				
+				entity.HasOne(x => x.Department)
+					.WithMany(x => x.Users)
+					.HasForeignKey(x => x.DepartmentId)
+					.OnDelete(DeleteBehavior.Restrict);
+			});
+			#endregion
+
+			#region Idea (Core Transaction Entity)
 			modelBuilder.Entity<Idea>(entity =>
 			{
 				entity.ToTable("Ideas");
+				entity.HasKey(x => x.Id);
+				entity.Property(x => x.Text).HasMaxLength(MaxLengths.TEXT).IsRequired();
 
-				entity.Property(x => x.Text)
-					  .HasMaxLength(MaxLengths.TEXT)
-					  .IsRequired();
-
-				
+		
 				entity.HasOne(x => x.User)
-					  .WithMany(x => x.Ideas)
-					  .HasForeignKey(x => x.UserId)
-					  .OnDelete(DeleteBehavior.Restrict);
+					.WithMany(x => x.Ideas)
+					.HasForeignKey(x => x.UserId)
+					.OnDelete(DeleteBehavior.Restrict);
+
+				entity.HasOne(x => x.Submission)
+					.WithMany(x => x.Ideas)
+					.HasForeignKey(x => x.SubmissionId)
+					.OnDelete(DeleteBehavior.Restrict);
+
+				entity.HasOne(x => x.Category)
+					.WithMany(x => x.Ideas)
+					.HasForeignKey(x => x.CategoryId)
+					.OnDelete(DeleteBehavior.Restrict);
+
+			
+				entity.HasOne(x => x.Department)
+					.WithMany(x => x.Ideas)
+					.HasForeignKey(x => x.DepartmentId)
+					.OnDelete(DeleteBehavior.Restrict);
 			});
 			#endregion
 
-			#region Comment
+			#region Comment & EmailOutBox
 			modelBuilder.Entity<Comment>(entity =>
 			{
 				entity.ToTable("Comments");
-
-				entity.Property(x => x.Text)
-					  .HasMaxLength(MaxLengths.COMMENT)
-					  .IsRequired();
+				entity.Property(x => x.Text).HasMaxLength(MaxLengths.COMMENT).IsRequired();
 
 				entity.HasOne(x => x.User)
-					  .WithMany(x => x.Comments)
-					  .HasForeignKey(x => x.UserId)
-					  .OnDelete(DeleteBehavior.Restrict);
+					.WithMany(x => x.Comments)
+					.HasForeignKey(x => x.UserId)
+					.OnDelete(DeleteBehavior.Restrict);
 
-				
 				entity.HasOne(x => x.Idea)
-					  .WithMany(x => x.Comments)
-					  .HasForeignKey(x => x.IdeaId)
-					  .OnDelete(DeleteBehavior.Cascade);
+					.WithMany(x => x.Comments)
+					.HasForeignKey(x => x.IdeaId)
+					.OnDelete(DeleteBehavior.Cascade);
 			});
-			#endregion
 
 			modelBuilder.Entity<EmailOutBox>(entity =>
 			{
-				entity.HasOne(e => e.Idea)
-					  .WithMany()
-					  .HasForeignKey(e => e.IdeaId)
-					  .OnDelete(DeleteBehavior.Restrict); 
-			});
+				entity.ToTable("EmailOutBoxes");
+				entity.HasOne(e => e.Comment)
+					.WithMany()
+					.HasForeignKey(e => e.CommentId)
+					.OnDelete(DeleteBehavior.Restrict);
 
+				entity.HasOne(e => e.Idea)
+					.WithMany()
+					.HasForeignKey(e => e.IdeaId)
+					.OnDelete(DeleteBehavior.Restrict);
+			});
+			#endregion
 		}
 	}
 }
