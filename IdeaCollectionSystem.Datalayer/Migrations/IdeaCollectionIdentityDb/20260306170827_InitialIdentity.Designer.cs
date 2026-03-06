@@ -8,11 +8,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
-namespace IdeaCollectionSystem.Datalayer.Migrations
+namespace IdeaCollectionSystem.Datalayer.Migrations.IdeaCollectionIdentityDb
 {
     [DbContext(typeof(IdeaCollectionIdentityDbContext))]
-    [Migration("20260207085417_ChangeSupabase")]
-    partial class ChangeSupabase
+    [Migration("20260306170827_InitialIdentity")]
+    partial class InitialIdentity
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)

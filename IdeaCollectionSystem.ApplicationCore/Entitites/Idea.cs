@@ -34,4 +34,5 @@ public class Idea
 
 	public ICollection<Comment> Comments { get; set; } = new List<Comment>();
 	public ICollection<IdeaReactions> IdeaReactions { get; set; } = new List<IdeaReactions>();
+	public ICollection<IdeaDocuments> IdeaDocuments { get; set; } = new List<IdeaDocuments>();
 }

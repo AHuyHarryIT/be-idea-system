@@ -7,7 +7,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
-namespace IdeaCollectionSystem.Datalayer.Migrations
+namespace IdeaCollectionSystem.Datalayer.Migrations.IdeaCollectionIdentityDb
 {
     [DbContext(typeof(IdeaCollectionIdentityDbContext))]
     partial class IdeaCollectionIdentityDbContextModelSnapshot : ModelSnapshot

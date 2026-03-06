@@ -40,7 +40,7 @@ namespace IdeaCollectionSystem.MVC.Controllers
 			return View("Terms");
 		}
 
-		//  My Ideas 
+		//  My Ideas
 		public async Task<IActionResult> MyIdeas()
 		{
 			var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
@@ -48,14 +48,14 @@ namespace IdeaCollectionSystem.MVC.Controllers
 			return View(ideas ?? new List<IdeaInfoDto>());
 		}
 
-		//  Browse All Ideas 
+		//  Browse All Ideas
 		public async Task<IActionResult> BrowseIdeas()
 		{
 			var ideas = await _ideaService.GetAllIdeasAsync();
 			return View(ideas);
 		}
 
-		//  Submit Idea 
+		//  Submit Idea GET
 		[HttpGet]
 		public async Task<IActionResult> SubmitIdea()
 		{
@@ -73,6 +73,7 @@ namespace IdeaCollectionSystem.MVC.Controllers
 			return View();
 		}
 
+		//  Submit Idea POST
 		[HttpPost]
 		[ValidateAntiForgeryToken]
 		public async Task<IActionResult> SubmitIdea(IdeaViewModel model)
@@ -91,7 +92,18 @@ namespace IdeaCollectionSystem.MVC.Controllers
 
 			var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
 			if (string.IsNullOrEmpty(userId))
-				ModelState.AddModelError("", "User not found.");
+			{
+				ModelState.AddModelError("", "User not found. Please login again.");
+				var cats = await _categoryService.GetAllActiveAsync();
+				ViewBag.Categories = new SelectList(cats, "Id", "Name", model.CategoryId);
+				return View(model);
+			}
+
+			// Validate CategoryId không phải null hoặc Guid.Empty
+			if (model.CategoryId == null || model.CategoryId == Guid.Empty)
+			{
+				ModelState.AddModelError("CategoryId", "Please select a category.");
+			}
 
 			if (ModelState.IsValid)
 			{
@@ -118,19 +130,19 @@ namespace IdeaCollectionSystem.MVC.Controllers
 				{
 					Text = model.Text,
 					Description = model.Description,
-					CategoryId = model.CategoryId,
+					CategoryId = model.CategoryId!.Value,
 					IsAnonymous = model.IsAnonymous,
 					FilePaths = filePaths
 				};
 
-				var result = await _ideaService.CreateIdeaAsync(dto, userId!);
+				var result = await _ideaService.CreateIdeaAsync(dto, userId);
 				if (result)
 				{
 					TempData["SuccessMessage"] = "Idea submitted successfully!";
 					return RedirectToAction(nameof(MyIdeas));
 				}
 
-				ModelState.AddModelError("", "Failed to submit idea.");
+				ModelState.AddModelError("", "Failed to submit idea. Make sure an active submission period exists.");
 			}
 
 			var categories = await _categoryService.GetAllActiveAsync();
@@ -138,7 +150,7 @@ namespace IdeaCollectionSystem.MVC.Controllers
 			return View(model);
 		}
 
-		//  Vote (Thumbs Up/Down) via AJAX 
+		//  Vote (Thumbs Up/Down) via AJAX
 		[HttpPost]
 		public async Task<IActionResult> Vote(int ideaId, bool isThumbsUp)
 		{

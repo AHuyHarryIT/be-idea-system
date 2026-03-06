@@ -3,20 +3,17 @@ using System;
 using IdeaCollectionSystem.Datalayer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
-using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
-namespace IdeaCollectionSystem.Datalayer.Migrations.IdeaCollectionDb
+namespace IdeaCollectionSystem.Datalayer.Migrations
 {
     [DbContext(typeof(IdeaCollectionDbContext))]
-    [Migration("20260227144059_AddDatabaseInSupabase")]
-    partial class AddDatabaseInSupabase
+    partial class IdeaCollectionDbContextModelSnapshot : ModelSnapshot
     {
-        /// <inheritdoc />
-        protected override void BuildTargetModel(ModelBuilder modelBuilder)
+        protected override void BuildModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -25,6 +22,75 @@ namespace IdeaCollectionSystem.Datalayer.Migrations.IdeaCollectionDb
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("Idea", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("CategoryId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<Guid>("DepartmentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<Guid?>("EmailOutBoxId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("IdeaDocumentsId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("IdeaReactionsIdeaId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("IdeaReactionsUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("IsAnonymous")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid>("SubmissionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Text")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CategoryId");
+
+                    b.HasIndex("DepartmentId");
+
+                    b.HasIndex("EmailOutBoxId");
+
+                    b.HasIndex("IdeaDocumentsId");
+
+                    b.HasIndex("SubmissionId");
+
+                    b.HasIndex("UserId");
+
+                    b.HasIndex("IdeaReactionsUserId", "IdeaReactionsIdeaId");
+
+                    b.ToTable("Ideas", (string)null);
+                });
+
             modelBuilder.Entity("IdeaCollectionSystem.ApplicationCore.Entitites.Category", b =>
                 {
                     b.Property<Guid>("Id")
@@ -32,13 +98,10 @@ namespace IdeaCollectionSystem.Datalayer.Migrations.IdeaCollectionDb
                         .HasColumnType("uuid");
 
                     b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp without time zone");
 
                     b.Property<DateTime?>("DeletedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid?>("IdeaId")
-                        .HasColumnType("uuid");
+                        .HasColumnType("timestamp without time zone");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -46,11 +109,9 @@ namespace IdeaCollectionSystem.Datalayer.Migrations.IdeaCollectionDb
                         .HasColumnType("character varying(100)");
 
                     b.Property<DateTime>("UpdateAt")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp without time zone");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("IdeaId");
 
                     b.ToTable("Categories", (string)null);
                 });
@@ -62,10 +123,10 @@ namespace IdeaCollectionSystem.Datalayer.Migrations.IdeaCollectionDb
                         .HasColumnType("uuid");
 
                     b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp without time zone");
 
                     b.Property<DateTime?>("DeletedAt")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp without time zone");
 
                     b.Property<Guid?>("EmailOutBoxId")
                         .HasColumnType("uuid");
@@ -77,12 +138,10 @@ namespace IdeaCollectionSystem.Datalayer.Migrations.IdeaCollectionDb
                         .HasColumnType("boolean");
 
                     b.Property<string>("Text")
-                        .IsRequired()
-                        .HasMaxLength(3000)
-                        .HasColumnType("character varying(3000)");
+                        .HasColumnType("text");
 
                     b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp without time zone");
 
                     b.Property<Guid>("UserId")
                         .HasColumnType("uuid");
@@ -106,11 +165,7 @@ namespace IdeaCollectionSystem.Datalayer.Migrations.IdeaCollectionDb
 
                     b.Property<string>("Description")
                         .IsRequired()
-                        .HasMaxLength(4000)
-                        .HasColumnType("character varying(4000)");
-
-                    b.Property<Guid?>("IdeaId")
-                        .HasColumnType("uuid");
+                        .HasColumnType("text");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -121,8 +176,6 @@ namespace IdeaCollectionSystem.Datalayer.Migrations.IdeaCollectionDb
                         .HasColumnType("uuid");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("IdeaId");
 
                     b.HasIndex("UserId");
 
@@ -143,7 +196,7 @@ namespace IdeaCollectionSystem.Datalayer.Migrations.IdeaCollectionDb
                         .HasColumnType("uuid");
 
                     b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp without time zone");
 
                     b.Property<string>("EmailTo")
                         .IsRequired()
@@ -157,7 +210,7 @@ namespace IdeaCollectionSystem.Datalayer.Migrations.IdeaCollectionDb
                         .HasColumnType("uuid");
 
                     b.Property<DateTime>("SentAt")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp without time zone");
 
                     b.Property<string>("Subject")
                         .IsRequired()
@@ -169,60 +222,72 @@ namespace IdeaCollectionSystem.Datalayer.Migrations.IdeaCollectionDb
 
                     b.HasIndex("IdeaId");
 
-                    b.ToTable("EmailOutBoxes");
+                    b.ToTable("EmailOutBoxes", (string)null);
                 });
 
-            modelBuilder.Entity("IdeaCollectionSystem.ApplicationCore.Entitites.Idea", b =>
+            modelBuilder.Entity("IdeaCollectionSystem.ApplicationCore.Entitites.IdeaDocuments", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.Property<Guid>("CategoryId")
+                    b.Property<DateTime>("DeletedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<long>("FizeSize")
+                        .HasColumnType("bigint");
+
+                    b.Property<Guid>("IdeaId")
                         .HasColumnType("uuid");
 
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<DateTime?>("DeletedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid>("DepartmentId")
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid?>("EmailOutBoxId")
-                        .HasColumnType("uuid");
-
-                    b.Property<bool>("IsAnonymous")
-                        .HasColumnType("boolean");
-
-                    b.Property<Guid>("SubmissionId")
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("Text")
+                    b.Property<string>("MimeType")
                         .IsRequired()
-                        .HasMaxLength(2000)
-                        .HasColumnType("character varying(2000)");
+                        .HasColumnType("text");
 
-                    b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
+                    b.Property<string>("OriginalFileName")
+                        .IsRequired()
+                        .HasColumnType("text");
 
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("uuid");
+                    b.Property<string>("StoredPath")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("UploadtedAt")
+                        .HasColumnType("timestamp without time zone");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("CategoryId");
+                    b.HasIndex("IdeaId");
 
-                    b.HasIndex("DepartmentId");
+                    b.ToTable("IdeaDocuments", (string)null);
+                });
 
-                    b.HasIndex("EmailOutBoxId");
+            modelBuilder.Entity("IdeaCollectionSystem.ApplicationCore.Entitites.IdeaReactions", b =>
+                {
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
 
-                    b.HasIndex("SubmissionId");
+                    b.Property<Guid>("IdeaId")
+                        .HasColumnType("uuid");
 
-                    b.HasIndex("UserId");
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
 
-                    b.ToTable("Ideas", (string)null);
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Reaction")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.HasKey("UserId", "IdeaId");
+
+                    b.HasIndex("IdeaId");
+
+                    b.ToTable("IdeaReactions", (string)null);
                 });
 
             modelBuilder.Entity("IdeaCollectionSystem.ApplicationCore.Entitites.Role", b =>
@@ -257,22 +322,19 @@ namespace IdeaCollectionSystem.Datalayer.Migrations.IdeaCollectionDb
                         .HasColumnType("uuid");
 
                     b.Property<DateTime>("AcademicYear")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp without time zone");
 
                     b.Property<DateTime>("ClousureDate")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp without time zone");
 
                     b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp without time zone");
 
                     b.Property<DateTime?>("DeletedAt")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp without time zone");
 
-                    b.Property<DateTime>("FinaleClosureDate")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid?>("IdeaId")
-                        .HasColumnType("uuid");
+                    b.Property<DateTime>("FinalClousureDate")
+                        .HasColumnType("timestamp without time zone");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -280,11 +342,9 @@ namespace IdeaCollectionSystem.Datalayer.Migrations.IdeaCollectionDb
                         .HasColumnType("character varying(100)");
 
                     b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp without time zone");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("IdeaId");
 
                     b.ToTable("Submissions", (string)null);
                 });
@@ -297,63 +357,101 @@ namespace IdeaCollectionSystem.Datalayer.Migrations.IdeaCollectionDb
 
                     b.Property<string>("Avartar")
                         .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)");
+                        .HasColumnType("text");
 
                     b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp without time zone");
 
                     b.Property<DateTime?>("DeletedAt")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp without time zone");
 
                     b.Property<Guid>("DepartmentId")
                         .HasColumnType("uuid");
 
                     b.Property<string>("FirstName")
                         .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
+                        .HasColumnType("text");
 
                     b.Property<string>("HashPassword")
                         .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)");
+                        .HasColumnType("text");
 
-                    b.Property<Guid?>("IdeaId")
+                    b.Property<Guid?>("IdeaReactionsIdeaId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("IdeaReactionsUserId")
                         .HasColumnType("uuid");
 
                     b.Property<string>("LastName")
                         .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
+                        .HasColumnType("text");
 
                     b.Property<Guid>("RoleId")
                         .HasColumnType("uuid");
 
                     b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp without time zone");
 
                     b.Property<string>("UserName")
                         .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
+                        .HasColumnType("text");
 
                     b.HasKey("Id");
 
                     b.HasIndex("DepartmentId");
 
-                    b.HasIndex("IdeaId");
-
                     b.HasIndex("RoleId");
+
+                    b.HasIndex("IdeaReactionsUserId", "IdeaReactionsIdeaId");
 
                     b.ToTable("Users", (string)null);
                 });
 
-            modelBuilder.Entity("IdeaCollectionSystem.ApplicationCore.Entitites.Category", b =>
+            modelBuilder.Entity("Idea", b =>
                 {
-                    b.HasOne("IdeaCollectionSystem.ApplicationCore.Entitites.Idea", null)
-                        .WithMany("Categories")
-                        .HasForeignKey("IdeaId");
+                    b.HasOne("IdeaCollectionSystem.ApplicationCore.Entitites.Category", "Category")
+                        .WithMany("Ideas")
+                        .HasForeignKey("CategoryId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("IdeaCollectionSystem.ApplicationCore.Entitites.Department", "Department")
+                        .WithMany("Ideas")
+                        .HasForeignKey("DepartmentId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("IdeaCollectionSystem.ApplicationCore.Entitites.EmailOutBox", null)
+                        .WithMany("Ideas")
+                        .HasForeignKey("EmailOutBoxId");
+
+                    b.HasOne("IdeaCollectionSystem.ApplicationCore.Entitites.IdeaDocuments", null)
+                        .WithMany("Ideas")
+                        .HasForeignKey("IdeaDocumentsId");
+
+                    b.HasOne("IdeaCollectionSystem.ApplicationCore.Entitites.Submission", "Submission")
+                        .WithMany("Ideas")
+                        .HasForeignKey("SubmissionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("IdeaCollectionSystem.ApplicationCore.Entitites.User", "User")
+                        .WithMany("Ideas")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("IdeaCollectionSystem.ApplicationCore.Entitites.IdeaReactions", null)
+                        .WithMany("Ideas")
+                        .HasForeignKey("IdeaReactionsUserId", "IdeaReactionsIdeaId");
+
+                    b.Navigation("Category");
+
+                    b.Navigation("Department");
+
+                    b.Navigation("Submission");
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("IdeaCollectionSystem.ApplicationCore.Entitites.Comment", b =>
@@ -362,7 +460,7 @@ namespace IdeaCollectionSystem.Datalayer.Migrations.IdeaCollectionDb
                         .WithMany("Comments")
                         .HasForeignKey("EmailOutBoxId");
 
-                    b.HasOne("IdeaCollectionSystem.ApplicationCore.Entitites.Idea", "Idea")
+                    b.HasOne("Idea", "Idea")
                         .WithMany("Comments")
                         .HasForeignKey("IdeaId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -381,10 +479,6 @@ namespace IdeaCollectionSystem.Datalayer.Migrations.IdeaCollectionDb
 
             modelBuilder.Entity("IdeaCollectionSystem.ApplicationCore.Entitites.Department", b =>
                 {
-                    b.HasOne("IdeaCollectionSystem.ApplicationCore.Entitites.Idea", null)
-                        .WithMany("Departments")
-                        .HasForeignKey("IdeaId");
-
                     b.HasOne("IdeaCollectionSystem.ApplicationCore.Entitites.User", null)
                         .WithMany("Departments")
                         .HasForeignKey("UserId");
@@ -395,10 +489,10 @@ namespace IdeaCollectionSystem.Datalayer.Migrations.IdeaCollectionDb
                     b.HasOne("IdeaCollectionSystem.ApplicationCore.Entitites.Comment", "Comment")
                         .WithMany()
                         .HasForeignKey("CommentId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.HasOne("IdeaCollectionSystem.ApplicationCore.Entitites.Idea", "Idea")
+                    b.HasOne("Idea", "Idea")
                         .WithMany()
                         .HasForeignKey("IdeaId")
                         .OnDelete(DeleteBehavior.Restrict)
@@ -409,41 +503,32 @@ namespace IdeaCollectionSystem.Datalayer.Migrations.IdeaCollectionDb
                     b.Navigation("Idea");
                 });
 
-            modelBuilder.Entity("IdeaCollectionSystem.ApplicationCore.Entitites.Idea", b =>
+            modelBuilder.Entity("IdeaCollectionSystem.ApplicationCore.Entitites.IdeaDocuments", b =>
                 {
-                    b.HasOne("IdeaCollectionSystem.ApplicationCore.Entitites.Category", "Category")
-                        .WithMany()
-                        .HasForeignKey("CategoryId")
+                    b.HasOne("Idea", "Idea")
+                        .WithMany("IdeaDocuments")
+                        .HasForeignKey("IdeaId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("IdeaCollectionSystem.ApplicationCore.Entitites.Department", "Department")
-                        .WithMany()
-                        .HasForeignKey("DepartmentId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                    b.Navigation("Idea");
+                });
 
-                    b.HasOne("IdeaCollectionSystem.ApplicationCore.Entitites.EmailOutBox", null)
-                        .WithMany("Ideas")
-                        .HasForeignKey("EmailOutBoxId");
-
-                    b.HasOne("IdeaCollectionSystem.ApplicationCore.Entitites.Submission", "Submission")
-                        .WithMany()
-                        .HasForeignKey("SubmissionId")
+            modelBuilder.Entity("IdeaCollectionSystem.ApplicationCore.Entitites.IdeaReactions", b =>
+                {
+                    b.HasOne("Idea", "Idea")
+                        .WithMany("IdeaReactions")
+                        .HasForeignKey("IdeaId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.HasOne("IdeaCollectionSystem.ApplicationCore.Entitites.User", "User")
-                        .WithMany("Ideas")
+                        .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.Navigation("Category");
-
-                    b.Navigation("Department");
-
-                    b.Navigation("Submission");
+                    b.Navigation("Idea");
 
                     b.Navigation("User");
                 });
@@ -455,34 +540,48 @@ namespace IdeaCollectionSystem.Datalayer.Migrations.IdeaCollectionDb
                         .HasForeignKey("UserId");
                 });
 
-            modelBuilder.Entity("IdeaCollectionSystem.ApplicationCore.Entitites.Submission", b =>
-                {
-                    b.HasOne("IdeaCollectionSystem.ApplicationCore.Entitites.Idea", null)
-                        .WithMany("Submissions")
-                        .HasForeignKey("IdeaId");
-                });
-
             modelBuilder.Entity("IdeaCollectionSystem.ApplicationCore.Entitites.User", b =>
                 {
                     b.HasOne("IdeaCollectionSystem.ApplicationCore.Entitites.Department", "Department")
-                        .WithMany()
-                        .HasForeignKey("DepartmentId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("IdeaCollectionSystem.ApplicationCore.Entitites.Idea", null)
                         .WithMany("Users")
-                        .HasForeignKey("IdeaId");
+                        .HasForeignKey("DepartmentId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
 
                     b.HasOne("IdeaCollectionSystem.ApplicationCore.Entitites.Role", "Role")
-                        .WithMany()
+                        .WithMany("Users")
                         .HasForeignKey("RoleId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.HasOne("IdeaCollectionSystem.ApplicationCore.Entitites.IdeaReactions", null)
+                        .WithMany("Users")
+                        .HasForeignKey("IdeaReactionsUserId", "IdeaReactionsIdeaId");
 
                     b.Navigation("Department");
 
                     b.Navigation("Role");
+                });
+
+            modelBuilder.Entity("Idea", b =>
+                {
+                    b.Navigation("Comments");
+
+                    b.Navigation("IdeaDocuments");
+
+                    b.Navigation("IdeaReactions");
+                });
+
+            modelBuilder.Entity("IdeaCollectionSystem.ApplicationCore.Entitites.Category", b =>
+                {
+                    b.Navigation("Ideas");
+                });
+
+            modelBuilder.Entity("IdeaCollectionSystem.ApplicationCore.Entitites.Department", b =>
+                {
+                    b.Navigation("Ideas");
+
+                    b.Navigation("Users");
                 });
 
             modelBuilder.Entity("IdeaCollectionSystem.ApplicationCore.Entitites.EmailOutBox", b =>
@@ -492,17 +591,26 @@ namespace IdeaCollectionSystem.Datalayer.Migrations.IdeaCollectionDb
                     b.Navigation("Ideas");
                 });
 
-            modelBuilder.Entity("IdeaCollectionSystem.ApplicationCore.Entitites.Idea", b =>
+            modelBuilder.Entity("IdeaCollectionSystem.ApplicationCore.Entitites.IdeaDocuments", b =>
                 {
-                    b.Navigation("Categories");
+                    b.Navigation("Ideas");
+                });
 
-                    b.Navigation("Comments");
-
-                    b.Navigation("Departments");
-
-                    b.Navigation("Submissions");
+            modelBuilder.Entity("IdeaCollectionSystem.ApplicationCore.Entitites.IdeaReactions", b =>
+                {
+                    b.Navigation("Ideas");
 
                     b.Navigation("Users");
+                });
+
+            modelBuilder.Entity("IdeaCollectionSystem.ApplicationCore.Entitites.Role", b =>
+                {
+                    b.Navigation("Users");
+                });
+
+            modelBuilder.Entity("IdeaCollectionSystem.ApplicationCore.Entitites.Submission", b =>
+                {
+                    b.Navigation("Ideas");
                 });
 
             modelBuilder.Entity("IdeaCollectionSystem.ApplicationCore.Entitites.User", b =>

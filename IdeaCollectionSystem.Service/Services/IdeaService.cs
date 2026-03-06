@@ -1,7 +1,9 @@
 ﻿using IdeaCollectionSystem.ApplicationCore.Entitites;
+using IdeaCollectionSystem.ApplicationCore.Entitites.Identity;
 using IdeaCollectionSystem.Datalayer;
 using IdeaCollectionSystem.Service.Interfaces;
 using IdeaCollectionSystem.Service.Models.DTOs;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
 namespace IdeaCollectionSystem.Service.Services
@@ -9,10 +11,12 @@ namespace IdeaCollectionSystem.Service.Services
 	public class IdeaService : IIdeaService
 	{
 		private readonly IdeaCollectionDbContext _context;
+		private readonly UserManager<IdeaUser> _userManager;
 
-		public IdeaService(IdeaCollectionDbContext context)
+		public IdeaService(IdeaCollectionDbContext context, UserManager<IdeaUser> userManager)
 		{
 			_context = context;
+			_userManager = userManager;
 		}
 
 		//  Check closure date 
@@ -22,18 +26,24 @@ namespace IdeaCollectionSystem.Service.Services
 				.OrderByDescending(s => s.ClousureDate)
 				.FirstOrDefaultAsync();
 
-			if (latestSubmission == null) return true; 
+			if (latestSubmission == null) return true;
 			return DateTime.UtcNow > latestSubmission.ClousureDate;
 		}
 
-		//  Create idea 
+		//  Create idea — tất cả 4 role đều submit được
 		public async Task<bool> CreateIdeaAsync(IdeaCreateDto dto, string userId)
 		{
-			if (!Guid.TryParse(userId, out var userGuid))
-				return false;
+			// userId đến từ ASP.NET Identity (IdeaUser.Id — string)
+			var ideaUser = await _userManager.FindByIdAsync(userId);
+			if (ideaUser == null) return false;
 
-			var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == userGuid);
-			if (user == null) return false;
+			// Tìm bản ghi User tương ứng trong bảng Users (custom) theo Email
+			var user = await _context.Users
+				.FirstOrDefaultAsync(u => u.UserName == ideaUser.UserName);
+
+			// Nếu không có bản ghi custom User, vẫn cho phép submit
+			// nhưng cần có DepartmentId — dùng Guid.Empty nếu chưa có
+			var departmentId = user?.DepartmentId ?? Guid.Empty;
 
 			// Find active submission
 			var submission = await _context.Submissions
@@ -42,17 +52,21 @@ namespace IdeaCollectionSystem.Service.Services
 
 			if (submission == null) return false;
 
+			// Validate CategoryId
+			if (dto.CategoryId == Guid.Empty) return false;
+
 			var idea = new Idea
 			{
 				Id = Guid.NewGuid(),
 				Text = dto.Text,
-				Description = dto.Description, // ← THÊM
+				Description = dto.Description,
 				CategoryId = dto.CategoryId,
-				DepartmentId = user.DepartmentId,
-				UserId = userGuid,
+				DepartmentId = departmentId,
+				UserId = user?.Id ?? Guid.Empty,
 				SubmissionId = submission.Id,
 				IsAnonymous = dto.IsAnonymous,
-				CreatedAt = DateTime.UtcNow
+				CreatedAt = DateTime.UtcNow,
+				UpdatedAt = DateTime.UtcNow
 			};
 
 			await _context.Ideas.AddAsync(idea);
@@ -80,7 +94,7 @@ namespace IdeaCollectionSystem.Service.Services
 			return true;
 		}
 
-		//  Get all ideas (Admin + QAManager) 
+		//  Get all ideas (Admin + QAManager)
 		public async Task<IEnumerable<IdeaInfoDto>> GetAllIdeasAsync()
 		{
 			return await _context.Ideas
@@ -104,13 +118,13 @@ namespace IdeaCollectionSystem.Service.Services
 				.ToListAsync();
 		}
 
-		//  Get ideas by dept (QACoordinator) ─
+		//  Get ideas by dept (QACoordinator)
 		public async Task<IEnumerable<IdeaInfoDto>> GetIdeasByDepartmentAsync(string userId)
 		{
-			if (!Guid.TryParse(userId, out var userGuid))
-				return Enumerable.Empty<IdeaInfoDto>();
+			var ideaUser = await _userManager.FindByIdAsync(userId);
+			if (ideaUser == null) return Enumerable.Empty<IdeaInfoDto>();
 
-			var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == userGuid);
+			var user = await _context.Users.FirstOrDefaultAsync(u => u.UserName == ideaUser.UserName);
 			if (user == null) return Enumerable.Empty<IdeaInfoDto>();
 
 			return await _context.Ideas
@@ -134,15 +148,29 @@ namespace IdeaCollectionSystem.Service.Services
 				.ToListAsync();
 		}
 
-		//  Get ideas by staff 
+		//  Get ideas by staff (lấy theo UserId từ Identity)
 		public async Task<IEnumerable<IdeaInfoDto>> GetIdeasByStaffAsync(string userId)
 		{
+			// userId từ Identity là string (Guid dạng string)
 			if (!Guid.TryParse(userId, out var userGuid))
 				return Enumerable.Empty<IdeaInfoDto>();
 
+			// Tìm user custom để lấy mapping, nhưng vẫn dùng userId từ Identity làm khóa
+			// Ideas.UserId được gán từ user.Id (custom User bảng Users)
+			// Nếu không có, fallback tìm theo ideas được tạo gần đây
+			var ideaUser = await _userManager.FindByIdAsync(userId);
+			if (ideaUser == null) return Enumerable.Empty<IdeaInfoDto>();
+
+			var customUser = await _context.Users.FirstOrDefaultAsync(u => u.UserName == ideaUser.UserName);
+			if (customUser == null)
+			{
+				// Chưa có custom user profile, trả về empty
+				return Enumerable.Empty<IdeaInfoDto>();
+			}
+
 			return await _context.Ideas
 				.Include(i => i.Category)
-				.Where(i => i.UserId == userGuid)
+				.Where(i => i.UserId == customUser.Id)
 				.OrderByDescending(i => i.CreatedAt)
 				.Select(i => new IdeaInfoDto
 				{
@@ -158,10 +186,9 @@ namespace IdeaCollectionSystem.Service.Services
 				.ToListAsync();
 		}
 
-		//  Get idea detail 
+		//  Get idea detail
 		public async Task<IdeaInfoDto?> GetIdeaDetailAsync(int ideaId)
 		{
-			// NOTE: ideaId here is GetHashCode() of Guid — in production use Guid directly
 			var idea = await _context.Ideas
 				.Include(i => i.Category)
 				.Include(i => i.User)
@@ -186,7 +213,7 @@ namespace IdeaCollectionSystem.Service.Services
 			};
 		}
 
-		//  Vote ─
+		//  Vote
 		public async Task<bool> VoteIdeaAsync(int ideaId, string userId, bool isThumbsUp)
 		{
 			if (!Guid.TryParse(userId, out var userGuid))
@@ -205,12 +232,10 @@ namespace IdeaCollectionSystem.Service.Services
 			{
 				if (existingReaction.Reaction == reactionType)
 				{
-					// Toggle off — remove vote
 					_context.IdeaReactions.Remove(existingReaction);
 				}
 				else
 				{
-					// Switch vote
 					existingReaction.Reaction = reactionType;
 					existingReaction.UpdatedAt = DateTime.UtcNow;
 				}
