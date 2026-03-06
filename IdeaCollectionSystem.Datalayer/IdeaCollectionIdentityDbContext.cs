@@ -20,9 +20,11 @@ public class IdeaCollectionIdentityDbContext
 		{
 			entity.Property(n => n.Name)
 				  .HasMaxLength(MaxLengths.NAME);
-
 			entity.Property(n => n.Avatar)
 				  .HasMaxLength(MaxLengths.FILE_PATH);
+	
+			entity.Property(n => n.DepartmentId)
+				  .IsRequired(false);
 		});
 
 		builder.Entity<IdeaRole>(entity =>

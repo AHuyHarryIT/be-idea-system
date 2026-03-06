@@ -1,4 +1,5 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using System;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace IdeaCollectionSystem.ApplicationCore.Entitites
@@ -18,21 +19,12 @@ namespace IdeaCollectionSystem.ApplicationCore.Entitites
 			FAILED = 2
 		}
 
-		public DateTime CreatedAt { get; set; } = DateTime.UtcNow;  
-		public DateTime SentAt { get; set; } = DateTime.UtcNow;    
-
+		public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+		public DateTime SentAt { get; set; } = DateTime.UtcNow;
 		public string Error { get; set; } = string.Empty;
 
-		public Guid IdeaId { get; set; }
 		[ForeignKey("IdeaId")]
+		public Guid IdeaId { get; set; }
 		public Idea? Idea { get; set; }
-
-		public Guid CommentId { get; set; }
-		[ForeignKey("CommentId")]
-		public Comment? Comment { get; set; }
-
-		public ICollection<Idea> Ideas { get; set; } = new List<Idea>();
-		public ICollection<Comment> Comments { get; set; } = new List<Comment>();
-
 	}
 }

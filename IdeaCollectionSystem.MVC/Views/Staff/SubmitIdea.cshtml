@@ -29,11 +29,19 @@
         </div>
 
         <div class="mb-3">
-            <label asp-for="CategoryId" class="form-label">Category</label>
+            <label asp-for="CategoryId" class="form-label">Category <span class="text-danger">*</span></label>
             <select asp-for="CategoryId" class="form-select" asp-items="ViewBag.Categories">
                 <option value="">-- Select Category --</option>
             </select>
             <span asp-validation-for="CategoryId" class="text-danger"></span>
+        </div>
+
+        <div class="mb-3">
+            <label asp-for="SubmissionId" class="form-label">Submission Period <span class="text-danger">*</span></label>
+            <select asp-for="SubmissionId" class="form-select" asp-items="ViewBag.Submissions">
+                <option value="">-- Select Submission Period --</option>
+            </select>
+            <span asp-validation-for="SubmissionId" class="text-danger"></span>
         </div>
 
         <div class="mb-3">

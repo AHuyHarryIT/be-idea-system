@@ -1,10 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace IdeaCollectionSystem.ApplicationCore.Entitites
 {
@@ -17,17 +13,13 @@ namespace IdeaCollectionSystem.ApplicationCore.Entitites
 		public Guid IdeaId { get; set; }
 		public Idea? Idea { get; set; }
 
-		[ForeignKey("UserId")]
-		public Guid UserId { get; set; } = Guid.Empty;
-		public User? User { get; set; }
 
-		public string Reaction { get; set; } = (string.Empty);
+		public string UserId { get; set; } = string.Empty;
+
+		public string Reaction { get; set; } = string.Empty;
 
 		public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 		public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
-
-		public ICollection<User> Users { get; set; } = new List<User>();
-		public ICollection<Idea> Ideas { get; set; } = new List<Idea>();
 
 	}
 }

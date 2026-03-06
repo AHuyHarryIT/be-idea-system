@@ -1,59 +1,39 @@
-
-using IdeaCollectionIdea.Common.Constants;
+﻿using IdeaCollectionIdea.Common.Constants;
 using IdeaCollectionSystem.ApplicationCore.Entitites;
 using IdeaCollectionSystem.ApplicationCore.Entitites.Identity;
 using IdeaCollectionSystem.Datalayer;
 using IdeaCollectionSystem.Service.Interfaces;
 using IdeaCollectionSystem.Service.Services;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.EntityFrameworkCore;
-
 
 AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
 
 var builder = WebApplication.CreateBuilder(args);
 
-
-// DbContext (Business)
 builder.Services.AddDbContext<IdeaCollectionDbContext>(options =>
-	options.UseNpgsql(
-		builder.Configuration.GetConnectionString("IdeaCollectionDbContext")));
+	options.UseNpgsql(builder.Configuration.GetConnectionString("IdeaCollectionDbContext")));
 
-// DbContext (Identity)
 builder.Services.AddDbContext<IdeaCollectionIdentityDbContext>(options =>
-	options.UseNpgsql(
-		builder.Configuration.GetConnectionString("IdeaIdentityConnection")));
-
-
-// Identity 
+	options.UseNpgsql(builder.Configuration.GetConnectionString("IdeaIdentityConnection")));
 
 builder.Services.AddIdentity<IdeaUser, IdeaRole>(options =>
 {
-	// Password
 	options.Password.RequireDigit = true;
 	options.Password.RequiredLength = 8;
 	options.Password.RequireNonAlphanumeric = false;
 	options.Password.RequireUppercase = true;
 	options.Password.RequireLowercase = true;
-
-	// Lockout
 	options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(30);
 	options.Lockout.MaxFailedAccessAttempts = 5;
 	options.Lockout.AllowedForNewUsers = true;
-
-	// User
 	options.User.RequireUniqueEmail = true;
-
-	// Sign in
 	options.SignIn.RequireConfirmedAccount = false;
 	options.SignIn.RequireConfirmedEmail = false;
 	options.SignIn.RequireConfirmedPhoneNumber = false;
 })
 .AddEntityFrameworkStores<IdeaCollectionIdentityDbContext>()
 .AddDefaultTokenProviders();
-
-//builder.Services.AddTransient<IEmailSender, EmailSender>();
 
 builder.Services.ConfigureApplicationCookie(options =>
 {
@@ -67,42 +47,19 @@ builder.Services.AddScoped<IIdeaService, IdeaService>();
 builder.Services.AddScoped<ICategoryService, CategoryService>();
 builder.Services.AddScoped<IQAManagerService, QAManagerService>();
 
-
-// Authorization policies
 builder.Services.AddAuthorizationBuilder()
-							
-							 .AddPolicy(PolicyConstants.AdminOnly, policy =>
-		policy.RequireRole(RoleConstants.Administrator))
-							
-							 .AddPolicy(PolicyConstants.QAManagerOnly, policy =>
-		policy.RequireRole(RoleConstants.QAManager))
-							
-							 .AddPolicy(PolicyConstants.QACoordinatorOnly, policy =>
-		policy.RequireRole(RoleConstants.QACoordinator))
-							
-							 .AddPolicy(PolicyConstants.StaffOnly, policy =>
-		policy.RequireRole(RoleConstants.Staff))
-							
-							 .AddPolicy(PolicyConstants.QAManagement, policy =>
-		policy.RequireRole(RoleConstants.QAManager, RoleConstants.QACoordinator))
-							
-							 .AddPolicy(PolicyConstants.AllStaff, policy =>
-		policy.RequireAuthenticatedUser())
-							
-							 .AddPolicy(PolicyConstants.CanManageCategories, policy =>
-		policy.RequireRole(RoleConstants.Administrator, RoleConstants.QAManager))
-							
-							 .AddPolicy(PolicyConstants.CanExportData, policy =>
-		policy.RequireRole(RoleConstants.Administrator, RoleConstants.QAManager))
-							
-							 .AddPolicy(PolicyConstants.CanManageUsers, policy =>
-		policy.RequireRole(RoleConstants.Administrator))
-							
-							 .AddPolicy(PolicyConstants.CanSetClosureDates, policy =>
-		policy.RequireRole(RoleConstants.Administrator, RoleConstants.QAManager));
+	.AddPolicy(PolicyConstants.AdminOnly, p => p.RequireRole(RoleConstants.Administrator))
+	.AddPolicy(PolicyConstants.QAManagerOnly, p => p.RequireRole(RoleConstants.QAManager))
+	.AddPolicy(PolicyConstants.QACoordinatorOnly, p => p.RequireRole(RoleConstants.QACoordinator))
+	.AddPolicy(PolicyConstants.StaffOnly, p => p.RequireRole(RoleConstants.Staff))
+	.AddPolicy(PolicyConstants.QAManagement, p => p.RequireRole(RoleConstants.QAManager, RoleConstants.QACoordinator))
+	.AddPolicy(PolicyConstants.AllStaff, p => p.RequireAuthenticatedUser())
+	.AddPolicy(PolicyConstants.CanManageCategories, p => p.RequireRole(RoleConstants.Administrator, RoleConstants.QAManager))
+	.AddPolicy(PolicyConstants.CanExportData, p => p.RequireRole(RoleConstants.Administrator, RoleConstants.QAManager))
+	.AddPolicy(PolicyConstants.CanManageUsers, p => p.RequireRole(RoleConstants.Administrator))
+	.AddPolicy(PolicyConstants.CanSetClosureDates, p => p.RequireRole(RoleConstants.Administrator, RoleConstants.QAManager));
 
 builder.Services.AddDistributedMemoryCache();
-
 builder.Services.AddSession(options =>
 {
 	options.IdleTimeout = TimeSpan.FromMinutes(60);
@@ -115,13 +72,9 @@ builder.Services.AddControllersWithViews();
 
 var app = builder.Build();
 
-
-// seeding data
-
 using (var scope = app.Services.CreateScope())
 {
 	var services = scope.ServiceProvider;
-
 	try
 	{
 		var roleManager = services.GetRequiredService<RoleManager<IdeaRole>>();
@@ -129,30 +82,21 @@ using (var scope = app.Services.CreateScope())
 		var dbContext = services.GetRequiredService<IdeaCollectionDbContext>();
 		var identityDbContext = services.GetRequiredService<IdeaCollectionIdentityDbContext>();
 
-		// Ensure databases are created
 		await dbContext.Database.MigrateAsync();
 		await identityDbContext.Database.MigrateAsync();
 
-		// Seed Roles
 		await SeedRolesAsync(roleManager);
-
-		// Seed Departments (if needed)
 		await SeedDepartmentsAsync(dbContext);
-
-		// Seed Demo Users
 		await SeedDemoUsersAsync(userManager, dbContext);
 
-		Console.WriteLine(" Database seeding completed successfully!");
+		Console.WriteLine("Database seeding completed successfully!");
 	}
 	catch (Exception ex)
 	{
 		var logger = services.GetRequiredService<ILogger<Program>>();
-		logger.LogError(ex, " An error occurred while seeding the database.");
+		logger.LogError(ex, "An error occurred while seeding the database.");
 	}
 }
-
-
-// midelware configuration
 
 if (!app.Environment.IsDevelopment())
 {
@@ -163,42 +107,18 @@ if (!app.Environment.IsDevelopment())
 app.UseSession();
 app.UseHttpsRedirection();
 app.UseStaticFiles();
-
 app.UseRouting();
-
 app.UseAuthentication();
 app.UseAuthorization();
 
-app.MapControllerRoute(
-	name: "admin",
-	pattern: "Admin/{action=Dashboard}/{id?}",
-	defaults: new { controller = "Admin" });
-
-app.MapControllerRoute(
-	name: "qamanager",
-	pattern: "QAManager/{action=Dashboard}/{id?}",
-	defaults: new { controller = "QAManager" });
-
-app.MapControllerRoute(
-	name: "qacoordinator",
-	pattern: "QACoordinator/{action=Dashboard}/{id?}",
-	defaults: new { controller = "QACoordinator" });
-
-app.MapControllerRoute(
-	name: "default",
-	pattern: "{controller=Home}/{action=Index}/{id?}");
-
-app.MapControllerRoute(
-	name: "staff",
-	pattern: "Staff/{action=Dashboard}/{id?}",
-	defaults: new { controller = "Staff" });
-
+app.MapControllerRoute(name: "admin", pattern: "Admin/{action=Dashboard}/{id?}", defaults: new { controller = "Admin" });
+app.MapControllerRoute(name: "qamanager", pattern: "QAManager/{action=Dashboard}/{id?}", defaults: new { controller = "QAManager" });
+app.MapControllerRoute(name: "qacoordinator", pattern: "QACoordinator/{action=Dashboard}/{id?}", defaults: new { controller = "QACoordinator" });
+app.MapControllerRoute(name: "default", pattern: "{controller=Home}/{action=Index}/{id?}");
+app.MapControllerRoute(name: "staff", pattern: "Staff/{action=Dashboard}/{id?}", defaults: new { controller = "Staff" });
 app.MapRazorPages();
-
 app.Run();
 
-
-// seeding methods
 
 static async Task SeedRolesAsync(RoleManager<IdeaRole> roleManager)
 {
@@ -206,30 +126,24 @@ static async Task SeedRolesAsync(RoleManager<IdeaRole> roleManager)
 	{
 		if (!await roleManager.RoleExistsAsync(roleName))
 		{
-			var role = new IdeaRole
+			await roleManager.CreateAsync(new IdeaRole
 			{
 				Name = roleName,
 				Description = RoleConstants.RoleDescriptions[roleName]
-			};
-
-			await roleManager.CreateAsync(role);
+			});
 		}
 	}
 }
-
 
 static async Task SeedDepartmentsAsync(IdeaCollectionDbContext context)
 {
 	if (!context.Departments.Any())
 	{
-		var departments = new[]
-		{
+		await context.Departments.AddRangeAsync(
 			new Department { Id = Guid.NewGuid(), Name = "Computer Science", Description = "CS Department" },
 			new Department { Id = Guid.NewGuid(), Name = "Business", Description = "Business Department" },
 			new Department { Id = Guid.NewGuid(), Name = "Engineering", Description = "Engineering Department" }
-		};
-
-		await context.Departments.AddRangeAsync(departments);
+		);
 		await context.SaveChangesAsync();
 	}
 }
@@ -237,80 +151,27 @@ static async Task SeedDepartmentsAsync(IdeaCollectionDbContext context)
 static async Task SeedDemoUsersAsync(UserManager<IdeaUser> userManager, IdeaCollectionDbContext context)
 {
 	var defaultPassword = "Admin@123";
+	var firstDept = context.Departments.FirstOrDefault();
 
-	// Admin User
-	if (await userManager.FindByEmailAsync("admin@university.edu") == null)
+	async Task Create(string email, string role, string name)
 	{
-		var admin = new IdeaUser
+		if (await userManager.FindByEmailAsync(email) != null) return;
+		var user = new IdeaUser
 		{
-			UserName = "admin@university.edu",
-			Email = "admin@university.edu",
+			UserName = email,
+			Email = email,
 			EmailConfirmed = true,
-			Name = "System Administrator",
-			Avatar = "/images/default-avatar.png"
+			Name = name,
+			Avatar = "/images/default-avatar.png",
+			DepartmentId = firstDept?.Id   // ← gán DepartmentId ngay khi tạo
 		};
-
-		var result = await userManager.CreateAsync(admin, defaultPassword);
+		var result = await userManager.CreateAsync(user, defaultPassword);
 		if (result.Succeeded)
-		{
-			await userManager.AddToRoleAsync(admin, RoleConstants.Administrator);
-		}
+			await userManager.AddToRoleAsync(user, role);
 	}
 
-	// QA Manager
-	if (await userManager.FindByEmailAsync("qamanager@university.edu") == null)
-	{
-		var qaManager = new IdeaUser
-		{
-			UserName = "qamanager@university.edu",
-			Email = "qamanager@university.edu",
-			EmailConfirmed = true,
-			Name = "QA Manager",
-			Avatar = "/images/default-avatar.png"
-		};
-
-		var result = await userManager.CreateAsync(qaManager, defaultPassword);
-		if (result.Succeeded)
-		{
-			await userManager.AddToRoleAsync(qaManager, RoleConstants.QAManager);
-		}
-	}
-
-	// QA Coordinator
-	if (await userManager.FindByEmailAsync("qacoordinator@university.edu") == null)
-	{
-		var qaCoordinator = new IdeaUser
-		{
-			UserName = "qacoordinator@university.edu",
-			Email = "qacoordinator@university.edu",
-			EmailConfirmed = true,
-			Name = "QA Coordinator",
-			Avatar = "/images/default-avatar.png"
-		};
-
-		var result = await userManager.CreateAsync(qaCoordinator, defaultPassword);
-		if (result.Succeeded)
-		{
-			await userManager.AddToRoleAsync(qaCoordinator, RoleConstants.QACoordinator);
-		}
-	}
-
-	// Staff User
-	if (await userManager.FindByEmailAsync("staff@university.edu") == null)
-	{
-		var staff = new IdeaUser
-		{
-			UserName = "staff@university.edu",
-			Email = "staff@university.edu",
-			EmailConfirmed = true,
-			Name = "Staff Member",
-			Avatar = "/images/default-avatar.png"
-		};
-
-		var result = await userManager.CreateAsync(staff, defaultPassword);
-		if (result.Succeeded)
-		{
-			await userManager.AddToRoleAsync(staff, RoleConstants.Staff);
-		}
-	}
+	await Create("admin@university.edu", RoleConstants.Administrator, "System Administrator");
+	await Create("qamanager@university.edu", RoleConstants.QAManager, "QA Manager");
+	await Create("qacoordinator@university.edu", RoleConstants.QACoordinator, "QA Coordinator");
+	await Create("staff@university.edu", RoleConstants.Staff, "Staff Member");
 }

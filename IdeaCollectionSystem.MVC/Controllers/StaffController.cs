@@ -14,11 +14,13 @@ namespace IdeaCollectionSystem.MVC.Controllers
 	{
 		private readonly IIdeaService _ideaService;
 		private readonly ICategoryService _categoryService;
+		private readonly IQAManagerService _qaService;
 
-		public StaffController(IIdeaService ideaService, ICategoryService categoryService)
+		public StaffController(IIdeaService ideaService, ICategoryService categoryService, IQAManagerService qaService)
 		{
 			_ideaService = ideaService;
 			_categoryService = categoryService;
+			_qaService = qaService;
 		}
 
 		// GET /Staff/Dashboard
@@ -70,6 +72,12 @@ namespace IdeaCollectionSystem.MVC.Controllers
 
 			var categories = await _categoryService.GetAllActiveAsync();
 			ViewBag.Categories = new SelectList(categories, "Id", "Name");
+
+			// Load danh sách Submission đang active (chưa quá ClosureDate)
+			var submissions = await _qaService.GetAllSubmissionsAsync();
+			var activeSubmissions = submissions.Where(s => s.IsActive).ToList();
+			ViewBag.Submissions = new SelectList(activeSubmissions, "Id", "Name");
+
 			return View();
 		}
 
@@ -94,8 +102,7 @@ namespace IdeaCollectionSystem.MVC.Controllers
 			if (string.IsNullOrEmpty(userId))
 			{
 				ModelState.AddModelError("", "User not found. Please login again.");
-				var cats = await _categoryService.GetAllActiveAsync();
-				ViewBag.Categories = new SelectList(cats, "Id", "Name", model.CategoryId);
+				await ReloadViewBagAsync(model);
 				return View(model);
 			}
 
@@ -103,6 +110,12 @@ namespace IdeaCollectionSystem.MVC.Controllers
 			if (model.CategoryId == null || model.CategoryId == Guid.Empty)
 			{
 				ModelState.AddModelError("CategoryId", "Please select a category.");
+			}
+
+			// Validate SubmissionId không phải null hoặc Guid.Empty
+			if (model.SubmissionId == null || model.SubmissionId == Guid.Empty)
+			{
+				ModelState.AddModelError("SubmissionId", "Please select a submission period.");
 			}
 
 			if (ModelState.IsValid)
@@ -131,6 +144,7 @@ namespace IdeaCollectionSystem.MVC.Controllers
 					Text = model.Text,
 					Description = model.Description,
 					CategoryId = model.CategoryId!.Value,
+					SubmissionId = model.SubmissionId!.Value,
 					IsAnonymous = model.IsAnonymous,
 					FilePaths = filePaths
 				};
@@ -142,12 +156,22 @@ namespace IdeaCollectionSystem.MVC.Controllers
 					return RedirectToAction(nameof(MyIdeas));
 				}
 
-				ModelState.AddModelError("", "Failed to submit idea. Make sure an active submission period exists.");
+				ModelState.AddModelError("", "Failed to submit idea. Please try again.");
 			}
 
+			await ReloadViewBagAsync(model);
+			return View(model);
+		}
+
+		//  Helper: Reload ViewBag data khi trả về View
+		private async Task ReloadViewBagAsync(IdeaViewModel model)
+		{
 			var categories = await _categoryService.GetAllActiveAsync();
 			ViewBag.Categories = new SelectList(categories, "Id", "Name", model.CategoryId);
-			return View(model);
+
+			var submissions = await _qaService.GetAllSubmissionsAsync();
+			var activeSubmissions = submissions.Where(s => s.IsActive).ToList();
+			ViewBag.Submissions = new SelectList(activeSubmissions, "Id", "Name", model.SubmissionId);
 		}
 
 		//  Vote (Thumbs Up/Down) via AJAX

@@ -16,6 +16,10 @@ namespace IdeaCollectionSystem.Models
 		[Required(ErrorMessage = "Please select a category")]
 		public Guid? CategoryId { get; set; }
 
+		// Bắt buộc chọn Submission
+		[Required(ErrorMessage = "Please select a submission period")]
+		public Guid? SubmissionId { get; set; }
+
 		public Guid DepartmentId { get; set; }
 
 		public bool IsAnonymous { get; set; }

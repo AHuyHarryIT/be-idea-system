@@ -40,7 +40,6 @@ namespace IdeaCollectionSystem.Service.Services
 		public async Task<byte[]> ExportIdeasToCsvAsync()
 		{
 			var ideas = await _context.Ideas
-				.Include(i => i.User)
 				.Include(i => i.Category)
 				.Include(i => i.Department)
 				.ToListAsync();
@@ -53,7 +52,7 @@ namespace IdeaCollectionSystem.Service.Services
 				var upvotes = await _context.IdeaReactions.CountAsync(r => r.IdeaId == i.Id && r.Reaction == "thumbs_up");
 				var downvotes = await _context.IdeaReactions.CountAsync(r => r.IdeaId == i.Id && r.Reaction == "thumbs_down");
 				var comments = await _context.Comments.CountAsync(c => c.IdeaId == i.Id);
-				var author = i.IsAnonymous ? "Anonymous" : (i.User?.FirstName + " " + i.User?.LastName);
+				var author = i.IsAnonymous ? "Anonymous" : (i.UserId ?? "Unknown");
 				csv.AppendLine(
 					$"{i.Id},\"{i.Text}\",\"{author}\",\"{i.Category?.Name}\"," +
 					$"\"{i.Department?.Name}\",\"{i.CreatedAt:yyyy-MM-dd HH:mm}\",{upvotes},{downvotes},{comments}");

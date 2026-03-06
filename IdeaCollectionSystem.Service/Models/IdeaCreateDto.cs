@@ -11,5 +11,7 @@
 		public Guid CategoryId { get; set; }
 		public Guid DepartmentId { get; set; }
 
+		public Guid SubmissionId { get; set; }
+
 	}
 }

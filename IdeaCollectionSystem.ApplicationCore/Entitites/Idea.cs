@@ -6,7 +6,6 @@ public class Idea
 	[Key]
 	public Guid Id { get; set; }
 
-	//public string Title { get; set; } = string.Empty;
 	public string Text { get; set; } = string.Empty;
 	public string Description { get; set; } = string.Empty;
 
@@ -16,21 +15,16 @@ public class Idea
 
 	public bool IsAnonymous { get; set; }
 
-	public Guid UserId { get; set; }
-	public User? User { get; set; }
-
+	public string UserId { get; set; } = string.Empty;
 
 	public Guid SubmissionId { get; set; }
 	public Submission? Submission { get; set; }
 
-
 	public Guid DepartmentId { get; set; }
 	public Department? Department { get; set; }
 
-
 	public Guid CategoryId { get; set; }
 	public Category? Category { get; set; }
-
 
 	public ICollection<Comment> Comments { get; set; } = new List<Comment>();
 	public ICollection<IdeaReactions> IdeaReactions { get; set; } = new List<IdeaReactions>();
