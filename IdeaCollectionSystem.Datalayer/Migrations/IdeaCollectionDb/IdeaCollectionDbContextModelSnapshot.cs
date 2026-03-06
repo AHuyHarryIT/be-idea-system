@@ -8,7 +8,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
-namespace IdeaCollectionSystem.Datalayer.Migrations
+namespace IdeaCollectionSystem.Datalayer.Migrations.IdeaCollectionDb
 {
     [DbContext(typeof(IdeaCollectionDbContext))]
     partial class IdeaCollectionDbContextModelSnapshot : ModelSnapshot
@@ -44,18 +44,6 @@ namespace IdeaCollectionSystem.Datalayer.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<Guid?>("EmailOutBoxId")
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid?>("IdeaDocumentsId")
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid?>("IdeaReactionsIdeaId")
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid?>("IdeaReactionsUserId")
-                        .HasColumnType("uuid");
-
                     b.Property<bool>("IsAnonymous")
                         .HasColumnType("boolean");
 
@@ -69,8 +57,10 @@ namespace IdeaCollectionSystem.Datalayer.Migrations
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp without time zone");
 
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("uuid");
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("character varying(450)");
 
                     b.HasKey("Id");
 
@@ -78,15 +68,7 @@ namespace IdeaCollectionSystem.Datalayer.Migrations
 
                     b.HasIndex("DepartmentId");
 
-                    b.HasIndex("EmailOutBoxId");
-
-                    b.HasIndex("IdeaDocumentsId");
-
                     b.HasIndex("SubmissionId");
-
-                    b.HasIndex("UserId");
-
-                    b.HasIndex("IdeaReactionsUserId", "IdeaReactionsIdeaId");
 
                     b.ToTable("Ideas", (string)null);
                 });
@@ -128,9 +110,6 @@ namespace IdeaCollectionSystem.Datalayer.Migrations
                     b.Property<DateTime?>("DeletedAt")
                         .HasColumnType("timestamp without time zone");
 
-                    b.Property<Guid?>("EmailOutBoxId")
-                        .HasColumnType("uuid");
-
                     b.Property<Guid>("IdeaId")
                         .HasColumnType("uuid");
 
@@ -143,16 +122,14 @@ namespace IdeaCollectionSystem.Datalayer.Migrations
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp without time zone");
 
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("uuid");
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("character varying(450)");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("EmailOutBoxId");
-
                     b.HasIndex("IdeaId");
-
-                    b.HasIndex("UserId");
 
                     b.ToTable("Comments", (string)null);
                 });
@@ -172,12 +149,7 @@ namespace IdeaCollectionSystem.Datalayer.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
-                    b.Property<Guid?>("UserId")
-                        .HasColumnType("uuid");
-
                     b.HasKey("Id");
-
-                    b.HasIndex("UserId");
 
                     b.ToTable("Departments", (string)null);
                 });
@@ -225,13 +197,13 @@ namespace IdeaCollectionSystem.Datalayer.Migrations
                     b.ToTable("EmailOutBoxes", (string)null);
                 });
 
-            modelBuilder.Entity("IdeaCollectionSystem.ApplicationCore.Entitites.IdeaDocuments", b =>
+            modelBuilder.Entity("IdeaCollectionSystem.ApplicationCore.Entitites.IdeaDocument", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.Property<DateTime>("DeletedAt")
+                    b.Property<DateTime?>("DeletedAt")
                         .HasColumnType("timestamp without time zone");
 
                     b.Property<long>("FizeSize")
@@ -262,10 +234,11 @@ namespace IdeaCollectionSystem.Datalayer.Migrations
                     b.ToTable("IdeaDocuments", (string)null);
                 });
 
-            modelBuilder.Entity("IdeaCollectionSystem.ApplicationCore.Entitites.IdeaReactions", b =>
+            modelBuilder.Entity("IdeaCollectionSystem.ApplicationCore.Entitites.IdeaReaction", b =>
                 {
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("uuid");
+                    b.Property<string>("UserId")
+                        .HasMaxLength(450)
+                        .HasColumnType("character varying(450)");
 
                     b.Property<Guid>("IdeaId")
                         .HasColumnType("uuid");
@@ -290,29 +263,18 @@ namespace IdeaCollectionSystem.Datalayer.Migrations
                     b.ToTable("IdeaReactions", (string)null);
                 });
 
-            modelBuilder.Entity("IdeaCollectionSystem.ApplicationCore.Entitites.Role", b =>
+            modelBuilder.Entity("IdeaCollectionSystem.ApplicationCore.Entitites.IdeaView", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.Property<string>("Description")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
-
-                    b.Property<Guid?>("UserId")
-                        .HasColumnType("uuid");
+                    b.Property<DateTime>("VistiTime")
+                        .HasColumnType("timestamp without time zone");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("UserId");
-
-                    b.ToTable("Roles", (string)null);
+                    b.ToTable("IdeaViews", (string)null);
                 });
 
             modelBuilder.Entity("IdeaCollectionSystem.ApplicationCore.Entitites.Submission", b =>
@@ -349,6 +311,36 @@ namespace IdeaCollectionSystem.Datalayer.Migrations
                     b.ToTable("Submissions", (string)null);
                 });
 
+            modelBuilder.Entity("IdeaCollectionSystem.ApplicationCore.Entitites.TermVersion", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Content")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid?>("UserTermAcceptanceId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Version")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserTermAcceptanceId");
+
+                    b.ToTable("TermVersions", (string)null);
+                });
+
             modelBuilder.Entity("IdeaCollectionSystem.ApplicationCore.Entitites.User", b =>
                 {
                     b.Property<Guid>("Id")
@@ -376,12 +368,6 @@ namespace IdeaCollectionSystem.Datalayer.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<Guid?>("IdeaReactionsIdeaId")
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid?>("IdeaReactionsUserId")
-                        .HasColumnType("uuid");
-
                     b.Property<string>("LastName")
                         .IsRequired()
                         .HasColumnType("text");
@@ -396,15 +382,47 @@ namespace IdeaCollectionSystem.Datalayer.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<Guid?>("UserTermAcceptanceId")
+                        .HasColumnType("uuid");
+
                     b.HasKey("Id");
 
-                    b.HasIndex("DepartmentId");
+                    b.HasIndex("UserTermAcceptanceId");
 
-                    b.HasIndex("RoleId");
+                    b.ToTable("User");
+                });
 
-                    b.HasIndex("IdeaReactionsUserId", "IdeaReactionsIdeaId");
+            modelBuilder.Entity("IdeaCollectionSystem.ApplicationCore.Entitites.UserTermAcceptance", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
 
-                    b.ToTable("Users", (string)null);
+                    b.Property<DateTime>("AcceptedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("IpAddress")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("TermId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("UserAgent")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("UserId")
+                        .HasMaxLength(450)
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TermId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("UserTermAcceptances", (string)null);
                 });
 
             modelBuilder.Entity("Idea", b =>
@@ -421,67 +439,28 @@ namespace IdeaCollectionSystem.Datalayer.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.HasOne("IdeaCollectionSystem.ApplicationCore.Entitites.EmailOutBox", null)
-                        .WithMany("Ideas")
-                        .HasForeignKey("EmailOutBoxId");
-
-                    b.HasOne("IdeaCollectionSystem.ApplicationCore.Entitites.IdeaDocuments", null)
-                        .WithMany("Ideas")
-                        .HasForeignKey("IdeaDocumentsId");
-
                     b.HasOne("IdeaCollectionSystem.ApplicationCore.Entitites.Submission", "Submission")
                         .WithMany("Ideas")
                         .HasForeignKey("SubmissionId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.HasOne("IdeaCollectionSystem.ApplicationCore.Entitites.User", "User")
-                        .WithMany("Ideas")
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("IdeaCollectionSystem.ApplicationCore.Entitites.IdeaReactions", null)
-                        .WithMany("Ideas")
-                        .HasForeignKey("IdeaReactionsUserId", "IdeaReactionsIdeaId");
-
                     b.Navigation("Category");
 
                     b.Navigation("Department");
 
                     b.Navigation("Submission");
-
-                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("IdeaCollectionSystem.ApplicationCore.Entitites.Comment", b =>
                 {
-                    b.HasOne("IdeaCollectionSystem.ApplicationCore.Entitites.EmailOutBox", null)
-                        .WithMany("Comments")
-                        .HasForeignKey("EmailOutBoxId");
-
                     b.HasOne("Idea", "Idea")
                         .WithMany("Comments")
                         .HasForeignKey("IdeaId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("IdeaCollectionSystem.ApplicationCore.Entitites.User", "User")
-                        .WithMany("Comments")
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
                     b.Navigation("Idea");
-
-                    b.Navigation("User");
-                });
-
-            modelBuilder.Entity("IdeaCollectionSystem.ApplicationCore.Entitites.Department", b =>
-                {
-                    b.HasOne("IdeaCollectionSystem.ApplicationCore.Entitites.User", null)
-                        .WithMany("Departments")
-                        .HasForeignKey("UserId");
                 });
 
             modelBuilder.Entity("IdeaCollectionSystem.ApplicationCore.Entitites.EmailOutBox", b =>
@@ -489,13 +468,13 @@ namespace IdeaCollectionSystem.Datalayer.Migrations
                     b.HasOne("IdeaCollectionSystem.ApplicationCore.Entitites.Comment", "Comment")
                         .WithMany()
                         .HasForeignKey("CommentId")
-                        .OnDelete(DeleteBehavior.Restrict)
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.HasOne("Idea", "Idea")
                         .WithMany()
                         .HasForeignKey("IdeaId")
-                        .OnDelete(DeleteBehavior.Restrict)
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.Navigation("Comment");
@@ -503,7 +482,7 @@ namespace IdeaCollectionSystem.Datalayer.Migrations
                     b.Navigation("Idea");
                 });
 
-            modelBuilder.Entity("IdeaCollectionSystem.ApplicationCore.Entitites.IdeaDocuments", b =>
+            modelBuilder.Entity("IdeaCollectionSystem.ApplicationCore.Entitites.IdeaDocument", b =>
                 {
                     b.HasOne("Idea", "Idea")
                         .WithMany("IdeaDocuments")
@@ -514,7 +493,7 @@ namespace IdeaCollectionSystem.Datalayer.Migrations
                     b.Navigation("Idea");
                 });
 
-            modelBuilder.Entity("IdeaCollectionSystem.ApplicationCore.Entitites.IdeaReactions", b =>
+            modelBuilder.Entity("IdeaCollectionSystem.ApplicationCore.Entitites.IdeaReaction", b =>
                 {
                     b.HasOne("Idea", "Idea")
                         .WithMany("IdeaReactions")
@@ -522,45 +501,40 @@ namespace IdeaCollectionSystem.Datalayer.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("IdeaCollectionSystem.ApplicationCore.Entitites.User", "User")
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
                     b.Navigation("Idea");
-
-                    b.Navigation("User");
                 });
 
-            modelBuilder.Entity("IdeaCollectionSystem.ApplicationCore.Entitites.Role", b =>
+            modelBuilder.Entity("IdeaCollectionSystem.ApplicationCore.Entitites.TermVersion", b =>
                 {
-                    b.HasOne("IdeaCollectionSystem.ApplicationCore.Entitites.User", null)
-                        .WithMany("Roles")
-                        .HasForeignKey("UserId");
+                    b.HasOne("IdeaCollectionSystem.ApplicationCore.Entitites.UserTermAcceptance", null)
+                        .WithMany("Terms")
+                        .HasForeignKey("UserTermAcceptanceId");
                 });
 
             modelBuilder.Entity("IdeaCollectionSystem.ApplicationCore.Entitites.User", b =>
                 {
-                    b.HasOne("IdeaCollectionSystem.ApplicationCore.Entitites.Department", "Department")
+                    b.HasOne("IdeaCollectionSystem.ApplicationCore.Entitites.UserTermAcceptance", null)
                         .WithMany("Users")
-                        .HasForeignKey("DepartmentId")
+                        .HasForeignKey("UserTermAcceptanceId");
+                });
+
+            modelBuilder.Entity("IdeaCollectionSystem.ApplicationCore.Entitites.UserTermAcceptance", b =>
+                {
+                    b.HasOne("IdeaCollectionSystem.ApplicationCore.Entitites.TermVersion", "Term")
+                        .WithMany()
+                        .HasForeignKey("TermId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.HasOne("IdeaCollectionSystem.ApplicationCore.Entitites.Role", "Role")
-                        .WithMany("Users")
-                        .HasForeignKey("RoleId")
-                        .OnDelete(DeleteBehavior.Restrict)
+                    b.HasOne("IdeaCollectionSystem.ApplicationCore.Entitites.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("IdeaCollectionSystem.ApplicationCore.Entitites.IdeaReactions", null)
-                        .WithMany("Users")
-                        .HasForeignKey("IdeaReactionsUserId", "IdeaReactionsIdeaId");
+                    b.Navigation("Term");
 
-                    b.Navigation("Department");
-
-                    b.Navigation("Role");
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("Idea", b =>
@@ -580,32 +554,6 @@ namespace IdeaCollectionSystem.Datalayer.Migrations
             modelBuilder.Entity("IdeaCollectionSystem.ApplicationCore.Entitites.Department", b =>
                 {
                     b.Navigation("Ideas");
-
-                    b.Navigation("Users");
-                });
-
-            modelBuilder.Entity("IdeaCollectionSystem.ApplicationCore.Entitites.EmailOutBox", b =>
-                {
-                    b.Navigation("Comments");
-
-                    b.Navigation("Ideas");
-                });
-
-            modelBuilder.Entity("IdeaCollectionSystem.ApplicationCore.Entitites.IdeaDocuments", b =>
-                {
-                    b.Navigation("Ideas");
-                });
-
-            modelBuilder.Entity("IdeaCollectionSystem.ApplicationCore.Entitites.IdeaReactions", b =>
-                {
-                    b.Navigation("Ideas");
-
-                    b.Navigation("Users");
-                });
-
-            modelBuilder.Entity("IdeaCollectionSystem.ApplicationCore.Entitites.Role", b =>
-                {
-                    b.Navigation("Users");
                 });
 
             modelBuilder.Entity("IdeaCollectionSystem.ApplicationCore.Entitites.Submission", b =>
@@ -613,15 +561,11 @@ namespace IdeaCollectionSystem.Datalayer.Migrations
                     b.Navigation("Ideas");
                 });
 
-            modelBuilder.Entity("IdeaCollectionSystem.ApplicationCore.Entitites.User", b =>
+            modelBuilder.Entity("IdeaCollectionSystem.ApplicationCore.Entitites.UserTermAcceptance", b =>
                 {
-                    b.Navigation("Comments");
+                    b.Navigation("Terms");
 
-                    b.Navigation("Departments");
-
-                    b.Navigation("Ideas");
-
-                    b.Navigation("Roles");
+                    b.Navigation("Users");
                 });
 #pragma warning restore 612, 618
         }

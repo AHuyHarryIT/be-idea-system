@@ -1,10 +1,14 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
 
 namespace IdeaCollectionSystem.ApplicationCore.Entitites
 {
-	public class IdeaDocuments
+	public class IdeaDocument
 	{
 		[Key]
 		public Guid Id { get; set; }
@@ -13,11 +17,11 @@ namespace IdeaCollectionSystem.ApplicationCore.Entitites
 		public string MimeType { get; set; } = string.Empty;
 		public long FizeSize { get; set; }
 		public DateTime UploadtedAt { get; set; } = DateTime.UtcNow;
-		public DateTime? DeletedAt { get; set; }
-
+		public DateTime? DeletedAt { get; set; } 
 		[ForeignKey("IdeaId")]
 		public Guid IdeaId { get; set; }
 		public Idea? Idea { get; set; }
 
+	
 	}
 }

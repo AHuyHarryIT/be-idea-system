@@ -14,8 +14,8 @@ public class Idea
 	public DateTime? DeletedAt { get; set; }
 
 	public bool IsAnonymous { get; set; }
-
 	public string UserId { get; set; } = string.Empty;
+	
 
 	public Guid SubmissionId { get; set; }
 	public Submission? Submission { get; set; }
@@ -27,6 +27,6 @@ public class Idea
 	public Category? Category { get; set; }
 
 	public ICollection<Comment> Comments { get; set; } = new List<Comment>();
-	public ICollection<IdeaReactions> IdeaReactions { get; set; } = new List<IdeaReactions>();
-	public ICollection<IdeaDocuments> IdeaDocuments { get; set; } = new List<IdeaDocuments>();
+	public ICollection<IdeaReaction> IdeaReactions { get; set; } = new List<IdeaReaction>();
+	public ICollection<IdeaDocument> IdeaDocuments { get; set; } = new List<IdeaDocument>();
 }

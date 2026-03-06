@@ -12,7 +12,7 @@ namespace IdeaCollectionSystem.Models
 		[StringLength(1000, MinimumLength = 10, ErrorMessage = "Description must be between 10 and 1000 characters")]
 		public string Description { get; set; } = string.Empty;
 
-		// Đổi sang Guid? để [Required] bắt được Guid.Empty / null
+		// Guid? để [Required] bắt được Guid.Empty / null
 		[Required(ErrorMessage = "Please select a category")]
 		public Guid? CategoryId { get; set; }
 

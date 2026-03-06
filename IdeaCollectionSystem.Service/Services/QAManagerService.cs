@@ -36,7 +36,7 @@ namespace IdeaCollectionSystem.Service.Services
 			};
 		}
 
-		//  CSV Export 
+		//  CSV Export — lấy author từ Identity thay vì i.User?.FirstName
 		public async Task<byte[]> ExportIdeasToCsvAsync()
 		{
 			var ideas = await _context.Ideas
@@ -52,7 +52,19 @@ namespace IdeaCollectionSystem.Service.Services
 				var upvotes = await _context.IdeaReactions.CountAsync(r => r.IdeaId == i.Id && r.Reaction == "thumbs_up");
 				var downvotes = await _context.IdeaReactions.CountAsync(r => r.IdeaId == i.Id && r.Reaction == "thumbs_down");
 				var comments = await _context.Comments.CountAsync(c => c.IdeaId == i.Id);
-				var author = i.IsAnonymous ? "Anonymous" : (i.UserId ?? "Unknown");
+
+				// Lấy author từ Identity, không dùng i.User?.FirstName
+				string author;
+				if (i.IsAnonymous)
+				{
+					author = "Anonymous";
+				}
+				else
+				{
+					var user = await _userManager.FindByIdAsync(i.UserId);
+					author = user?.Name ?? user?.Email ?? "Unknown";
+				}
+
 				csv.AppendLine(
 					$"{i.Id},\"{i.Text}\",\"{author}\",\"{i.Category?.Name}\"," +
 					$"\"{i.Department?.Name}\",\"{i.CreatedAt:yyyy-MM-dd HH:mm}\",{upvotes},{downvotes},{comments}");

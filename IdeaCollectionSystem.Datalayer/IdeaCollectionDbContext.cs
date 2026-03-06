@@ -11,16 +11,20 @@ namespace IdeaCollectionSystem.Datalayer
 		}
 
 		#region DbSet
-		// Bỏ DbSet<User> — không dùng custom Users nữa, dùng AspNetUsers (Identity)
+		// Đã gỡ bỏ DbSet<User> và DbSet<Role> vì chúng được quản lý bởi Identity
 		public DbSet<Category> Categories { get; set; }
 		public DbSet<Comment> Comments { get; set; }
 		public DbSet<Department> Departments { get; set; }
-		public DbSet<Role> Roles { get; set; }
 		public DbSet<Submission> Submissions { get; set; }
 		public DbSet<Idea> Ideas { get; set; }
-		public DbSet<IdeaReactions> IdeaReactions { get; set; }
+		public DbSet<IdeaReaction> IdeaReactions { get; set; }
 		public DbSet<EmailOutBox> EmailOutBoxes { get; set; }
-		public DbSet<IdeaDocuments> IdeaDocuments { get; set; }
+		public DbSet<IdeaDocument> IdeaDocuments { get; set; }
+
+		// BỔ SUNG: Các Entities đang có trong thư mục nhưng bị thiếu ở code cũ
+		public DbSet<IdeaView> IdeaViews { get; set; }
+		public DbSet<TermVersion> TermVersions { get; set; }
+		public DbSet<UserTermAcceptance> UserTermAcceptances { get; set; }
 		#endregion
 
 		protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -28,13 +32,6 @@ namespace IdeaCollectionSystem.Datalayer
 			base.OnModelCreating(modelBuilder);
 
 			#region Master Entities
-			modelBuilder.Entity<Role>(entity =>
-			{
-				entity.ToTable("Roles");
-				entity.HasKey(x => x.Id);
-				entity.Property(x => x.Name).HasMaxLength(100).IsRequired();
-			});
-
 			modelBuilder.Entity<Department>(entity =>
 			{
 				entity.ToTable("Departments");
@@ -63,8 +60,8 @@ namespace IdeaCollectionSystem.Datalayer
 				entity.ToTable("Ideas");
 				entity.HasKey(x => x.Id);
 
-				// UserId là string (Identity ID) — lưu trực tiếp, không FK sang Users
-				entity.Property(x => x.UserId).IsRequired();
+				// UserId là string (Identity ID). Đặt MaxLength(450) để khớp chuẩn Identity
+				entity.Property(x => x.UserId).IsRequired().HasMaxLength(450);
 
 				entity.HasOne(x => x.Submission)
 					.WithMany(x => x.Ideas)
@@ -84,7 +81,7 @@ namespace IdeaCollectionSystem.Datalayer
 			#endregion
 
 			#region IdeaDocuments
-			modelBuilder.Entity<IdeaDocuments>(entity =>
+			modelBuilder.Entity<IdeaDocument>(entity =>
 			{
 				entity.ToTable("IdeaDocuments");
 				entity.HasKey(x => x.Id);
@@ -102,8 +99,7 @@ namespace IdeaCollectionSystem.Datalayer
 				entity.ToTable("Comments");
 				entity.HasKey(x => x.Id);
 
-				// UserId là string (Identity ID) — lưu trực tiếp, không FK
-				entity.Property(x => x.UserId).IsRequired();
+				entity.Property(x => x.UserId).IsRequired().HasMaxLength(450);
 
 				entity.HasOne(x => x.Idea)
 					.WithMany(x => x.Comments)
@@ -113,13 +109,14 @@ namespace IdeaCollectionSystem.Datalayer
 			#endregion
 
 			#region IdeaReactions
-			modelBuilder.Entity<IdeaReactions>(entity =>
+			modelBuilder.Entity<IdeaReaction>(entity =>
 			{
 				entity.ToTable("IdeaReactions");
-				entity.HasKey(x => x.Id);
 
-				// UserId là string (Identity ID) — lưu trực tiếp, không FK
-				entity.Property(x => x.UserId).IsRequired();
+				// CHUẨN HÓA: Dùng Composite Key để 1 user chỉ được Like/Dislike 1 lần cho 1 ý tưởng
+				entity.HasKey(x => new { x.UserId, x.IdeaId });
+
+				entity.Property(x => x.UserId).IsRequired().HasMaxLength(450);
 
 				entity.HasOne(x => x.Idea)
 					.WithMany(x => x.IdeaReactions)
@@ -138,6 +135,33 @@ namespace IdeaCollectionSystem.Datalayer
 					.WithMany()
 					.HasForeignKey(x => x.IdeaId)
 					.OnDelete(DeleteBehavior.Cascade);
+			});
+			#endregion
+
+			#region Bổ sung các bảng bị thiếu
+			modelBuilder.Entity<IdeaView>(entity =>
+			{
+				entity.ToTable("IdeaViews");
+				entity.HasKey(x => x.Id);
+			});
+
+			modelBuilder.Entity<TermVersion>(entity =>
+			{
+				entity.ToTable("TermVersions");
+				entity.HasKey(x => x.Id);
+			});
+
+			modelBuilder.Entity<UserTermAcceptance>(entity =>
+			{
+				entity.ToTable("UserTermAcceptances");
+				entity.HasKey(x => x.Id);
+				entity.Property(x => x.UserId).IsRequired().HasMaxLength(450);
+
+				// Fix: Use TermId and Term navigation property as per UserTermAcceptance signature
+				entity.HasOne(x => x.Term)
+					.WithMany()
+					.HasForeignKey(x => x.TermId)
+					.OnDelete(DeleteBehavior.Restrict);
 			});
 			#endregion
 		}

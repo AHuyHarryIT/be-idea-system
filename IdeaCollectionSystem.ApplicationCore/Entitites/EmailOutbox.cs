@@ -1,5 +1,4 @@
-﻿using System;
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace IdeaCollectionSystem.ApplicationCore.Entitites
@@ -21,10 +20,17 @@ namespace IdeaCollectionSystem.ApplicationCore.Entitites
 
 		public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 		public DateTime SentAt { get; set; } = DateTime.UtcNow;
+
 		public string Error { get; set; } = string.Empty;
 
-		[ForeignKey("IdeaId")]
 		public Guid IdeaId { get; set; }
+		[ForeignKey("IdeaId")]
 		public Idea? Idea { get; set; }
+
+		public Guid CommentId { get; set; }
+		[ForeignKey("CommentId")]
+		public Comment? Comment { get; set; }
+
+	
 	}
 }

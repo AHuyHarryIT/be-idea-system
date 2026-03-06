@@ -15,7 +15,10 @@ builder.Services.AddDbContext<IdeaCollectionDbContext>(options =>
 	options.UseNpgsql(builder.Configuration.GetConnectionString("IdeaCollectionDbContext")));
 
 builder.Services.AddDbContext<IdeaCollectionIdentityDbContext>(options =>
-	options.UseNpgsql(builder.Configuration.GetConnectionString("IdeaIdentityConnection")));
+	options.UseNpgsql(
+		builder.Configuration.GetConnectionString("IdeaCollectionIdentityDbContext"),
+		x => x.MigrationsHistoryTable("__EFMigrationsHistory_Identity") 
+	));
 
 builder.Services.AddIdentity<IdeaUser, IdeaRole>(options =>
 {
@@ -82,11 +85,11 @@ using (var scope = app.Services.CreateScope())
 		var dbContext = services.GetRequiredService<IdeaCollectionDbContext>();
 		var identityDbContext = services.GetRequiredService<IdeaCollectionIdentityDbContext>();
 
-		await dbContext.Database.MigrateAsync();
-		await identityDbContext.Database.MigrateAsync();
+		//await dbContext.Database.MigrateAsync();
+		//await identityDbContext.Database.MigrateAsync();
 
 		await SeedRolesAsync(roleManager);
-		await SeedDepartmentsAsync(dbContext);
+		await SeedDepartmentsAsync(dbContext);        // ← phải chạy trước
 		await SeedDemoUsersAsync(userManager, dbContext);
 
 		Console.WriteLine("Database seeding completed successfully!");
@@ -163,7 +166,7 @@ static async Task SeedDemoUsersAsync(UserManager<IdeaUser> userManager, IdeaColl
 			EmailConfirmed = true,
 			Name = name,
 			Avatar = "/images/default-avatar.png",
-			DepartmentId = firstDept?.Id   // ← gán DepartmentId ngay khi tạo
+			DepartmentId = firstDept?.Id   // ← gán DepartmentId ngay khi tạo user
 		};
 		var result = await userManager.CreateAsync(user, defaultPassword);
 		if (result.Succeeded)

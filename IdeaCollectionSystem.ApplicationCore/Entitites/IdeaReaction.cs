@@ -4,7 +4,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace IdeaCollectionSystem.ApplicationCore.Entitites
 {
-	public class IdeaReactions
+	public class IdeaReaction
 	{
 		[Key]
 		public Guid Id { get; set; }
@@ -13,13 +13,12 @@ namespace IdeaCollectionSystem.ApplicationCore.Entitites
 		public Guid IdeaId { get; set; }
 		public Idea? Idea { get; set; }
 
-
+		// UserId là string — dùng Identity ID, không FK sang custom User
 		public string UserId { get; set; } = string.Empty;
 
 		public string Reaction { get; set; } = string.Empty;
 
 		public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 		public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
-
 	}
 }

@@ -26,7 +26,7 @@ namespace IdeaCollectionSystem.MVC.Controllers
 		// GET /Staff/Dashboard
 		public IActionResult Dashboard() => View();
 
-		// ─── Terms ────────────────────────────────────────────────────────────
+		// ─── Terms 
 		[HttpGet]
 		public IActionResult Terms() => View();
 
@@ -106,17 +106,13 @@ namespace IdeaCollectionSystem.MVC.Controllers
 				return View(model);
 			}
 
-			// Validate CategoryId không phải null hoặc Guid.Empty
+			// Validate CategoryId
 			if (model.CategoryId == null || model.CategoryId == Guid.Empty)
-			{
 				ModelState.AddModelError("CategoryId", "Please select a category.");
-			}
 
-			// Validate SubmissionId không phải null hoặc Guid.Empty
+			// Validate SubmissionId — bắt buộc
 			if (model.SubmissionId == null || model.SubmissionId == Guid.Empty)
-			{
 				ModelState.AddModelError("SubmissionId", "Please select a submission period.");
-			}
 
 			if (ModelState.IsValid)
 			{
@@ -144,7 +140,7 @@ namespace IdeaCollectionSystem.MVC.Controllers
 					Text = model.Text,
 					Description = model.Description,
 					CategoryId = model.CategoryId!.Value,
-					SubmissionId = model.SubmissionId!.Value,
+					SubmissionId = model.SubmissionId!.Value,   // truyền SubmissionId bắt buộc
 					IsAnonymous = model.IsAnonymous,
 					FilePaths = filePaths
 				};
@@ -163,7 +159,7 @@ namespace IdeaCollectionSystem.MVC.Controllers
 			return View(model);
 		}
 
-		//  Helper: Reload ViewBag data khi trả về View
+		//  Helper: Reload ViewBag khi trả về View sau lỗi validation
 		private async Task ReloadViewBagAsync(IdeaViewModel model)
 		{
 			var categories = await _categoryService.GetAllActiveAsync();

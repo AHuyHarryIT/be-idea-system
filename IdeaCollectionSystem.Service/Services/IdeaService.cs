@@ -30,7 +30,7 @@ namespace IdeaCollectionSystem.Service.Services
 			return DateTime.UtcNow > latestSubmission.ClousureDate;
 		}
 
-		// Create idea — dùng IdeaUser trực tiếp, không cần custom User
+		// Create idea — dùng IdeaUser từ Identity, không cần custom User
 		public async Task<bool> CreateIdeaAsync(IdeaCreateDto dto, string userId)
 		{
 			// Tìm IdeaUser từ Identity
@@ -49,32 +49,22 @@ namespace IdeaCollectionSystem.Service.Services
 			}
 			else
 			{
-				// Fallback: lấy Department đầu tiên
 				var firstDept = await _context.Departments.FirstOrDefaultAsync();
 				if (firstDept == null) return false;
 				departmentId = firstDept.Id;
 			}
 
-			// Validate DepartmentId tồn tại
 			var departmentExists = await _context.Departments.AnyAsync(d => d.Id == departmentId);
 			if (!departmentExists) return false;
 
-			// Validate CategoryId
 			if (dto.CategoryId == Guid.Empty) return false;
 
-			// Lấy Submission
+			// Lấy Submission: ưu tiên dto.SubmissionId, fallback lấy mới nhất
 			Submission? submission;
 			if (dto.SubmissionId != Guid.Empty)
-			{
-				submission = await _context.Submissions
-					.FirstOrDefaultAsync(s => s.Id == dto.SubmissionId);
-			}
+				submission = await _context.Submissions.FirstOrDefaultAsync(s => s.Id == dto.SubmissionId);
 			else
-			{
-				submission = await _context.Submissions
-					.OrderByDescending(s => s.ClousureDate)
-					.FirstOrDefaultAsync();
-			}
+				submission = await _context.Submissions.OrderByDescending(s => s.ClousureDate).FirstOrDefaultAsync();
 
 			if (submission == null) return false;
 
@@ -101,7 +91,7 @@ namespace IdeaCollectionSystem.Service.Services
 			{
 				foreach (var path in dto.FilePaths)
 				{
-					var doc = new IdeaDocuments
+					var doc = new IdeaDocument
 					{
 						Id = Guid.NewGuid(),
 						IdeaId = idea.Id,
@@ -128,7 +118,6 @@ namespace IdeaCollectionSystem.Service.Services
 				.OrderByDescending(i => i.CreatedAt)
 				.ToListAsync();
 
-			// Lấy tên user từ Identity
 			var result = new List<IdeaInfoDto>();
 			foreach (var i in ideas)
 			{
@@ -246,11 +235,10 @@ namespace IdeaCollectionSystem.Service.Services
 		// Vote
 		public async Task<bool> VoteIdeaAsync(int ideaId, string userId, bool isThumbsUp)
 		{
-			var idea = await _context.Ideas
-				.FirstOrDefaultAsync(i => i.Id.GetHashCode() == ideaId);
+			var idea = await _context.Ideas.FirstOrDefaultAsync(i => i.Id.GetHashCode() == ideaId);
 			if (idea == null) return false;
 
-			// Remove Guid parsing, use string userId directly for IdeaReactions.UserId
+			// UserId là string — so sánh trực tiếp, không cần Guid.TryParse
 			var existingReaction = await _context.IdeaReactions
 				.FirstOrDefaultAsync(r => r.IdeaId == idea.Id && r.UserId == userId);
 
@@ -268,7 +256,7 @@ namespace IdeaCollectionSystem.Service.Services
 			}
 			else
 			{
-				await _context.IdeaReactions.AddAsync(new IdeaReactions
+				await _context.IdeaReactions.AddAsync(new IdeaReaction
 				{
 					Id = Guid.NewGuid(),
 					IdeaId = idea.Id,
