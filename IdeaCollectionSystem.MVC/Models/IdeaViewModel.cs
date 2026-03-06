@@ -13,11 +13,12 @@ namespace IdeaCollectionSystem.Models
 		public string Description { get; set; }
 
 		[Required(ErrorMessage = "Please select a category")]
-		public int CategoryId { get; set; }
+		public Guid CategoryId { get; set; } = Guid.Empty;
+
+		public Guid DepartmentId { get; set; }
 
 		public bool IsAnonymous { get; set; }
 
-		// Không cần thuộc tính này trong form nhưng có thể thêm để binding
-		// public List<IFormFile>? SupportingFiles { get; set; }
+
 	}
 }

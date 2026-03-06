@@ -6,7 +6,7 @@
 }
 
 <h2 class="mb-4">Ideas Without Comments</h2>
-
+@* 
 @if (!Model.Any())
 {
     <div class="alert alert-success">
@@ -14,7 +14,7 @@
     </div>
 }
 else
-{
+{ *@
     <div class="alert alert-warning">
         There are <strong>@Model.Count()</strong> ideas without comments.
     </div>
@@ -49,8 +49,8 @@ else
             }
         </tbody>
     </table>
-}
+@* } *@
 
 <a asp-action="Dashboard" class="btn btn-outline-primary mt-3">
-    ← Back to Dashboard
+     Back to Dashboard
 </a>

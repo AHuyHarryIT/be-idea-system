@@ -1,4 +1,5 @@
 ﻿using IdeaCollectionIdea.Common.Constants;
+using IdeaCollectionSystem.ApplicationCore.Entitites;
 using IdeaCollectionSystem.Models;
 using IdeaCollectionSystem.Service.Interfaces;
 using IdeaCollectionSystem.Service.Models.DTOs;
@@ -26,6 +27,7 @@ namespace IdeaCollectionSystem.MVC.Controllers
 			return View();
 		}
 
+		// Terms
 		[HttpGet]
 		public IActionResult Terms()
 		{
@@ -44,6 +46,17 @@ namespace IdeaCollectionSystem.MVC.Controllers
 			return View("Terms");
 		}
 
+		// My Ideas
+		public async Task<IActionResult> MyIdeas()
+		{
+			var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+			var ideas = await _ideaService.GetIdeasByStaffAsync(userId!);
+
+			return View(ideas ?? new List<IdeaInfoDto>());
+		}
+
+		// Submit Idea
 		[HttpGet]
 		public async Task<IActionResult> SubmitIdea()
 		{
@@ -74,48 +87,49 @@ namespace IdeaCollectionSystem.MVC.Controllers
 				return RedirectToAction("Login", "Account");
 			}
 
-			// Kiểm tra session terms
 			if (HttpContext.Session.GetString("AgreedTerms") != "true")
 			{
 				return RedirectToAction(nameof(Terms));
 			}
 
-			// Kiểm tra closure date
 			if (await _ideaService.IsClosureDatePassedAsync())
 			{
 				TempData["ErrorMessage"] = "The closure date for new ideas has passed.";
 				return RedirectToAction(nameof(Dashboard));
 			}
 
-			// Lấy claims từ user
-			var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
-			var departmentIdClaim = User.FindFirstValue("DepartmentId");
+			var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
 
-			// Kiểm tra claims
-			if (string.IsNullOrEmpty(userIdClaim))
+			if (string.IsNullOrEmpty(userId))
 			{
 				ModelState.AddModelError("", "User not found.");
 			}
 
-			if (string.IsNullOrEmpty(departmentIdClaim))
-			{
-				ModelState.AddModelError("", "Department not found. Please contact admin.");
-			}
-
-			// Kiểm tra ModelState sau khi đã kiểm tra claims
 			if (ModelState.IsValid)
 			{
-				int departmentId = int.Parse(departmentIdClaim!);
-
-				// Xử lý file upload nếu có
 				List<string>? filePaths = null;
+
 				if (Request.Form.Files.Count > 0)
 				{
 					filePaths = new List<string>();
+
 					foreach (var file in Request.Form.Files)
 					{
-						// TODO: Xử lý lưu file và lấy đường dẫn
-						// filePaths.Add(savedFilePath);
+						// Save the file to a location and get the saved path
+						var uploadsFolder = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads");
+						if (!Directory.Exists(uploadsFolder))
+						{
+							Directory.CreateDirectory(uploadsFolder);
+						}
+						var uniqueFileName = Guid.NewGuid().ToString() + Path.GetExtension(file.FileName);
+						var filePath = Path.Combine(uploadsFolder, uniqueFileName);
+
+						using (var stream = new FileStream(filePath, FileMode.Create))
+						{
+							await file.CopyToAsync(stream);
+						}
+						var savedPath = Path.Combine("uploads", uniqueFileName);
+						filePaths.Add(savedPath);
 					}
 				}
 
@@ -123,41 +137,27 @@ namespace IdeaCollectionSystem.MVC.Controllers
 				{
 					Title = model.Title,
 					Description = model.Description,
-					CategoryId = Guid.Parse(model.CategoryId.ToString()),
-					DepartmentId = departmentId,
+					CategoryId = model.CategoryId,
 					IsAnonymous = model.IsAnonymous,
-					FilePaths = filePaths // Gán file paths nếu có
+					FilePaths = filePaths
 				};
 
-				var result = await _ideaService.CreateIdeaAsync(dto, userIdClaim!);
+				var result = await _ideaService.CreateIdeaAsync(dto, userId);
 
 				if (result)
 				{
 					TempData["SuccessMessage"] = "Idea submitted successfully!";
-					return RedirectToAction(nameof(MyIdea));
+					return RedirectToAction(nameof(MyIdeas));
 				}
 
 				ModelState.AddModelError("", "Failed to submit idea.");
 			}
 
-			// Nếu có lỗi, reload categories
 			var categories = await _categoryService.GetAllActiveAsync();
 			ViewBag.Categories = new SelectList(categories, "Id", "Name", model.CategoryId);
+
 			return View(model);
 		}
 
-
-		[HttpGet]
-		public async Task<IActionResult> MyIdea()
-		{
-			var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
-			if (string.IsNullOrEmpty(userIdClaim))
-			{
-				return RedirectToAction("Login", "Account");
-			}
-
-			var ideas = await _ideaService.GetIdeasByUserAsync(userIdClaim);
-			return View(ideas);
-		}
 	}
 }

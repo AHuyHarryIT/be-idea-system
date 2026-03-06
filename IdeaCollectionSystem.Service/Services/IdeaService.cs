@@ -4,12 +4,10 @@ using IdeaCollectionSystem.Service.Models.DTOs;
 using Microsoft.EntityFrameworkCore;
 using IdeaCollectionSystem.ApplicationCore.Entitites;
 
-
 namespace IdeaCollectionSystem.Service.Services
 {
 	public class IdeaService : IIdeaService
 	{
-
 		private readonly IdeaCollectionDbContext _context;
 
 		public IdeaService(IdeaCollectionDbContext context)
@@ -17,9 +15,9 @@ namespace IdeaCollectionSystem.Service.Services
 			_context = context;
 		}
 
+		// Check closure date
 		public async Task<bool> IsClosureDatePassedAsync()
 		{
-			
 			var latestSubmission = await _context.Submissions
 				.OrderByDescending(s => s.ClousureDate)
 				.FirstOrDefaultAsync();
@@ -29,54 +27,59 @@ namespace IdeaCollectionSystem.Service.Services
 			return DateTime.UtcNow > latestSubmission.ClousureDate;
 		}
 
+		// Create idea
 		public async Task<bool> CreateIdeaAsync(IdeaCreateDto dto, string userId)
 		{
-			
-			if (await IsClosureDatePassedAsync()) return false;
+			if (!Guid.TryParse(userId, out var userGuid))
+				return false;
 
-			if (!Guid.TryParse(userId, out var userGuid)) return false;
+			var user = await _context.Users
+				.FirstOrDefaultAsync(u => u.Id == userGuid);
 
-			var newIdea = new Idea
+			if (user == null)
+				return false;
+
+			var idea = new Idea
 			{
-				Text = dto.Title,
-				UserId = userGuid,  
+				//Tex = dto.Title,
+				Text = dto.Text,
 				CategoryId = dto.CategoryId,
+				DepartmentId = user.DepartmentId, 
+				UserId = userGuid,
 				IsAnonymous = dto.IsAnonymous,
 				CreatedAt = DateTime.UtcNow
 			};
 
-			_context.Ideas.Add(newIdea);
-			return await _context.SaveChangesAsync() > 0;
+			await _context.Ideas.AddAsync(idea);
+			await _context.SaveChangesAsync();   
+
+			return true;
 		}
 
-
+		// Get ideas of current staff
 		public async Task<IEnumerable<IdeaInfoDto>> GetIdeasByStaffAsync(string userId)
 		{
-			
 			if (!Guid.TryParse(userId, out var userGuid))
-			{
 				return Enumerable.Empty<IdeaInfoDto>();
-			}
 
 			return await _context.Ideas
+				.Include(i => i.Category)
 				.Where(i => i.UserId == userGuid)
 				.Select(i => new IdeaInfoDto
 				{
-					Id = 0, 
-					Title = i.Text,
-					CategoryName = i.Category.Name,
+					Id = i.Id.GetHashCode(), 
+					CategoryName = i.Category != null ? i.Category.Name : "No Category",
 					CreatedDate = i.CreatedAt,
 					IsAnonymous = i.IsAnonymous
 				})
 				.ToListAsync();
 		}
 
+		// Get idea titles by user
 		public async Task<string?> GetIdeasByUserAsync(string userIdClaim)
 		{
 			if (!Guid.TryParse(userIdClaim, out var userGuid))
-			{
 				return null;
-			}
 
 			var ideas = await _context.Ideas
 				.Where(i => i.UserId == userGuid)
@@ -85,6 +88,5 @@ namespace IdeaCollectionSystem.Service.Services
 
 			return ideas.Count == 0 ? null : string.Join(", ", ideas);
 		}
-
 	}
 }
