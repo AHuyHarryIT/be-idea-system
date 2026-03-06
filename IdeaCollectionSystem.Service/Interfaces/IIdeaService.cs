@@ -1,9 +1,4 @@
 ﻿using IdeaCollectionSystem.Service.Models.DTOs;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace IdeaCollectionSystem.Service.Interfaces
 {
@@ -11,7 +6,11 @@ namespace IdeaCollectionSystem.Service.Interfaces
 	{
 		Task<bool> CreateIdeaAsync(IdeaCreateDto dto, string userId);
 		Task<IEnumerable<IdeaInfoDto>> GetIdeasByStaffAsync(string userId);
+		Task<IEnumerable<IdeaInfoDto>> GetAllIdeasAsync();
+		Task<IEnumerable<IdeaInfoDto>> GetIdeasByDepartmentAsync(string userId);
 		Task<string?> GetIdeasByUserAsync(string userIdClaim);
 		Task<bool> IsClosureDatePassedAsync();
+		Task<bool> VoteIdeaAsync(int ideaId, string userId, bool isThumbsUp);
+		Task<IdeaInfoDto?> GetIdeaDetailAsync(int ideaId);
 	}
 }
