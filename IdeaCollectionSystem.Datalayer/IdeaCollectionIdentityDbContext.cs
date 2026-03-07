@@ -24,7 +24,9 @@ public class IdeaCollectionIdentityDbContext
 				  .HasMaxLength(MaxLengths.FILE_PATH);
 
 			entity.Property(n => n.DepartmentId)
-				  .IsRequired(false);  
+				  .IsRequired(false);
+
+			entity.Ignore("Department");
 		});
 
 		builder.Entity<IdeaRole>(entity =>
