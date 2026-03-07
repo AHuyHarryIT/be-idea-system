@@ -8,16 +8,16 @@ namespace IdeaCollectionSystem.API.Controllers;
 [ApiController]
 [Route("api/[controller]")]
 [Authorize]
-public class SubmittionController : ControllerBase
+public class SubmissionController : ControllerBase
 {
 	private readonly IQAManagerService _qaManagerService;
 
-	public SubmittionController(IQAManagerService qaManagerService)
+	public SubmissionController(IQAManagerService qaManagerService)
 	{
 		_qaManagerService = qaManagerService;
 	}
 
-	// GET api/submittion
+	// GET api/submission
 	[HttpGet]
 	public async Task<IActionResult> GetAll()
 	{
@@ -25,7 +25,7 @@ public class SubmittionController : ControllerBase
 		return Ok(submissions);
 	}
 
-	// POST api/submittion
+	// POST api/submission
 	[HttpPost]
 	[Authorize(Roles = "Administrator,QAManager")]
 	public async Task<IActionResult> Create([FromBody] SubmissionCreateDto dto)
@@ -37,10 +37,10 @@ public class SubmittionController : ControllerBase
 		if (!result)
 			return BadRequest(new { message = "Không thể tạo đợt nộp bài." });
 
-		return Ok(new { message = "Đợt nộp bài đã được tạo." });
+		return StatusCode(201, new { message = "Đợt nộp bài đã được tạo." });
 	}
 
-	// PUT api/submittion/{id}
+	// PUT api/submission/{id}
 	[HttpPut("{id}")]
 	[Authorize(Roles = "Administrator,QAManager")]
 	public async Task<IActionResult> Update(Guid id, [FromBody] SubmissionCreateDto dto)
