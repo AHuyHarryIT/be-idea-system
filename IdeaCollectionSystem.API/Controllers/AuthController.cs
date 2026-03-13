@@ -1,5 +1,6 @@
 ﻿using IdeaCollectionSystem.API.Models;
 using IdeaCollectionSystem.ApplicationCore.Entitites.Identity;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.Data;
 using Microsoft.AspNetCore.Mvc;
@@ -29,6 +30,7 @@ public class AuthController : ControllerBase
 	}
 
 	// POST api/auth/login
+	[AllowAnonymous]
 	[HttpPost("login")]
 	public async Task<IActionResult> Login([FromBody] IdeaCollectionSystem.API.Models.LoginRequest request)
 	{
@@ -41,11 +43,11 @@ public class AuthController : ControllerBase
 			return Unauthorized(new { message = "Email hoặc mật khẩu không đúng." });
 
 		var roles = await _userManager.GetRolesAsync(user);
-		var token = GenerateJwtToken(user, roles);
+		var requesttoken = GenerateJwtToken(user, roles);
 
 		return Ok(new
 		{
-			token,
+            requesttoken,
 			user = new
 			{
 				id = user.Id,
@@ -57,6 +59,7 @@ public class AuthController : ControllerBase
 	}
 
 	// POST api/auth/register
+	[AllowAnonymous]
 	[HttpPost("register")]
 	public async Task<IActionResult> Register([FromBody] IdeaCollectionSystem.API.Models.RegisterRequest request)
 	{
