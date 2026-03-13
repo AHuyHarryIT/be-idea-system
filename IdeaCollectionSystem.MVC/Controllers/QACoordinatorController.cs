@@ -43,7 +43,7 @@ namespace IdeaCollectionSystem.MVC.Controllers
 		//  Submit Idea (coordinator cũng được submit) 
 		public IActionResult ManageStaff() => View();
 
-		// ─── Vote (Thumbs Up/Down) via AJAX 
+		//  Vote (Thumbs Up/Down) via AJAX 
 		[HttpPost]
 		public async Task<IActionResult> Vote(int ideaId, bool isThumbsUp)
 		{

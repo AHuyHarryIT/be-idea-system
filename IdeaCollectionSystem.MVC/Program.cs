@@ -89,7 +89,7 @@ using (var scope = app.Services.CreateScope())
 		//await identityDbContext.Database.MigrateAsync();
 
 		await SeedRolesAsync(roleManager);
-		await SeedDepartmentsAsync(dbContext);        // ← phải chạy trước
+		await SeedDepartmentsAsync(dbContext);        
 		await SeedDemoUsersAsync(userManager, dbContext);
 
 		Console.WriteLine("Database seeding completed successfully!");

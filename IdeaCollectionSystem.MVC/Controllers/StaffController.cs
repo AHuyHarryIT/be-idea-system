@@ -140,7 +140,7 @@ namespace IdeaCollectionSystem.MVC.Controllers
 					Text = model.Text,
 					Description = model.Description,
 					CategoryId = model.CategoryId!.Value,
-					SubmissionId = model.SubmissionId!.Value,   // truyền SubmissionId bắt buộc
+					SubmissionId = model.SubmissionId!.Value,   
 					IsAnonymous = model.IsAnonymous,
 					FilePaths = filePaths
 				};
