@@ -1,4 +1,7 @@
-﻿public class IdeaInfoDto
+﻿using IdeaCollectionSystem.Service.Models;
+using IdeaCollectionSystem.Service.Models.DTOs;
+
+public class IdeaInfoDto
 {
 	public Guid Id { get; set; } 
 	public string Text { get; set; } = string.Empty;
@@ -12,4 +15,6 @@
 	public int ThumbsDownCount { get; set; }
 	public int CommentCount { get; set; }
 	public bool CanComment { get; set; }
+
+	public List<CommentDto> Comments { get; set; } = new List<CommentDto>();
 }

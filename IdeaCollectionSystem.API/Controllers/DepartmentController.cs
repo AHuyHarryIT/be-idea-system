@@ -1,4 +1,5 @@
 ﻿using IdeaCollectionSystem.Service.Interfaces;
+using IdeaCollectionSystem.Service.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -8,20 +9,26 @@ namespace IdeaCollectionSystem.API.Controllers
 	[ApiController]
 	public class DepartmentController : ControllerBase
 	{
-		private readonly IUserService userService;
+		private readonly IDepartmentService _departmentService;
 
-		public DepartmentController(IUserService departmentService)
+		public DepartmentController (IDepartmentService departmentService)
 		{
-			userService = departmentService;
+			_departmentService = departmentService;
 		}
 
 		// GET: api/department
-		[HttpGet]
-		[Authorize] 
+		[HttpGet("departments")] // Định tuyến rõ ràng cho API
 		public async Task<IActionResult> GetDepartments()
 		{
-			var users = await userService.GetAllUsersAsync();
-			return Ok(users);
+			// Gọi đúng Service của Department
+			var departments = await _departmentService.GetAllDepartmentsAsync();
+
+			if (departments == null || !departments.Any())
+			{
+				return NotFound(new { message = "Không tìm thấy phòng ban nào." });
+			}
+
+			return Ok(departments);
 		}
 	}
 }

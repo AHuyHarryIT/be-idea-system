@@ -86,7 +86,8 @@ namespace IdeaCollectionSystem.API.Controllers
 		//	return Ok(new { message = "Đăng ký thành công. Vui lòng đăng nhập." });
 		//}
 
-		// --- HÀM TẠO TOKEN ĐÃ ĐƯỢC CHUẨN HÓA ---
+
+		//  GenerateJwtToken
 		private string GenerateJwtToken(IdeaUser user, IList<string> roles)
 		{
 			var claims = new List<Claim>

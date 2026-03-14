@@ -9,6 +9,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using System.IdentityModel.Tokens.Jwt;
+using System.Reflection; // Bắt buộc phải có để lấy thời gian Build
 using System.Text;
 using static System.Net.WebRequestMethods;
 
@@ -69,7 +70,7 @@ builder.Services.AddAuthentication(options =>
 		ValidIssuer = jwtIssuer,
 		ValidAudience = jwtAudience,
 		IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey)),
-		ClockSkew = TimeSpan.Zero 
+		ClockSkew = TimeSpan.Zero
 	};
 });
 
@@ -86,25 +87,26 @@ builder.Services.AddAuthorizationBuilder()
 	.AddPolicy(PolicyConstants.CanManageUsers, p => p.RequireRole(RoleConstants.Administrator))
 	.AddPolicy(PolicyConstants.CanSetClosureDates, p => p.RequireRole(RoleConstants.Administrator, RoleConstants.QAManager));
 
-// 6. CORS for React
+// 6. CORS for React 
 var allowedOrigins = builder.Configuration.GetSection("AllowedOrigins").Get<string[]>()
-    ?? new[] { 
-        "http://localhost:3000", 
-        "http://localhost:5173",
+	?? new[] {
+		"http://localhost:3000",
+		"http://localhost:5173",
 		"https://fe-idea-system.onrender.com",
-    };
+		"*"
+	};
 
 builder.Services.AddCors(options =>
 {
 	options.AddPolicy("AllowFrontend", policy =>
 	{
-		policy.WithOrigins("https://fe-idea-system.onrender.com",
-		"http://localhost:5173")
+		policy.WithOrigins(allowedOrigins)
 			  .AllowAnyHeader()
 			  .AllowAnyMethod()
-			  .AllowCredentials(); 
+			  .AllowCredentials();
 	});
 });
+
 // 7. Services DI
 builder.Services.AddScoped<IIdeaService, IdeaService>();
 builder.Services.AddScoped<ICategoryService, CategoryService>();
@@ -113,22 +115,34 @@ builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<ISubmissionService, SubmissionService>();
 builder.Services.AddScoped<IStatsService, StatsService>();
 builder.Services.AddScoped<IExportService, ExportService>();
+builder.Services.AddScoped<IDepartmentService, DepartmentService>();
 
 // 8. Controllers + Swagger
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
+
+// Logic lấy thời gian Publish
+var buildDate = System.IO.File.GetLastWriteTime(Assembly.GetExecutingAssembly().Location);
+var dynamicVersion = $"v1.{buildDate:ddMM.HHmm}";
+
 builder.Services.AddSwaggerGen(c =>
 {
-	c.SwaggerDoc("v1", new OpenApiInfo { Title = "Idea Collection API", Version = "v1" });
+	c.SwaggerDoc("v1", new OpenApiInfo
+	{
+		Title = "Idea Collection API",
+		Version = dynamicVersion,
+		Description = $"Last Updated: {buildDate:dd/MM/yyyy HH:mm:ss}"
+	});
 
-    c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
-    {
-        Description = "Paste Token",
-        Name = "Authorization",
-        In = ParameterLocation.Header,
-        Type = SecuritySchemeType.Http, 
-        Scheme = "bearer" 
-    });
+	c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+	{
+		Description = "Paste Token (format: Bearer {token})",
+		Name = "Authorization",
+		In = ParameterLocation.Header,
+		Type = SecuritySchemeType.Http,
+		Scheme = "bearer"
+	});
+
 	c.AddSecurityRequirement(new OpenApiSecurityRequirement
 	{
 		{
@@ -159,7 +173,7 @@ using (var scope = app.Services.CreateScope())
 	}
 }
 
-// 10. Middleware
+// 10. Middleware Pipeline (Đã gỡ bỏ UseCors("ReactPolicy") bị lỗi)
 app.UseSwagger();
 app.UseSwaggerUI();
 
@@ -167,10 +181,9 @@ app.UseRouting();
 
 app.UseCors("AllowFrontend");
 
-app.UseCors("ReactPolicy");
 app.UseHttpsRedirection();
 
-app.UseAuthentication(); 
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();

@@ -10,18 +10,18 @@ namespace IdeaCollectionSystem.API.Controllers
 	[Authorize(Roles = RoleConstants.Administrator + "," + RoleConstants.QAManager)]
 	public class ExportController : ControllerBase
 	{
-		private readonly IExportService exportService;
+		private readonly IExportService _exportService;
 
-		public ExportController(IExportService qaService)
+		public ExportController(IExportService exportService)
 		{
-			exportService = qaService;
+			_exportService = exportService;
 		}
 
 		// GET api/export/csv
 		[HttpGet("csv")]
 		public async Task<IActionResult> ExportCsv()
 		{
-			var data = await exportService.ExportIdeasToCsvAsync();
+			var data = await _exportService.ExportIdeasToCsvAsync();
 
 		
 			if (data == null || data.Length == 0)
@@ -37,7 +37,7 @@ namespace IdeaCollectionSystem.API.Controllers
 		[HttpGet("zip")]
 		public async Task<IActionResult> ExportZip()
 		{
-			var data = await exportService.ExportDocumentsToZipAsync();
+			var data = await _exportService.ExportDocumentsToZipAsync();
 
 			// CHỐT CHẶN: Tránh lỗi 500 nếu không có file đính kèm
 			if (data == null || data.Length == 0)
