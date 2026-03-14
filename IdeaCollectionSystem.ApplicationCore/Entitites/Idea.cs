@@ -15,7 +15,6 @@ public class Idea
 
 	public bool IsAnonymous { get; set; }
 	public string UserId { get; set; } = string.Empty;
-	
 
 	public Guid SubmissionId { get; set; }
 	public Submission? Submission { get; set; }

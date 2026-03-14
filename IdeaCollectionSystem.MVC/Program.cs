@@ -11,15 +11,17 @@ AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
 
 var builder = WebApplication.CreateBuilder(args);
 
+// 1. Database Connections
 builder.Services.AddDbContext<IdeaCollectionDbContext>(options =>
 	options.UseNpgsql(builder.Configuration.GetConnectionString("IdeaCollectionDbContext")));
 
 builder.Services.AddDbContext<IdeaCollectionIdentityDbContext>(options =>
 	options.UseNpgsql(
 		builder.Configuration.GetConnectionString("IdeaCollectionIdentityDbContext"),
-		x => x.MigrationsHistoryTable("__EFMigrationsHistory_Identity") 
+		x => x.MigrationsHistoryTable("__EFMigrationsHistory_Identity")
 	));
 
+// 2. Identity Configuration
 builder.Services.AddIdentity<IdeaUser, IdeaRole>(options =>
 {
 	options.Password.RequireDigit = true;
@@ -27,41 +29,47 @@ builder.Services.AddIdentity<IdeaUser, IdeaRole>(options =>
 	options.Password.RequireNonAlphanumeric = false;
 	options.Password.RequireUppercase = true;
 	options.Password.RequireLowercase = true;
-	options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(30);
-	options.Lockout.MaxFailedAccessAttempts = 5;
-	options.Lockout.AllowedForNewUsers = true;
 	options.User.RequireUniqueEmail = true;
 	options.SignIn.RequireConfirmedAccount = false;
-	options.SignIn.RequireConfirmedEmail = false;
-	options.SignIn.RequireConfirmedPhoneNumber = false;
 })
 .AddEntityFrameworkStores<IdeaCollectionIdentityDbContext>()
 .AddDefaultTokenProviders();
 
+// 3. Cookie & Auth Configuration
 builder.Services.ConfigureApplicationCookie(options =>
 {
-	options.LoginPath = "/Identity/Account/Login";
-	options.AccessDeniedPath = "/Identity/Account/AccessDenied";
+	// Đảm bảo các đường dẫn này tồn tại trong AccountController của bạn
+	options.LoginPath = "/Account/Login";
+	options.AccessDeniedPath = "/Account/AccessDenied";
 	options.SlidingExpiration = true;
 	options.ExpireTimeSpan = TimeSpan.FromHours(2);
 });
 
+// 4. Policy Configuration
+builder.Services.AddAuthorization(options =>
+{
+	// Lưu ý: Kiểm tra lại xem trong RoleConstants của bạn là "Admin" hay "Administrator"
+	options.AddPolicy(PolicyConstants.AdminOnly, p => p.RequireRole(RoleConstants.Administrator));
+	options.AddPolicy(PolicyConstants.QAManagerOnly, p => p.RequireRole(RoleConstants.QAManager));
+	options.AddPolicy(PolicyConstants.QACoordinatorOnly, p => p.RequireRole(RoleConstants.QACoordinator));
+	options.AddPolicy(PolicyConstants.StaffOnly, p => p.RequireRole(RoleConstants.Staff));
+	options.AddPolicy(PolicyConstants.AllStaff, p => p.RequireAuthenticatedUser());
+	options.AddPolicy(PolicyConstants.CanManageCategories, p => p.RequireRole(RoleConstants.Administrator, RoleConstants.QAManager));
+	options.AddPolicy(PolicyConstants.CanExportData, p => p.RequireRole(RoleConstants.Administrator, RoleConstants.QAManager));
+	options.AddPolicy(PolicyConstants.CanManageUsers, p => p.RequireRole(RoleConstants.Administrator));
+	options.AddPolicy(PolicyConstants.CanSetClosureDates, p => p.RequireRole(RoleConstants.Administrator, RoleConstants.QAManager));
+});
+
+// 5. Services Injection (QUAN TRỌNG: Phải có IEmailService)
 builder.Services.AddScoped<IIdeaService, IdeaService>();
 builder.Services.AddScoped<ICategoryService, CategoryService>();
-builder.Services.AddScoped<IQAManagerService, QAManagerService>();
+builder.Services.AddScoped<IUserService, UserService>();
+builder.Services.AddScoped<IStatsService, StatsService>();
+builder.Services.AddScoped<ISubmissionService, SubmissionService>();
+builder.Services.AddScoped<IExportService, ExportService>();
+builder.Services.AddScoped<IEmailService, EmailService>(); // THÊM DÒNG NÀY ĐỂ KHÔNG LỖI
 
-builder.Services.AddAuthorizationBuilder()
-	.AddPolicy(PolicyConstants.AdminOnly, p => p.RequireRole(RoleConstants.Administrator))
-	.AddPolicy(PolicyConstants.QAManagerOnly, p => p.RequireRole(RoleConstants.QAManager))
-	.AddPolicy(PolicyConstants.QACoordinatorOnly, p => p.RequireRole(RoleConstants.QACoordinator))
-	.AddPolicy(PolicyConstants.StaffOnly, p => p.RequireRole(RoleConstants.Staff))
-	.AddPolicy(PolicyConstants.QAManagement, p => p.RequireRole(RoleConstants.QAManager, RoleConstants.QACoordinator))
-	.AddPolicy(PolicyConstants.AllStaff, p => p.RequireAuthenticatedUser())
-	.AddPolicy(PolicyConstants.CanManageCategories, p => p.RequireRole(RoleConstants.Administrator, RoleConstants.QAManager))
-	.AddPolicy(PolicyConstants.CanExportData, p => p.RequireRole(RoleConstants.Administrator, RoleConstants.QAManager))
-	.AddPolicy(PolicyConstants.CanManageUsers, p => p.RequireRole(RoleConstants.Administrator))
-	.AddPolicy(PolicyConstants.CanSetClosureDates, p => p.RequireRole(RoleConstants.Administrator, RoleConstants.QAManager));
-
+// 6. Caching & Session
 builder.Services.AddDistributedMemoryCache();
 builder.Services.AddSession(options =>
 {
@@ -75,23 +83,13 @@ builder.Services.AddControllersWithViews();
 
 var app = builder.Build();
 
+// 7. Seeding Data
 using (var scope = app.Services.CreateScope())
 {
 	var services = scope.ServiceProvider;
 	try
 	{
-		var roleManager = services.GetRequiredService<RoleManager<IdeaRole>>();
-		var userManager = services.GetRequiredService<UserManager<IdeaUser>>();
-		var dbContext = services.GetRequiredService<IdeaCollectionDbContext>();
-		var identityDbContext = services.GetRequiredService<IdeaCollectionIdentityDbContext>();
-
-		//await dbContext.Database.MigrateAsync();
-		//await identityDbContext.Database.MigrateAsync();
-
-		await SeedRolesAsync(roleManager);
-		await SeedDepartmentsAsync(dbContext);        
-		await SeedDemoUsersAsync(userManager, dbContext);
-
+		await RoleSeeder.InitializeAsync(services);
 		Console.WriteLine("Database seeding completed successfully!");
 	}
 	catch (Exception ex)
@@ -101,80 +99,33 @@ using (var scope = app.Services.CreateScope())
 	}
 }
 
+// 8. HTTP Request Pipeline
 if (!app.Environment.IsDevelopment())
 {
 	app.UseExceptionHandler("/Home/Error");
 	app.UseHsts();
 }
 
-app.UseSession();
 app.UseHttpsRedirection();
 app.UseStaticFiles();
+
 app.UseRouting();
+
+// UseSession PHẢI nằm sau UseRouting và trước UseAuthorization
+app.UseSession();
+
 app.UseAuthentication();
 app.UseAuthorization();
 
-app.MapControllerRoute(name: "admin", pattern: "Admin/{action=Dashboard}/{id?}", defaults: new { controller = "Admin" });
-app.MapControllerRoute(name: "qamanager", pattern: "QAManager/{action=Dashboard}/{id?}", defaults: new { controller = "QAManager" });
-app.MapControllerRoute(name: "qacoordinator", pattern: "QACoordinator/{action=Dashboard}/{id?}", defaults: new { controller = "QACoordinator" });
-app.MapControllerRoute(name: "default", pattern: "{controller=Home}/{action=Index}/{id?}");
-app.MapControllerRoute(name: "staff", pattern: "Staff/{action=Dashboard}/{id?}", defaults: new { controller = "Staff" });
+// 9. Routing (Đã tối ưu thứ tự)
+app.MapControllerRoute(
+	name: "areas",
+	pattern: "{area:exists}/{controller=Home}/{action=Index}/{id?}");
+
+app.MapControllerRoute(
+	name: "default",
+	pattern: "{controller=Home}/{action=Index}/{id?}");
+
 app.MapRazorPages();
+
 app.Run();
-
-
-static async Task SeedRolesAsync(RoleManager<IdeaRole> roleManager)
-{
-	foreach (var roleName in RoleConstants.GetAllRoles())
-	{
-		if (!await roleManager.RoleExistsAsync(roleName))
-		{
-			await roleManager.CreateAsync(new IdeaRole
-			{
-				Name = roleName,
-				Description = RoleConstants.RoleDescriptions[roleName]
-			});
-		}
-	}
-}
-
-static async Task SeedDepartmentsAsync(IdeaCollectionDbContext context)
-{
-	if (!context.Departments.Any())
-	{
-		await context.Departments.AddRangeAsync(
-			new Department { Id = Guid.NewGuid(), Name = "Computer Science", Description = "CS Department" },
-			new Department { Id = Guid.NewGuid(), Name = "Business", Description = "Business Department" },
-			new Department { Id = Guid.NewGuid(), Name = "Engineering", Description = "Engineering Department" }
-		);
-		await context.SaveChangesAsync();
-	}
-}
-
-static async Task SeedDemoUsersAsync(UserManager<IdeaUser> userManager, IdeaCollectionDbContext context)
-{
-	var defaultPassword = "Admin@123";
-	var firstDept = context.Departments.FirstOrDefault();
-
-	async Task Create(string email, string role, string name)
-	{
-		if (await userManager.FindByEmailAsync(email) != null) return;
-		var user = new IdeaUser
-		{
-			UserName = email,
-			Email = email,
-			EmailConfirmed = true,
-			Name = name,
-			Avatar = "/images/default-avatar.png",
-			DepartmentId = firstDept?.Id   // ← gán DepartmentId ngay khi tạo user
-		};
-		var result = await userManager.CreateAsync(user, defaultPassword);
-		if (result.Succeeded)
-			await userManager.AddToRoleAsync(user, role);
-	}
-
-	await Create("admin@university.edu", RoleConstants.Administrator, "System Administrator");
-	await Create("qamanager@university.edu", RoleConstants.QAManager, "QA Manager");
-	await Create("qacoordinator@university.edu", RoleConstants.QACoordinator, "QA Coordinator");
-	await Create("staff@university.edu", RoleConstants.Staff, "Staff Member");
-}

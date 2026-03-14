@@ -1,8 +1,7 @@
 ﻿namespace IdeaCollectionSystem.Service.Models.DTOs
 {
-	public class VoteDto
+	public class VoteRequestDto	
 	{
-		public int IdeaId { get; set; }
 		public bool IsThumbsUp { get; set; }
 	}
 }

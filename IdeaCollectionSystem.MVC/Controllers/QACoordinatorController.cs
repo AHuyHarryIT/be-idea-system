@@ -6,53 +6,75 @@ using System.Security.Claims;
 
 namespace IdeaCollectionSystem.MVC.Controllers
 {
-	[Authorize(Policy = PolicyConstants.QACoordinatorOnly)]
+
+	[Authorize(Roles = RoleConstants.QACoordinator)]
 	public class QACoordinatorController : Controller
 	{
 		private readonly IIdeaService _ideaService;
-		private readonly IQAManagerService _qaService;
+		private readonly IStatsService _statsService; 
+		private readonly IUserService _userService;
 
-		public QACoordinatorController(IIdeaService ideaService, IQAManagerService qaService)
+		public QACoordinatorController(
+			IIdeaService ideaService,
+			IStatsService statsService,
+			IUserService userService)
 		{
 			_ideaService = ideaService;
-			_qaService = qaService;
+			_statsService = statsService;
+			_userService = userService;
 		}
 
-		// GET /QACoordinator/Dashboard
 		public IActionResult Dashboard()
 		{
 			ViewBag.PageTitle = "QA Coordinator Dashboard";
 			return View();
 		}
 
-		//  Department Ideas (dept only) 
+		//  Xem các ý tưởng thuộc phòng ban của mình 
 		public async Task<IActionResult> DepartmentIdeas()
 		{
 			var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-			var ideas = await _ideaService.GetIdeasByDepartmentAsync(userId!);
+			if (string.IsNullOrEmpty(userId)) return RedirectToAction("Login", "Account");
+
+			var ideas = await _ideaService.GetIdeasByDepartmentAsync(userId);
 			return View(ideas);
 		}
 
-		//  Department Statistics 
+		//  Thống kê riêng cho phòng ban 
 		public async Task<IActionResult> DepartmentStatistics()
 		{
-			var stats = await _qaService.GetDepartmentStatisticsAsync();
+			var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+			var stats = await _statsService.GetDepartmentStatisticsAsync();
+
 			return View(stats);
 		}
 
-		//  Submit Idea (coordinator cũng được submit) 
-		public IActionResult ManageStaff() => View();
+		//  Quản lý Staff trong phòng ban 
+		public async Task<IActionResult> ManageStaff()
+		{
+			var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+			var allUsers = await _userService.GetAllUsersAsync();
+			return View(allUsers);
+		}
 
-		//  Vote (Thumbs Up/Down) via AJAX 
+		//  Vote (Hỗ trợ AJAX từ View) 
 		[HttpPost]
-		public async Task<IActionResult> Vote(int ideaId, bool isThumbsUp)
+		public async Task<IActionResult> Vote(Guid ideaId, bool isThumbsUp)
 		{
 			var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
 			if (string.IsNullOrEmpty(userId))
-				return Json(new { success = false });
+				return Json(new { success = false, message = "Unauthorized" });
 
-			var result = await _ideaService.VoteIdeaAsync(ideaId, userId, isThumbsUp);
-			return Json(new { success = result });
+			try
+			{
+				var result = await _ideaService.VoteIdeaAsync(ideaId, userId, isThumbsUp);
+				return Json(new { success = result });
+			}
+			catch (Exception ex)
+			{
+				return Json(new { success = false, message = ex.Message });
+			}
 		}
 	}
 }

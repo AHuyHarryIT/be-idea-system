@@ -1,3 +1,4 @@
+﻿using IdeaCollectionIdea.Common.Constants;
 using IdeaCollectionSystem.ApplicationCore.Entitites.Identity;
 using IdeaCollectionSystem.Datalayer;
 using IdeaCollectionSystem.Service.Interfaces;
@@ -7,21 +8,25 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using System.IdentityModel.Tokens.Jwt;
 using System.Text;
+using static System.Net.WebRequestMethods;
+
+AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
 
 var builder = WebApplication.CreateBuilder(args);
 
-// ?? DbContext (Business) ???????????????????????????????????????
+// 2. Database Contexts 
 builder.Services.AddDbContext<IdeaCollectionDbContext>(options =>
-	options.UseNpgsql(
-		builder.Configuration.GetConnectionString("IdeaCollectionDbContext")));
+	options.UseNpgsql(builder.Configuration.GetConnectionString("IdeaCollectionDbContext")));
 
-// ?? DbContext (Identity) ??????????????????????????????????????
 builder.Services.AddDbContext<IdeaCollectionIdentityDbContext>(options =>
 	options.UseNpgsql(
-		builder.Configuration.GetConnectionString("IdeaCollectionIdentityDbContext")));
+		builder.Configuration.GetConnectionString("IdeaCollectionIdentityDbContext"),
+		x => x.MigrationsHistoryTable("__EFMigrationsHistory_Identity")
+	));
 
-// ?? Identity ??????????????????????????????????????????????????
+// 3. Identity
 builder.Services.AddIdentity<IdeaUser, IdeaRole>(options =>
 {
 	options.Password.RequireDigit = true;
@@ -29,22 +34,29 @@ builder.Services.AddIdentity<IdeaUser, IdeaRole>(options =>
 	options.Password.RequireNonAlphanumeric = false;
 	options.Password.RequireUppercase = true;
 	options.Password.RequireLowercase = true;
+	options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(30);
+	options.Lockout.MaxFailedAccessAttempts = 5;
+	options.Lockout.AllowedForNewUsers = true;
 	options.User.RequireUniqueEmail = true;
 	options.SignIn.RequireConfirmedAccount = false;
 	options.SignIn.RequireConfirmedEmail = false;
+	options.SignIn.RequireConfirmedPhoneNumber = false;
 })
 .AddEntityFrameworkStores<IdeaCollectionIdentityDbContext>()
 .AddDefaultTokenProviders();
 
-// ?? JWT Authentication ????????????????????????????????????????
+// 4. JWT Authentication
 var jwtKey = builder.Configuration["Jwt:Key"]!;
 var jwtIssuer = builder.Configuration["Jwt:Issuer"]!;
 var jwtAudience = builder.Configuration["Jwt:Audience"]!;
+
+JwtSecurityTokenHandler.DefaultInboundClaimTypeMap.Clear();
 
 builder.Services.AddAuthentication(options =>
 {
 	options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
 	options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+	options.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
 })
 .AddJwtBearer(options =>
 {
@@ -56,46 +68,67 @@ builder.Services.AddAuthentication(options =>
 		ValidateIssuerSigningKey = true,
 		ValidIssuer = jwtIssuer,
 		ValidAudience = jwtAudience,
-		IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey))
+		IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey)),
+		ClockSkew = TimeSpan.Zero 
 	};
 });
 
-// ?? CORS cho React ????????????????????????????????????????????
+// 5. Authorization Policies 
+builder.Services.AddAuthorizationBuilder()
+	.AddPolicy(PolicyConstants.AdminOnly, p => p.RequireRole(RoleConstants.Administrator))
+	.AddPolicy(PolicyConstants.QAManagerOnly, p => p.RequireRole(RoleConstants.QAManager))
+	.AddPolicy(PolicyConstants.QACoordinatorOnly, p => p.RequireRole(RoleConstants.QACoordinator))
+	.AddPolicy(PolicyConstants.StaffOnly, p => p.RequireRole(RoleConstants.Staff))
+	.AddPolicy(PolicyConstants.QAManagement, p => p.RequireRole(RoleConstants.QAManager, RoleConstants.QACoordinator))
+	.AddPolicy(PolicyConstants.AllStaff, p => p.RequireAuthenticatedUser())
+	.AddPolicy(PolicyConstants.CanManageCategories, p => p.RequireRole(RoleConstants.Administrator, RoleConstants.QAManager))
+	.AddPolicy(PolicyConstants.CanExportData, p => p.RequireRole(RoleConstants.Administrator, RoleConstants.QAManager))
+	.AddPolicy(PolicyConstants.CanManageUsers, p => p.RequireRole(RoleConstants.Administrator))
+	.AddPolicy(PolicyConstants.CanSetClosureDates, p => p.RequireRole(RoleConstants.Administrator, RoleConstants.QAManager));
+
+// 6. CORS for React
 var allowedOrigins = builder.Configuration.GetSection("AllowedOrigins").Get<string[]>()
-	?? new[] { "http://localhost:3000" };
+    ?? new[] { 
+        "http://localhost:3000", 
+        "http://localhost:5173",
+		"https://fe-idea-system.onrender.com",
+    };
 
 builder.Services.AddCors(options =>
 {
-	options.AddPolicy("ReactPolicy", policy =>
+	options.AddPolicy("AllowFrontend", policy =>
 	{
-		policy.WithOrigins(allowedOrigins)
+		policy.WithOrigins("https://fe-idea-system.onrender.com",
+		"http://localhost:5173")
 			  .AllowAnyHeader()
 			  .AllowAnyMethod()
-			  .AllowCredentials();
+			  .AllowCredentials(); 
 	});
 });
-
-// ?? Services DI ???????????????????????????????????????????????
+// 7. Services DI
 builder.Services.AddScoped<IIdeaService, IdeaService>();
 builder.Services.AddScoped<ICategoryService, CategoryService>();
-builder.Services.AddScoped<IQAManagerService, QAManagerService>();
+builder.Services.AddScoped<IEmailService, EmailService>();
+builder.Services.AddScoped<IUserService, UserService>();
+builder.Services.AddScoped<ISubmissionService, SubmissionService>();
+builder.Services.AddScoped<IStatsService, StatsService>();
+builder.Services.AddScoped<IExportService, ExportService>();
 
-// ?? Controllers + Swagger ????????????????????????????????????
+// 8. Controllers + Swagger
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
 	c.SwaggerDoc("v1", new OpenApiInfo { Title = "Idea Collection API", Version = "v1" });
 
-	// Swagger h? tr? JWT Bearer
-	c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
-	{
-		Description = "JWT Authorization header. Nh?p: Bearer {token}",
-		Name = "Authorization",
-		In = ParameterLocation.Header,
-		Type = SecuritySchemeType.ApiKey,
-		Scheme = "Bearer"
-	});
+    c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+    {
+        Description = "Paste Token",
+        Name = "Authorization",
+        In = ParameterLocation.Header,
+        Type = SecuritySchemeType.Http, 
+        Scheme = "bearer" 
+    });
 	c.AddSecurityRequirement(new OpenApiSecurityRequirement
 	{
 		{
@@ -110,17 +143,36 @@ builder.Services.AddSwaggerGen(c =>
 
 var app = builder.Build();
 
-// ?? Middleware ????????????????????????????????????????????????
-if (app.Environment.IsDevelopment())
+// 9. Seeding Data
+using (var scope = app.Services.CreateScope())
 {
-	app.UseSwagger();
-	app.UseSwaggerUI();
+	var services = scope.ServiceProvider;
+	try
+	{
+		await RoleSeeder.InitializeAsync(services);
+		Console.WriteLine("Database seeding completed successfully!");
+	}
+	catch (Exception ex)
+	{
+		var logger = services.GetRequiredService<ILogger<Program>>();
+		logger.LogError(ex, "An error occurred while seeding the database.");
+	}
 }
+
+// 10. Middleware
+app.UseSwagger();
+app.UseSwaggerUI();
+
+app.UseRouting();
+
+app.UseCors("AllowFrontend");
 
 app.UseCors("ReactPolicy");
 app.UseHttpsRedirection();
-app.UseAuthentication();
+
+app.UseAuthentication(); 
 app.UseAuthorization();
+
 app.MapControllers();
 
 app.Run();

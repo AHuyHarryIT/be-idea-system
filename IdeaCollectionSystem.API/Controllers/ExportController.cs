@@ -1,34 +1,51 @@
-﻿using IdeaCollectionSystem.Service.Interfaces;
+﻿using IdeaCollectionIdea.Common.Constants; 
+using IdeaCollectionSystem.Service.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
-namespace IdeaCollectionSystem.API.Controllers;
-
-[ApiController]
-[Route("api/[controller]")]
-[Authorize(Roles = "Administrator,QA Manager")]
-public class ExportController : ControllerBase
+namespace IdeaCollectionSystem.API.Controllers
 {
-    private readonly IQAManagerService _qaService;
+	[ApiController]
+	[Route("api/[controller]")]
+	[Authorize(Roles = RoleConstants.Administrator + "," + RoleConstants.QAManager)]
+	public class ExportController : ControllerBase
+	{
+		private readonly IExportService exportService;
 
-    public ExportController(IQAManagerService qaService)
-    {
-        _qaService = qaService;
-    }
+		public ExportController(IExportService qaService)
+		{
+			exportService = qaService;
+		}
 
-    // GET api/export/csv
-    [HttpGet("csv")]
-    public async Task<IActionResult> ExportCsv()
-    {
-        var data = await _qaService.ExportIdeasToCsvAsync();
-        return File(data, "text/csv", $"Ideas_{DateTime.Now:yyyyMMdd}.csv");
-    }
+		// GET api/export/csv
+		[HttpGet("csv")]
+		public async Task<IActionResult> ExportCsv()
+		{
+			var data = await exportService.ExportIdeasToCsvAsync();
 
-    // GET api/export/zip
-    [HttpGet("zip")]
-    public async Task<IActionResult> ExportZip()
-    {
-        var data = await _qaService.ExportDocumentsToZipAsync();
-        return File(data, "application/zip", $"Documents_{DateTime.Now:yyyyMMdd}.zip");
-    }
+		
+			if (data == null || data.Length == 0)
+			{
+				return NotFound(new { message = "There is no idea data available to export as a CSV." });
+			}
+
+			// Sửa DateTime.Now thành DateTime.UtcNow
+			return File(data, "text/csv", $"Ideas_{DateTime.UtcNow:yyyyMMdd_HHmm}.csv");
+		}
+
+		// GET api/export/zip
+		[HttpGet("zip")]
+		public async Task<IActionResult> ExportZip()
+		{
+			var data = await exportService.ExportDocumentsToZipAsync();
+
+			// CHỐT CHẶN: Tránh lỗi 500 nếu không có file đính kèm
+			if (data == null || data.Length == 0)
+			{
+				return NotFound(new { message = "There are no attached documents in the system to export the ZIP code."});
+				}
+
+			return File(data, "application/zip", $"Documents_{DateTime.UtcNow:yyyyMMdd_HHmm}.zip");
+		}
+	}
 }

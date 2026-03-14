@@ -1,45 +1,48 @@
-﻿using IdeaCollectionSystem.Service.Interfaces;
+﻿using IdeaCollectionIdea.Common.Constants; // Bắt buộc phải có để gọi RoleConstants
+using IdeaCollectionSystem.Service.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
-namespace IdeaCollectionSystem.API.Controllers;
-
-[ApiController]
-[Route("api/[controller]")]
-[Authorize]
-public class StatsController : ControllerBase
+namespace IdeaCollectionSystem.API.Controllers
 {
-    private readonly IQAManagerService _qaService;
+	[ApiController]
+	[Route("api/[controller]")]
+	[Authorize] // Bảo vệ vòng ngoài (Yêu cầu có token)
+	public class StatsController : ControllerBase
+	{
+		private readonly IStatsService statsService;
 
-    public StatsController(IQAManagerService qaService)
-    {
-        _qaService = qaService;
-    }
+		public StatsController(IStatsService qaService)
+		{
+			statsService = qaService;
+		}
 
-    // GET api/stats/dashboard  → Admin, QAManager
-    [HttpGet("dashboard")]
-    [Authorize(Roles = "Administrator,QA Manager")]
-    public async Task<IActionResult> GetDashboard()
-    {
-        var stats = await _qaService.GetDashboardStatsAsync();
-        return Ok(stats);
-    }
+		// GET api/stats/dashboard
+		[HttpGet("dashboard")]
+		[Authorize(Roles = RoleConstants.Administrator + "," + RoleConstants.QAManager)]
+		public async Task<IActionResult> GetDashboard()
+		{
+			var stats = await statsService.GetDashboardStatsAsync();
+			return Ok(stats);
+		}
 
-    // GET api/stats/departments  → Admin, QAManager, QACoordinator
-    [HttpGet("departments")]
-    [Authorize(Roles = "Administrator,QA Manager,QA Coordinator")]
-    public async Task<IActionResult> GetDepartmentStats()
-    {
-        var stats = await _qaService.GetDepartmentStatisticsAsync();
-        return Ok(stats);
-    }
+		// GET api/stats/departments
+		[HttpGet("departments")]
+		[Authorize(Roles = RoleConstants.Administrator + "," + RoleConstants.QAManager + "," + RoleConstants.QACoordinator)]
+		public async Task<IActionResult> GetDepartmentStats()
+		{
+			var stats = await statsService.GetDepartmentStatisticsAsync();
+			return Ok(stats);
+		}
 
-    // GET api/stats/ideas-without-comments  → Admin, QAManager
-    [HttpGet("ideas-without-comments")]
-    [Authorize(Roles = "Administrator,QA Manager")]
-    public async Task<IActionResult> GetIdeasWithoutComments()
-    {
-        var ideas = await _qaService.GetIdeasWithoutCommentsAsync();
-        return Ok(ideas);
-    }
+	
+		// GET api/stats/ideas-without-comments
+		[HttpGet("ideas-without-comments")]
+		[Authorize(Roles = RoleConstants.Administrator + "," + RoleConstants.QAManager)]
+		public async Task<IActionResult> GetIdeasWithoutComments()
+		{
+			var ideas = await statsService.GetIdeasWithoutCommentsAsync();
+			return Ok(ideas);
+		}
+	}
 }

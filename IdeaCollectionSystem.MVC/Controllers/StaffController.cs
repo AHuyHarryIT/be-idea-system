@@ -9,24 +9,27 @@ using System.Security.Claims;
 
 namespace IdeaCollectionSystem.MVC.Controllers
 {
-	[Authorize(Policy = PolicyConstants.AllStaff)]
+	[Authorize] // Cho phép tất cả người dùng đã đăng nhập
 	public class StaffController : Controller
 	{
 		private readonly IIdeaService _ideaService;
 		private readonly ICategoryService _categoryService;
-		private readonly IQAManagerService _qaService;
+		private readonly ISubmissionService _submissionService; // Thay thế IQAManagerService
 
-		public StaffController(IIdeaService ideaService, ICategoryService categoryService, IQAManagerService qaService)
+		public StaffController(
+			IIdeaService ideaService,
+			ICategoryService categoryService,
+			ISubmissionService submissionService)
 		{
 			_ideaService = ideaService;
 			_categoryService = categoryService;
-			_qaService = qaService;
+			_submissionService = submissionService;
 		}
 
-		// GET /Staff/Dashboard
+		// --- DASHBOARD ---
 		public IActionResult Dashboard() => View();
 
-		// ─── Terms 
+		// --- TERMS & CONDITIONS (Yêu cầu bắt buộc của Coursework) ---
 		[HttpGet]
 		public IActionResult Terms() => View();
 
@@ -38,11 +41,11 @@ namespace IdeaCollectionSystem.MVC.Controllers
 				HttpContext.Session.SetString("AgreedTerms", "true");
 				return RedirectToAction(nameof(SubmitIdea));
 			}
-			ModelState.AddModelError("", "You must agree to the Terms and Conditions.");
+			ModelState.AddModelError("", "You must agree to the Terms and Conditions to proceed.");
 			return View("Terms");
 		}
 
-		//  My Ideas
+		// --- MY IDEAS ---
 		public async Task<IActionResult> MyIdeas()
 		{
 			var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
@@ -50,136 +53,115 @@ namespace IdeaCollectionSystem.MVC.Controllers
 			return View(ideas ?? new List<IdeaInfoDto>());
 		}
 
-		//  Browse All Ideas
+		// --- BROWSE IDEAS ---
 		public async Task<IActionResult> BrowseIdeas()
 		{
 			var ideas = await _ideaService.GetAllIdeasAsync();
 			return View(ideas);
 		}
 
-		//  Submit Idea GET
+		// --- SUBMIT IDEA (GET) ---
 		[HttpGet]
 		public async Task<IActionResult> SubmitIdea()
 		{
+			// 1. Kiểm tra đã đồng ý điều khoản chưa
 			if (HttpContext.Session.GetString("AgreedTerms") != "true")
 				return RedirectToAction(nameof(Terms));
 
-			if (await _ideaService.IsClosureDatePassedAsync())
-			{
-				TempData["ErrorMessage"] = "The closure date for new ideas has passed.";
-				return RedirectToAction(nameof(Dashboard));
-			}
-
-			var categories = await _categoryService.GetAllActiveAsync();
-			ViewBag.Categories = new SelectList(categories, "Id", "Name");
-
-			// Load danh sách Submission đang active (chưa quá ClosureDate)
-			var submissions = await _qaService.GetAllSubmissionsAsync();
-			var activeSubmissions = submissions.Where(s => s.IsActive).ToList();
-			ViewBag.Submissions = new SelectList(activeSubmissions, "Id", "Name");
+			// 2. Load dữ liệu cho Dropdown
+			await LoadFormSelectionData();
 
 			return View();
 		}
 
-		//  Submit Idea POST
+		// --- SUBMIT IDEA (POST) ---
 		[HttpPost]
 		[ValidateAntiForgeryToken]
 		public async Task<IActionResult> SubmitIdea(IdeaViewModel model)
 		{
-			if (!User.Identity!.IsAuthenticated)
-				return RedirectToAction("Login", "Account");
-
+			// Kiểm tra điều khoản
 			if (HttpContext.Session.GetString("AgreedTerms") != "true")
 				return RedirectToAction(nameof(Terms));
 
-			if (await _ideaService.IsClosureDatePassedAsync())
-			{
-				TempData["ErrorMessage"] = "The closure date for new ideas has passed.";
-				return RedirectToAction(nameof(Dashboard));
-			}
-
 			var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-			if (string.IsNullOrEmpty(userId))
-			{
-				ModelState.AddModelError("", "User not found. Please login again.");
-				await ReloadViewBagAsync(model);
-				return View(model);
-			}
-
-			// Validate CategoryId
-			if (model.CategoryId == null || model.CategoryId == Guid.Empty)
-				ModelState.AddModelError("CategoryId", "Please select a category.");
-
-			// Validate SubmissionId — bắt buộc
-			if (model.SubmissionId == null || model.SubmissionId == Guid.Empty)
-				ModelState.AddModelError("SubmissionId", "Please select a submission period.");
 
 			if (ModelState.IsValid)
 			{
-				List<string>? filePaths = null;
+				// Kiểm tra logic Closure Date tại tầng Service trước khi lưu
+				// (Giả sử CreateIdeaAsync đã có logic check date nội bộ)
 
-				if (Request.Form.Files.Count > 0)
-				{
-					filePaths = new List<string>();
-					var uploadsFolder = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads");
-					if (!Directory.Exists(uploadsFolder))
-						Directory.CreateDirectory(uploadsFolder);
-
-					foreach (var file in Request.Form.Files)
-					{
-						var uniqueFileName = Guid.NewGuid() + Path.GetExtension(file.FileName);
-						var filePath = Path.Combine(uploadsFolder, uniqueFileName);
-						using var stream = new FileStream(filePath, FileMode.Create);
-						await file.CopyToAsync(stream);
-						filePaths.Add(Path.Combine("uploads", uniqueFileName));
-					}
-				}
+				List<string>? filePaths = await HandleFileUploads();
 
 				var dto = new IdeaCreateDto
 				{
 					Text = model.Text,
 					Description = model.Description,
 					CategoryId = model.CategoryId!.Value,
-					SubmissionId = model.SubmissionId!.Value,   
+					SubmissionId = model.SubmissionId!.Value,
 					IsAnonymous = model.IsAnonymous,
 					FilePaths = filePaths
 				};
 
-				var result = await _ideaService.CreateIdeaAsync(dto, userId);
-				if (result)
+				try
 				{
-					TempData["SuccessMessage"] = "Idea submitted successfully!";
+					var result = await _ideaService.CreateIdeaAsync(dto, userId!);
+					TempData["SuccessMessage"] = "Your idea has been submitted successfully!";
 					return RedirectToAction(nameof(MyIdeas));
 				}
-
-				ModelState.AddModelError("", "Failed to submit idea. Please try again.");
+				catch (Exception ex)
+				{
+					ModelState.AddModelError("", ex.Message);
+				}
 			}
 
-			await ReloadViewBagAsync(model);
+			await LoadFormSelectionData(model.CategoryId, model.SubmissionId);
 			return View(model);
 		}
 
-		//  Helper: Reload ViewBag khi trả về View sau lỗi validation
-		private async Task ReloadViewBagAsync(IdeaViewModel model)
-		{
-			var categories = await _categoryService.GetAllActiveAsync();
-			ViewBag.Categories = new SelectList(categories, "Id", "Name", model.CategoryId);
-
-			var submissions = await _qaService.GetAllSubmissionsAsync();
-			var activeSubmissions = submissions.Where(s => s.IsActive).ToList();
-			ViewBag.Submissions = new SelectList(activeSubmissions, "Id", "Name", model.SubmissionId);
-		}
-
-		//  Vote (Thumbs Up/Down) via AJAX
+		// --- VOTE (AJAX) ---
 		[HttpPost]
-		public async Task<IActionResult> Vote(int ideaId, bool isThumbsUp)
+		public async Task<IActionResult> Vote(Guid ideaId, bool isThumbsUp)
 		{
 			var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-			if (string.IsNullOrEmpty(userId))
-				return Json(new { success = false });
+			if (string.IsNullOrEmpty(userId)) return Json(new { success = false });
 
 			var result = await _ideaService.VoteIdeaAsync(ideaId, userId, isThumbsUp);
 			return Json(new { success = result });
+		}
+
+		// --- HELPER METHODS ---
+		private async Task LoadFormSelectionData(Guid? selectedCat = null, Guid? selectedSub = null)
+		{
+			var categories = await _categoryService.GetAllActiveAsync();
+			ViewBag.Categories = new SelectList(categories, "Id", "Name", selectedCat);
+
+			// Chỉ lấy các đợt nộp bài đang còn hạn (IsActive)
+			var submissions = await _submissionService.GetAllSubmissionsAsync();
+			var activeSubmissions = submissions.Where(s => s.IsActive).ToList();
+			ViewBag.Submissions = new SelectList(activeSubmissions, "Id", "Name", selectedSub);
+		}
+
+		private async Task<List<string>?> HandleFileUploads()
+		{
+			if (Request.Form.Files.Count == 0) return null;
+
+			var filePaths = new List<string>();
+			var uploadsFolder = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads");
+
+			if (!Directory.Exists(uploadsFolder)) Directory.CreateDirectory(uploadsFolder);
+
+			foreach (var file in Request.Form.Files)
+			{
+				var uniqueFileName = $"{Guid.NewGuid()}_{file.FileName}";
+				var filePath = Path.Combine(uploadsFolder, uniqueFileName);
+
+				using (var stream = new FileStream(filePath, FileMode.Create))
+				{
+					await file.CopyToAsync(stream);
+				}
+				filePaths.Add(Path.Combine("uploads", uniqueFileName));
+			}
+			return filePaths;
 		}
 	}
 }

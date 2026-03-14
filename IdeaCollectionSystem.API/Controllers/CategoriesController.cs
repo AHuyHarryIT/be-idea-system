@@ -1,51 +1,59 @@
-﻿using IdeaCollectionSystem.Service.Interfaces;
-using IdeaCollectionSystem.Service.Models.DTOs;
+﻿using IdeaCollectionIdea.Common.Constants;
+using IdeaCollectionSystem.Service.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
-namespace IdeaCollectionSystem.API.Controllers;
-
-[ApiController]
-[Route("api/[controller]")]
-public class CategoriesController : ControllerBase
+namespace IdeaCollectionSystem.API.Controllers
 {
-	private readonly ICategoryService _categoryService;
-
-	public CategoriesController(ICategoryService categoryService)
+	[Route("api/[controller]")]
+	[ApiController]
+	[Authorize] 
+	public class CategoriesController : ControllerBase
 	{
-		_categoryService = categoryService;
+		private readonly ICategoryService _categoryService;
+
+		public CategoriesController(ICategoryService categoryService)
+		{
+			_categoryService = categoryService;
+		}
+
+		// GET: api/categories
+		[HttpGet]
+		public async Task<IActionResult> GetCategories()
+		{
+			// list staff when submit idea
+			var categories = await _categoryService.GetAllActiveAsync();
+			return Ok(categories);
+		}
+
+		// POST: api/categories
+		[HttpPost]
+		[Authorize(Roles = RoleConstants.Administrator + "," + RoleConstants.QAManager)]
+		public async Task<IActionResult> CreateCategory([FromBody] CreateCategoryRequest request)
+		{
+			if (string.IsNullOrWhiteSpace(request.Name))
+				return BadRequest(new { message = "The category name cannot be left blank." });
+
+			await _categoryService.CreateAsync(request.Name);
+			return Ok(new { message = "Create Categories Sucessfully"});
+			 
+		}
+
+		// DELETE: api/categories/{id}
+		[HttpDelete("{id}")]
+		[Authorize(Roles = RoleConstants.Administrator + "," + RoleConstants.QAManager)]
+		public async Task<IActionResult> DeleteCategory([FromRoute] Guid id)
+		{
+			var success = await _categoryService.DeleteIfUnusedAsync(id);
+			if (!success)
+				return BadRequest(new { message = "Cannot be deleted. This category is being used for existing ideas." });
+
+			return Ok(new { message = "Category deletion successful." });
+		}
 	}
 
-	// GET api/categories
-	[HttpGet]
-	[Authorize]
-	public async Task<IActionResult> GetAll()
+	public class CreateCategoryRequest
 	{
-		var categories = await _categoryService.GetAllActiveAsync();
-		return Ok(categories);
-	}
-
-	// POST api/categories
-	[HttpPost]
-	[Authorize(Roles = "Administrator,QAManager")]
-	public async Task<IActionResult> Create([FromBody] string name)
-	{
-		var result = await _categoryService.CreateAsync(name);
-		if (!result)
-			return BadRequest(new { message = "Không thể tạo category." });
-
-		return Ok(new { message = "Category đã được tạo." });
-	}
-
-	// DELETE api/categories/{id}
-	[HttpDelete("{id}")]
-	[Authorize(Roles = "Administrator,QAManager")]
-	public async Task<IActionResult> Delete(Guid id)
-	{
-		var result = await _categoryService.DeleteIfUnusedAsync(id);
-		if (!result)
-			return BadRequest(new { message = "Category đang được sử dụng, không thể xóa." });
-
-		return Ok(new { message = "Category đã được xóa." });
+		public string Name { get; set; } = string.Empty;
 	}
 }

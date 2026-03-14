@@ -1,4 +1,4 @@
-using IdeaCollectionIdea.Common.Constants;
+﻿using IdeaCollectionIdea.Common.Constants;
 using IdeaCollectionSystem.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -20,6 +20,6 @@ namespace IdeaCollectionSystem.MVC.Controllers
 			return View();
 		}
 
-	
+
 	}
 }

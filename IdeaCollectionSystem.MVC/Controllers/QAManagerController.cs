@@ -6,48 +6,52 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace IdeaCollectionSystem.MVC.Controllers
 {
-	[Authorize(Policy = PolicyConstants.QAManagerOnly)]
+	[Authorize(Roles = RoleConstants.QAManager)]
 	public class QAManagerController : Controller
 	{
-		private readonly IQAManagerService _qaService;
+		// Tiêm đúng các Service chuyên biệt
 		private readonly ICategoryService _categoryService;
 		private readonly IIdeaService _ideaService;
+		private readonly IStatsService _statsService;
+		private readonly IExportService _exportService;
+		private readonly ISubmissionService _submissionService;
 
 		public QAManagerController(
-			IQAManagerService qaService,
 			ICategoryService categoryService,
-			IIdeaService ideaService)
+			IIdeaService ideaService,
+			IStatsService statsService,
+			IExportService exportService,
+			ISubmissionService submissionService)
 		{
-			_qaService = qaService;
 			_categoryService = categoryService;
 			_ideaService = ideaService;
+			_statsService = statsService;
+			_exportService = exportService;
+			_submissionService = submissionService;
 		}
 
-		// GET /QAManager/Dashboard
+		//  DASHBOARD 
 		public async Task<IActionResult> Dashboard()
 		{
-			var stats = await _qaService.GetDashboardStatsAsync();
+			var stats = await _statsService.GetDashboardStatsAsync();
 			return View(stats);
 		}
 
-		//  View All Ideas 
+		//  VIEW ALL IDEAS 
 		public async Task<IActionResult> AllIdeas()
 		{
 			var ideas = await _ideaService.GetAllIdeasAsync();
 			return View(ideas);
 		}
 
-		//  Categories 
-		[Authorize(Policy = PolicyConstants.CanManageCategories)]
+		//  CATEGORIES MANAGEMENT 
 		public async Task<IActionResult> Categories()
 		{
 			var categories = await _categoryService.GetAllActiveAsync();
-			if (TempData["Error"] != null) ModelState.AddModelError("", TempData["Error"]!.ToString()!);
 			return View(categories);
 		}
 
 		[HttpPost]
-		[Authorize(Policy = PolicyConstants.CanManageCategories)]
 		public async Task<IActionResult> CreateCategory(string name)
 		{
 			if (!string.IsNullOrWhiteSpace(name))
@@ -55,75 +59,51 @@ namespace IdeaCollectionSystem.MVC.Controllers
 			return RedirectToAction(nameof(Categories));
 		}
 
-		[HttpPost]
-		[Authorize(Policy = PolicyConstants.CanManageCategories)]
-		public async Task<IActionResult> DeleteCategory(Guid id)
-		{
-			var success = await _categoryService.DeleteIfUnusedAsync(id);
-			if (!success)
-				TempData["Error"] = "Category is in use and cannot be deleted.";
-			return RedirectToAction(nameof(Categories));
-		}
-
-		//  Export 
-		[Authorize(Policy = PolicyConstants.CanExportData)]
+		//  EXPORT DATA 
 		public IActionResult Export() => View();
 
-		[Authorize(Policy = PolicyConstants.CanExportData)]
 		public async Task<IActionResult> ExportCsv()
 		{
-			var data = await _qaService.ExportIdeasToCsvAsync();
-			return File(data, "text/csv", $"Ideas_{DateTime.UtcNow:yyyyMMdd}.csv");
+			var data = await _exportService.ExportIdeasToCsvAsync();
+			return File(data, "text/csv", $"Ideas_Report_{DateTime.UtcNow:yyyyMMdd}.csv");
 		}
 
-		[Authorize(Policy = PolicyConstants.CanExportData)]
 		public async Task<IActionResult> ExportZip()
 		{
-			var data = await _qaService.ExportDocumentsToZipAsync();
-			return File(data, "application/zip", $"Documents_{DateTime.UtcNow:yyyyMMdd}.zip");
+			var data = await _exportService.ExportDocumentsToZipAsync();
+			return File(data, "application/zip", $"Attachments_{DateTime.UtcNow:yyyyMMdd}.zip");
 		}
-		//  Closure Dates 
-		[Authorize(Policy = PolicyConstants.CanSetClosureDates)]
+
+		//  ACADEMIC YEARS / CLOSURE DATES 
 		public async Task<IActionResult> ClosureDates()
 		{
-			var submissions = await _qaService.GetAllSubmissionsAsync();
+			var submissions = await _submissionService.GetAllSubmissionsAsync();
 			return View(submissions);
 		}
 
 		[HttpPost]
-		[Authorize(Policy = PolicyConstants.CanSetClosureDates)]
 		public async Task<IActionResult> CreateSubmission(SubmissionCreateDto dto)
 		{
 			if (ModelState.IsValid)
 			{
-				await _qaService.CreateSubmissionAsync(dto);
-				TempData["Success"] = "Submission period created.";
+				await _submissionService.CreateSubmissionAsync(dto);
+				TempData["Success"] = "New closure dates set successfully.";
 			}
 			return RedirectToAction(nameof(ClosureDates));
 		}
 
-		[HttpPost]
-		[Authorize(Policy = PolicyConstants.CanSetClosureDates)]
-		public async Task<IActionResult> UpdateSubmission(Guid id, SubmissionCreateDto dto)
-		{
-			if (ModelState.IsValid)
-			{
-				await _qaService.UpdateSubmissionAsync(id, dto);
-				TempData["Success"] = "Submission period updated.";
-			}
-			return RedirectToAction(nameof(ClosureDates));
-		}
-
-		//  Statistics 
+		//  STATISTICS 
 		public async Task<IActionResult> Statistics()
 		{
-			var deptStats = await _qaService.GetDepartmentStatisticsAsync();
+			var deptStats = await _statsService.GetDepartmentStatisticsAsync();
 			return View(deptStats);
 		}
 
+		//  EXCEPTION REPORT: IDEAS WITHOUT COMMENTS 
 		public async Task<IActionResult> IdeasWithoutComments()
 		{
-			var ideas = await _qaService.GetIdeasWithoutCommentsAsync();
+			
+			var ideas = await _ideaService.GetIdeasWithoutCommentsAsync();
 			return View(ideas);
 		}
 	}

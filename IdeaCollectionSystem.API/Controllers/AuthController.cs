@@ -1,104 +1,167 @@
-﻿using IdeaCollectionSystem.API.Models;
+﻿using IdeaCollectionIdea.Common.Constants; // Để lấy RoleConstants
 using IdeaCollectionSystem.ApplicationCore.Entitites.Identity;
+using IdeaCollectionSystem.Service.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.Identity.Data;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
 
-namespace IdeaCollectionSystem.API.Controllers;
-
-[ApiController]
-[Route("api/[controller]")]
-public class AuthController : ControllerBase
+namespace IdeaCollectionSystem.API.Controllers
 {
-	private readonly UserManager<IdeaUser> _userManager;
-	private readonly SignInManager<IdeaUser> _signInManager;
-	private readonly IConfiguration _config;
-
-	public AuthController(
-		UserManager<IdeaUser> userManager,
-		SignInManager<IdeaUser> signInManager,
-		IConfiguration config)
+	[Route("api/[controller]")]
+	[ApiController]
+	public class AuthController : ControllerBase
 	{
-		_userManager = userManager;
-		_signInManager = signInManager;
-		_config = config;
-	}
+		private readonly UserManager<IdeaUser> _userManager;
+		private readonly IConfiguration _config;
+		private readonly IEmailService _emailService;
 
-	// POST api/auth/login
-	[AllowAnonymous]
-	[HttpPost("login")]
-	public async Task<IActionResult> Login([FromBody] IdeaCollectionSystem.API.Models.LoginRequest request)
-	{
-		var user = await _userManager.FindByEmailAsync(request.Email);
-		if (user == null)
-			return Unauthorized(new { message = "Email hoặc mật khẩu không đúng." });
 
-		var result = await _signInManager.CheckPasswordSignInAsync(user, request.Password, lockoutOnFailure: false);
-		if (!result.Succeeded)
-			return Unauthorized(new { message = "Email hoặc mật khẩu không đúng." });
-
-		var roles = await _userManager.GetRolesAsync(user);
-		var requesttoken = GenerateJwtToken(user, roles);
-
-		return Ok(new
+		public AuthController(
+			UserManager<IdeaUser> userManager,
+			IConfiguration config,
+			IEmailService emailService)
 		{
-            requesttoken,
-			user = new
+			_userManager = userManager;
+			_config = config;
+			_emailService = emailService;
+		}
+
+		// POST: api/auth/login
+		[AllowAnonymous]
+		[HttpPost("login")]
+		public async Task<IActionResult> Login([FromBody] LoginRequestDto request)
+		{
+			var user = await _userManager.FindByEmailAsync(request.Email);
+			if (user == null)
+				return Unauthorized(new { message = "Email or password not match." });
+
+
+			var isPasswordValid = await _userManager.CheckPasswordAsync(user, request.Password);
+			if (!isPasswordValid)
+				return Unauthorized(new { message = "Email or password not match." });
+			var roles = await _userManager.GetRolesAsync(user);
+
+			var accessToken = GenerateJwtToken(user, roles);
+
+			return Ok(new
 			{
-				id = user.Id,
-				email = user.Email,
-				name = user.Name,
-				roles
+				access_token = accessToken,
+				user = new
+				{
+					id = user.Id,
+					email = user.Email,
+					name = user.Name,
+					departmentId = user.DepartmentId,
+					roles = roles
+				}
+			});
+		}
+
+		//// POST: api/auth/register
+		//[AllowAnonymous]
+		//[HttpPost("register")]
+		//public async Task<IActionResult> Register([FromBody] RegisterRequestDto request)
+		//{
+		//	var user = new IdeaUser
+		//	{
+		//		UserName = request.Email,
+		//		Email = request.Email,
+		//		Name = request.Name
+		//	};
+
+		//	var result = await _userManager.CreateAsync(user, request.Password);
+		//	if (!result.Succeeded)
+		//	{
+		//		var errors = result.Errors.Select(e => e.Description);
+		//		return BadRequest(new { message = "Đăng ký thất bại", errors });
+		//	}
+
+
+		//	await _userManager.AddToRoleAsync(user, RoleConstants.Staff);
+
+		//	return Ok(new { message = "Đăng ký thành công. Vui lòng đăng nhập." });
+		//}
+
+		// --- HÀM TẠO TOKEN ĐÃ ĐƯỢC CHUẨN HÓA ---
+		private string GenerateJwtToken(IdeaUser user, IList<string> roles)
+		{
+			var claims = new List<Claim>
+			{
+				new Claim(JwtRegisteredClaimNames.Sub, user.Id), // ID chuẩn của JWT
+                new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()), // Mã chống lặp token
+                new Claim(ClaimTypes.NameIdentifier, user.Id),
+				new Claim(ClaimTypes.Email, user.Email!),
+				new Claim(ClaimTypes.Name, user.Name ?? "")
+			};
+
+
+			if (user.DepartmentId.HasValue)
+			{
+				claims.Add(new Claim("DepartmentId", user.DepartmentId.Value.ToString()));
 			}
-		});
-	}
 
-	// POST api/auth/register
-	[AllowAnonymous]
-	[HttpPost("register")]
-	public async Task<IActionResult> Register([FromBody] IdeaCollectionSystem.API.Models.RegisterRequest request)
-	{
-		var user = new IdeaUser
+			foreach (var role in roles)
+			{
+				claims.Add(new Claim(ClaimTypes.Role, role));
+			}
+
+			var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_config["Jwt:Key"]!));
+			var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+
+
+			var expireMinutes = Convert.ToDouble(_config["Jwt:ExpiresInMinutes"] ?? "120");
+			var expires = DateTime.UtcNow.AddMinutes(expireMinutes);
+
+			var token = new JwtSecurityToken(
+				issuer: _config["Jwt:Issuer"],
+				audience: _config["Jwt:Audience"],
+				claims: claims,
+				expires: expires,
+				signingCredentials: creds
+			);
+
+			return new JwtSecurityTokenHandler().WriteToken(token);
+		}
+
+		//// Replace _configuration with _config in TestEmail method
+		//[HttpGet("test-email")]
+		//[AllowAnonymous] // test email không cần token
+		//public async Task<IActionResult> TestEmail()
+		//{
+		//	try
+		//	{
+		//		string toEmail = "dangcuong9551@gmail.com";
+		//		string subject = "Hệ thống Idea: Kiểm tra cấu hình Email";
+		//		string body = $"<h1>Kết nối thành công!</h1><p>Email này được gửi lúc {DateTime.UtcNow:HH:mm:ss}. Hệ thống của bạn đã sẵn sàng!</p>";
+
+		//		await _emailService.SendEmailAsync(toEmail, subject, body);
+
+		//		return Ok(new
+		//		{
+		//			message = "Đã gửi",
+		//			usingEmail = _config["EmailSettings:SenderEmail"] // Kiểm tra xem Azure đã nhận đúng Mail chưa
+		//		});
+		//	}
+		//	catch (Exception ex)
+		//	{
+		//		return BadRequest(new { error = ex.Message, detail = ex.InnerException?.Message });
+		//	}
+		//}
+		public class LoginRequestDto
 		{
-			UserName = request.Email,
-			Email = request.Email,
-			Name = request.Name
-		};
+			public string Email { get; set; } = string.Empty;
+			public string Password { get; set; } = string.Empty;
+		}
 
-		var result = await _userManager.CreateAsync(user, request.Password);
-		if (!result.Succeeded)
-			return BadRequest(new { errors = result.Errors.Select(e => e.Description) });
-
-		return Ok(new { message = "Đăng ký thành công." });
-	}
-
-	private string GenerateJwtToken(IdeaUser user, IList<string> roles)
-	{
-		var claims = new List<Claim>
+		public class RegisterRequestDto
 		{
-			new(ClaimTypes.NameIdentifier, user.Id),
-			new(ClaimTypes.Email, user.Email!),
-			new(ClaimTypes.Name, user.Name ?? ""),
-		};
-		claims.AddRange(roles.Select(r => new Claim(ClaimTypes.Role, r)));
-
-		var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_config["Jwt:Key"]!));
-		var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
-		var expires = DateTime.UtcNow.AddMinutes(
-			double.Parse(_config["Jwt:ExpiresInMinutes"] ?? "120"));
-
-		var token = new JwtSecurityToken(
-			issuer: _config["Jwt:Issuer"],
-			audience: _config["Jwt:Audience"],
-			claims: claims,
-			expires: expires,
-			signingCredentials: creds);
-
-		return new JwtSecurityTokenHandler().WriteToken(token);
+			public string Email { get; set; } = string.Empty;
+			public string Password { get; set; } = string.Empty;
+			public string Name { get; set; } = string.Empty;
+		}
 	}
 }
