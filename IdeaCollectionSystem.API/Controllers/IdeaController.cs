@@ -96,5 +96,16 @@ namespace IdeaCollectionSystem.API.Controllers
 
 			return BadRequest(new { success = false, message = "The vote was a failure." });
 		}
+
+		// GET: api/idea/paged?pageNumber=1&sortBy=popular
+		[HttpGet("paged")]
+		public async Task<IActionResult> GetIdeasPaged([FromQuery] IdeaQueryParameters parameters)
+		{
+			var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+			if (string.IsNullOrEmpty(userId)) return Unauthorized();
+
+			var pagedResult = await _ideaService.GetIdeasPagedAsync(parameters, userId);
+			return Ok(pagedResult);
+		}
 	}
 }

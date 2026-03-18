@@ -19,7 +19,7 @@ namespace IdeaCollectionSystem.API.Controllers
 		}
 
 
-		// Get
+		// Get clousure dates
 		[HttpGet]
 		public async Task<IActionResult> GetClosureDates()
 		{
@@ -27,7 +27,7 @@ namespace IdeaCollectionSystem.API.Controllers
 			return Ok(submissions);
 		}
 
-		// create
+		// create submission
 		[HttpPost]
 		public async Task<IActionResult> CreateSubmission([FromBody] SubmissionCreateDto dto)
 		{
@@ -35,7 +35,7 @@ namespace IdeaCollectionSystem.API.Controllers
 			return Ok(new { message = "Create a successful submission period." });
 		}
 
-		// put
+		// update submission
 		[HttpPut("{id}")]
 		public async Task<IActionResult> UpdateSubmission([FromRoute] Guid id, [FromBody] SubmissionCreateDto dto)
 		{

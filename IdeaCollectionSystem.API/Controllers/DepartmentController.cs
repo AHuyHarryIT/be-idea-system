@@ -17,10 +17,10 @@ namespace IdeaCollectionSystem.API.Controllers
 		}
 
 		// GET: api/department
-		[HttpGet("departments")] // Định tuyến rõ ràng cho API
+		[HttpGet("departments")] 
 		public async Task<IActionResult> GetDepartments()
 		{
-			// Gọi đúng Service của Department
+			
 			var departments = await _departmentService.GetAllDepartmentsAsync();
 
 			if (departments == null || !departments.Any())

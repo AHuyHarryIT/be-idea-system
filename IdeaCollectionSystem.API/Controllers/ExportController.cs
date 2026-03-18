@@ -29,7 +29,7 @@ namespace IdeaCollectionSystem.API.Controllers
 				return NotFound(new { message = "There is no idea data available to export as a CSV." });
 			}
 
-			// Sửa DateTime.Now thành DateTime.UtcNow
+
 			return File(data, "text/csv", $"Ideas_{DateTime.UtcNow:yyyyMMdd_HHmm}.csv");
 		}
 

@@ -14,6 +14,8 @@ public class Idea
 	public DateTime? DeletedAt { get; set; }
 
 	public bool IsAnonymous { get; set; }
+
+	public int ViewCount { get; set; } = 0;
 	public string UserId { get; set; } = string.Empty;
 	public Guid SubmissionId { get; set; }
 	public Submission? Submission { get; set; }

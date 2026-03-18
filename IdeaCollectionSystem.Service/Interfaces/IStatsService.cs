@@ -7,5 +7,7 @@ namespace IdeaCollectionSystem.Service.Interfaces
 		Task<QaDashboardDto> GetDashboardStatsAsync();
 		Task<IEnumerable<DepartmentStatDto>> GetDepartmentStatisticsAsync();
 		Task<IEnumerable<IdeaInfoDto>> GetIdeasWithoutCommentsAsync();
+
+		Task<List<DepartmentStatDto>> GetDepartmentStatsAsync(Guid? submissionId = null);
 	}
 }

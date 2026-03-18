@@ -1,12 +1,10 @@
 ﻿using IdeaCollectionIdea.Common.Constants;
 using IdeaCollectionSystem.ApplicationCore.Entitites;
-using IdeaCollectionSystem.ApplicationCore.Entitites.Identity;
 using IdeaCollectionSystem.Datalayer;
 using IdeaCollectionSystem.Service.Interfaces;
 using IdeaCollectionSystem.Service.Models.DTOs;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-using System.Xml.Linq;
 
 namespace IdeaCollectionSystem.Service.Services
 {
@@ -43,7 +41,7 @@ namespace IdeaCollectionSystem.Service.Services
 			return DateTime.UtcNow > idea.Submission.FinalClousureDate;
 		}
 
-		// --- CREATE IDEA & SEND EMAIL ---
+		//  CREATE IDEA & SEND EMAIL 
 		public async Task<bool> CreateIdeaAsync(IdeaCreateDto dto, string userId)
 		{
 			var ideaUser = await _userManager.FindByIdAsync(userId);
@@ -128,7 +126,7 @@ namespace IdeaCollectionSystem.Service.Services
 			return true;
 		}
 
-		// --- READ IDEAS ---
+		//  Get all IDEAS 
 		public async Task<IEnumerable<IdeaInfoDto>> GetAllIdeasAsync()
 		{
 			var ideas = await _context.Ideas
@@ -170,6 +168,97 @@ namespace IdeaCollectionSystem.Service.Services
 			return result;
 		}
 
+		// Pagination, sorting, filtering
+		public async Task<PagedResult<IdeaInfoDto>> GetIdeasPagedAsync(IdeaQueryParameters parameters, string userId)
+		{
+
+			var query = _context.Ideas
+				.Include(i => i.Category)
+				.Include(i => i.Department)
+				.Include(i => i.Submission)
+				.Include(i => i.Comments)
+				.Include(i => i.IdeaReactions)
+				.AsQueryable();
+
+			//  filtering: 
+			if (parameters.SubmissionId.HasValue && parameters.SubmissionId.Value != Guid.Empty)
+			{
+				query = query.Where(i => i.SubmissionId == parameters.SubmissionId.Value);
+			}
+
+
+			switch (parameters.SortBy?.ToLower())
+			{
+				case "popular":
+					query = query.OrderByDescending(i =>
+						i.IdeaReactions.Count(r => r.Reaction == "thumbs_up") -
+						i.IdeaReactions.Count(r => r.Reaction == "thumbs_down"));
+					break;
+
+				case "viewed":
+					query = query.OrderByDescending(i => i.ViewCount);
+					break;
+
+				case "latest_comments":
+					query = query.OrderByDescending(i => i.Comments.Any() ? i.Comments.Max(c => c.CreatedAt) : DateTime.MinValue);
+					break;
+
+				case "latest":
+				default:
+					query = query.OrderByDescending(i => i.CreatedAt);
+					break;
+			}
+
+			//  PAGINATIOn
+			int totalCount = await query.CountAsync();
+
+
+			var ideas = await query
+				.Skip((parameters.PageNumber - 1) * parameters.PageSize)
+				.Take(parameters.PageSize)
+				.ToListAsync();
+
+			// 5. MAP SANG DTO
+			var resultItems = new List<IdeaInfoDto>();
+			foreach (var idea in ideas)
+			{
+				var author = "Unknown";
+				if (!idea.IsAnonymous)
+				{
+					var user = await _userManager.FindByIdAsync(idea.UserId);
+					author = user?.Name ?? user?.Email ?? "Unknown";
+				}
+				else author = "Anonymous";
+
+				bool canComment = idea.Submission != null && DateTime.UtcNow <= idea.Submission.FinalClousureDate;
+
+				resultItems.Add(new IdeaInfoDto
+				{
+					Id = idea.Id,
+					Text = idea.Text,
+					CategoryName = idea.Category?.Name ?? "No Category",
+					DepartmentName = idea.Department?.Name ?? "",
+					AuthorName = author,
+					CreatedDate = idea.CreatedAt,
+					IsAnonymous = idea.IsAnonymous,
+					ViewCount = idea.ViewCount, // Đã có View Count ở bước trước
+					ThumbsUpCount = idea.IdeaReactions.Count(r => r.Reaction == "thumbs_up"),
+					ThumbsDownCount = idea.IdeaReactions.Count(r => r.Reaction == "thumbs_down"),
+					CommentCount = idea.Comments.Count,
+					CanComment = canComment
+				});
+			}
+
+			return new PagedResult<IdeaInfoDto>
+			{
+				Items = resultItems,
+				TotalCount = totalCount,
+				PageNumber = parameters.PageNumber,
+				PageSize = parameters.PageSize
+			};
+		}
+
+		// Get Ideas By Department
 		public async Task<IEnumerable<IdeaInfoDto>> GetIdeasByDepartmentAsync(string userId)
 		{
 			var ideaUser = await _userManager.FindByIdAsync(userId);
@@ -208,6 +297,7 @@ namespace IdeaCollectionSystem.Service.Services
 			return result;
 		}
 
+		// Get Ideas By Staff
 		public async Task<IEnumerable<IdeaInfoDto>> GetIdeasByStaffAsync(string userId)
 		{
 			var ideas = await _context.Ideas
@@ -232,7 +322,7 @@ namespace IdeaCollectionSystem.Service.Services
 			}).ToList();
 		}
 
-		// --- GET IDEA DETAILS (With Comments) ---
+		//  GET IDEA DETAILS (With Comments) 
 		public async Task<IdeaInfoDto?> GetIdeaDetailAsync(Guid ideaId, string userId)
 		{
 			var idea = await _context.Ideas
@@ -243,6 +333,9 @@ namespace IdeaCollectionSystem.Service.Services
 				.FirstOrDefaultAsync(i => i.Id == ideaId);
 
 			if (idea == null) return null;
+
+			idea.ViewCount += 1;
+			await _context.SaveChangesAsync();
 
 			var user = await _userManager.FindByIdAsync(idea.UserId);
 			bool canComment = idea.Submission != null && DateTime.UtcNow <= idea.Submission.FinalClousureDate;
@@ -326,7 +419,7 @@ namespace IdeaCollectionSystem.Service.Services
 			return result;
 		}
 
-		// --- INTERACT & OTHERS ---
+		//  INTERACT & OTHERS 
 		public async Task<bool> VoteIdeaAsync(Guid ideaId, string userId, bool isThumbsUp)
 		{
 			var idea = await _context.Ideas.FirstOrDefaultAsync(i => i.Id == ideaId);

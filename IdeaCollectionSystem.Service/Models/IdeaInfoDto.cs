@@ -16,5 +16,7 @@ public class IdeaInfoDto
 	public int CommentCount { get; set; }
 	public bool CanComment { get; set; }
 
+	public int ViewCount { get; set; }
+
 	public List<CommentDto> Comments { get; set; } = new List<CommentDto>();
 }

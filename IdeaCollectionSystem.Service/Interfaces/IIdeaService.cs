@@ -16,5 +16,7 @@ namespace IdeaCollectionSystem.Service.Interfaces
 		Task<bool> VoteIdeaAsync(Guid ideaId, string userId, bool isThumbsUp);
 
 		Task<IEnumerable<IdeaInfoDto>> GetIdeasWithoutCommentsAsync();
+
+		Task<PagedResult<IdeaInfoDto>> GetIdeasPagedAsync(IdeaQueryParameters parameters, string userId);
 	}
 }

@@ -67,7 +67,7 @@ namespace IdeaCollectionSystem.API.Controllers
 			return Ok(new { message = "Account created successfully." });
 		}
 
-		//  3. ĐỔI ROLE CHO TÀI KHOẢN 
+	
 		// PUT: api/user/{userId}/role
 		[HttpPut("{userId}/role")]
 		public async Task<IActionResult> UpdateUserRole([FromRoute] string userId, [FromBody] UpdateRoleRequest request)
