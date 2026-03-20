@@ -1,6 +1,4 @@
-﻿using IdeaCollectionIdea.Common.Constants;
-using IdeaCollectionSystem.ApplicationCore.Entitites;
-using IdeaCollectionSystem.ApplicationCore.Entitites.Identity;
+﻿using IdeaCollectionSystem.ApplicationCore.Entitites.Identity;
 using IdeaCollectionSystem.Datalayer;
 using IdeaCollectionSystem.Service.Interfaces;
 using IdeaCollectionSystem.Service.Services;
@@ -46,19 +44,19 @@ builder.Services.ConfigureApplicationCookie(options =>
 });
 
 // 4. Policy Configuration
-builder.Services.AddAuthorization(options =>
-{
-	// Lưu ý: Kiểm tra lại xem trong RoleConstants của bạn là "Admin" hay "Administrator"
-	options.AddPolicy(PolicyConstants.AdminOnly, p => p.RequireRole(RoleConstants.Administrator));
-	options.AddPolicy(PolicyConstants.QAManagerOnly, p => p.RequireRole(RoleConstants.QAManager));
-	options.AddPolicy(PolicyConstants.QACoordinatorOnly, p => p.RequireRole(RoleConstants.QACoordinator));
-	options.AddPolicy(PolicyConstants.StaffOnly, p => p.RequireRole(RoleConstants.Staff));
-	options.AddPolicy(PolicyConstants.AllStaff, p => p.RequireAuthenticatedUser());
-	options.AddPolicy(PolicyConstants.CanManageCategories, p => p.RequireRole(RoleConstants.Administrator, RoleConstants.QAManager));
-	options.AddPolicy(PolicyConstants.CanExportData, p => p.RequireRole(RoleConstants.Administrator, RoleConstants.QAManager));
-	options.AddPolicy(PolicyConstants.CanManageUsers, p => p.RequireRole(RoleConstants.Administrator));
-	options.AddPolicy(PolicyConstants.CanSetClosureDates, p => p.RequireRole(RoleConstants.Administrator, RoleConstants.QAManager));
-});
+//builder.Services.AddAuthorization(options =>
+//{
+//	// Lưu ý: Kiểm tra lại xem trong RoleConstants của bạn là "Admin" hay "Administrator"
+//	options.AddPolicy(PolicyConstants.AdminOnly, p => p.RequireRole(RoleConstants.Administrator));
+//	options.AddPolicy(PolicyConstants.QAManagerOnly, p => p.RequireRole(RoleConstants.QAManager));
+//	options.AddPolicy(PolicyConstants.QACoordinatorOnly, p => p.RequireRole(RoleConstants.QACoordinator));
+//	options.AddPolicy(PolicyConstants.StaffOnly, p => p.RequireRole(RoleConstants.Staff));
+//	options.AddPolicy(PolicyConstants.AllStaff, p => p.RequireAuthenticatedUser());
+//	options.AddPolicy(PolicyConstants.CanManageCategories, p => p.RequireRole(RoleConstants.Administrator, RoleConstants.QAManager));
+//	options.AddPolicy(PolicyConstants.CanExportData, p => p.RequireRole(RoleConstants.Administrator, RoleConstants.QAManager));
+//	options.AddPolicy(PolicyConstants.CanManageUsers, p => p.RequireRole(RoleConstants.Administrator));
+//	options.AddPolicy(PolicyConstants.CanSetClosureDates, p => p.RequireRole(RoleConstants.Administrator, RoleConstants.QAManager));
+//});
 
 // 5. Services Injection (QUAN TRỌNG: Phải có IEmailService)
 builder.Services.AddScoped<IIdeaService, IdeaService>();

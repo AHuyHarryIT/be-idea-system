@@ -19,5 +19,18 @@ namespace IdeaCollectionSystem.Service.Services
 		
 			return await _context.Departments.ToListAsync();
 		}
+
+		// Add Department
+		public async Task<bool> CreateDepartmentAsync(String name)
+		{
+			var Department = new Department
+			{
+				Id = Guid.NewGuid(),
+				Name = name
+			};
+			await _context.SaveChangesAsync();
+			return true;
+		}
+	
 	}
 }

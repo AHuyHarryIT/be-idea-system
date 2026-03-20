@@ -1,6 +1,6 @@
 ﻿using IdeaCollectionIdea.Common.Constants;
-using IdeaCollectionSystem.ApplicationCore.Entitites.Identity;
 using IdeaCollectionSystem.Service.Interfaces;
+using IdeaCollectionSystem.Service.Models.DTOs;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -89,18 +89,4 @@ namespace IdeaCollectionSystem.API.Controllers
 		}
 	}
 
-	// --- Các DTO phụ trợ ---
-	public class CreateUserRequest
-	{
-		public string Email { get; set; } = string.Empty;
-		public string Password { get; set; } = string.Empty;
-		public string Name { get; set; } = string.Empty;
-		public Guid? DepartmentId { get; set; }
-		public string Role { get; set; } = string.Empty;
-	}
-
-	public class UpdateRoleRequest
-	{
-		public string Role { get; set; } = string.Empty;
-	}
 }

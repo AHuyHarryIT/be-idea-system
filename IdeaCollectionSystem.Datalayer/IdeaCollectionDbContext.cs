@@ -11,7 +11,7 @@ namespace IdeaCollectionSystem.Datalayer
 		}
 
 		#region DbSet
-		// Đã gỡ bỏ DbSet<User> và DbSet<Role> vì chúng được quản lý bởi Identity
+
 		public DbSet<Category> Categories { get; set; }
 		public DbSet<Comment> Comments { get; set; }
 		public DbSet<Department> Departments { get; set; }
@@ -21,7 +21,6 @@ namespace IdeaCollectionSystem.Datalayer
 		public DbSet<EmailOutBox> EmailOutBoxes { get; set; }
 		public DbSet<IdeaDocument> IdeaDocuments { get; set; }
 
-		// BỔ SUNG: Các Entities đang có trong thư mục nhưng bị thiếu ở code cũ
 		public DbSet<IdeaView> IdeaViews { get; set; }
 		public DbSet<TermVersion> TermVersions { get; set; }
 		public DbSet<UserTermAcceptance> UserTermAcceptances { get; set; }

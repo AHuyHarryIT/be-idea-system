@@ -1,6 +1,5 @@
-﻿using IdeaCollectionIdea.Common.Constants; // Để lấy RoleConstants
-using IdeaCollectionSystem.ApplicationCore.Entitites.Identity;
-using IdeaCollectionSystem.Service.Interfaces;
+﻿using IdeaCollectionSystem.Service.Interfaces;
+using IdeaCollectionSystem.Service.Models.DTOs;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -128,41 +127,5 @@ namespace IdeaCollectionSystem.API.Controllers
 			return new JwtSecurityTokenHandler().WriteToken(token);
 		}
 
-		//// Replace _configuration with _config in TestEmail method
-		//[HttpGet("test-email")]
-		//[AllowAnonymous] // test email không cần token
-		//public async Task<IActionResult> TestEmail()
-		//{
-		//	try
-		//	{
-		//		string toEmail = "dangcuong9551@gmail.com";
-		//		string subject = "Hệ thống Idea: Kiểm tra cấu hình Email";
-		//		string body = $"<h1>Kết nối thành công!</h1><p>Email này được gửi lúc {DateTime.UtcNow:HH:mm:ss}. Hệ thống của bạn đã sẵn sàng!</p>";
-
-		//		await _emailService.SendEmailAsync(toEmail, subject, body);
-
-		//		return Ok(new
-		//		{
-		//			message = "Đã gửi",
-		//			usingEmail = _config["EmailSettings:SenderEmail"] // Kiểm tra xem Azure đã nhận đúng Mail chưa
-		//		});
-		//	}
-		//	catch (Exception ex)
-		//	{
-		//		return BadRequest(new { error = ex.Message, detail = ex.InnerException?.Message });
-		//	}
-		//}
-		public class LoginRequestDto
-		{
-			public string Email { get; set; } = string.Empty;
-			public string Password { get; set; } = string.Empty;
-		}
-
-		public class RegisterRequestDto
-		{
-			public string Email { get; set; } = string.Empty;
-			public string Password { get; set; } = string.Empty;
-			public string Name { get; set; } = string.Empty;
-		}
 	}
 }

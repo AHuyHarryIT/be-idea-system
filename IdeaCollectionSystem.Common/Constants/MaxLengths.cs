@@ -23,15 +23,7 @@
 		// Media
 		public const int FILE_PATH = 500;
 		public const int FILE_FORMAT = 20;
-		public const int QUALITY = 20;            // 720p, 1080p, 4K
-		public const int SERVER_NAME = 50;        // CDN, VIP, Backup
-
-
-		// URLs
-		public const int URL = 500;
-		public const int IMAGE_URL = 500;
-		public const int VIDEO_URL = 500;
-		public const int TRAILER_URL = 500;
+		public const int SERVER_NAME = 50;     
 
 	}
 }

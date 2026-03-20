@@ -18,6 +18,7 @@ namespace IdeaCollectionSystem.Service.Services
 			_userManager = userManager;
 		}
 
+		// Get stats dashboard
 		public async Task<QaDashboardDto> GetDashboardStatsAsync()
 		{
 			return new QaDashboardDto
@@ -33,6 +34,8 @@ namespace IdeaCollectionSystem.Service.Services
 			};
 		}
 
+
+		// Get department statistics
 		public async Task<IEnumerable<DepartmentStatDto>> GetDepartmentStatisticsAsync()
 		{
 			var totalIdeas = await _context.Ideas.CountAsync();
@@ -48,6 +51,7 @@ namespace IdeaCollectionSystem.Service.Services
 				.ToListAsync();
 		}
 
+		// Get ideas without comments
 		public async Task<IEnumerable<IdeaInfoDto>> GetIdeasWithoutCommentsAsync()
 		{
 			return await _context.Ideas
@@ -64,6 +68,7 @@ namespace IdeaCollectionSystem.Service.Services
 				.ToListAsync();
 		}
 
+		// Get department stats with optional submission filter
 		public async Task<List<DepartmentStatDto>> GetDepartmentStatsAsync(Guid? submissionId = null)
 		{
 			// 1. Lấy toàn bộ ý tưởng (có thể lọc theo năm học nếu muốn)

@@ -15,6 +15,7 @@ namespace IdeaCollectionSystem.Service.Services
 			_context = context;
 		}
 
+		// Get all submisssions
 		public async Task<IEnumerable<SubmissionDto>> GetAllSubmissionsAsync()
 		{
 			return await _context.Submissions
@@ -32,6 +33,7 @@ namespace IdeaCollectionSystem.Service.Services
 				.ToListAsync();
 		}
 
+		// Create submission
 		public async Task<bool> CreateSubmissionAsync(SubmissionCreateDto dto)
 		{
 			var submission = new Submission
@@ -49,6 +51,7 @@ namespace IdeaCollectionSystem.Service.Services
 			return await _context.SaveChangesAsync() > 0;
 		}
 
+		// update submission
 		public async Task<bool> UpdateSubmissionAsync(Guid id, SubmissionCreateDto dto)
 		{
 			var submission = await _context.Submissions.FindAsync(id);

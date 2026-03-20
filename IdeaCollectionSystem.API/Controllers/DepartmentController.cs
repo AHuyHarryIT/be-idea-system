@@ -25,7 +25,7 @@ namespace IdeaCollectionSystem.API.Controllers
 
 			if (departments == null || !departments.Any())
 			{
-				return NotFound(new { message = "Không tìm thấy phòng ban nào." });
+				return NotFound(new { message = "No departments were found." });
 			}
 
 			return Ok(departments);

@@ -58,7 +58,7 @@ namespace IdeaCollectionSystem.API.Controllers
 			return Ok(myIdeas);
 		}
 
-		// 4. Get Idea Details (Includes Comments)
+		// 4. Get Idea Details
 		[HttpGet("{id}")]
 		public async Task<IActionResult> GetIdeaDetails([FromRoute] Guid id)
 		{

@@ -74,26 +74,12 @@ builder.Services.AddAuthentication(options =>
 	};
 });
 
-// 5. Authorization Policies 
-builder.Services.AddAuthorizationBuilder()
-	.AddPolicy(PolicyConstants.AdminOnly, p => p.RequireRole(RoleConstants.Administrator))
-	.AddPolicy(PolicyConstants.QAManagerOnly, p => p.RequireRole(RoleConstants.QAManager))
-	.AddPolicy(PolicyConstants.QACoordinatorOnly, p => p.RequireRole(RoleConstants.QACoordinator))
-	.AddPolicy(PolicyConstants.StaffOnly, p => p.RequireRole(RoleConstants.Staff))
-	.AddPolicy(PolicyConstants.QAManagement, p => p.RequireRole(RoleConstants.QAManager, RoleConstants.QACoordinator))
-	.AddPolicy(PolicyConstants.AllStaff, p => p.RequireAuthenticatedUser())
-	.AddPolicy(PolicyConstants.CanManageCategories, p => p.RequireRole(RoleConstants.Administrator, RoleConstants.QAManager))
-	.AddPolicy(PolicyConstants.CanExportData, p => p.RequireRole(RoleConstants.Administrator, RoleConstants.QAManager))
-	.AddPolicy(PolicyConstants.CanManageUsers, p => p.RequireRole(RoleConstants.Administrator))
-	.AddPolicy(PolicyConstants.CanSetClosureDates, p => p.RequireRole(RoleConstants.Administrator, RoleConstants.QAManager));
-
 // 6. CORS for React 
 var allowedOrigins = builder.Configuration.GetSection("AllowedOrigins").Get<string[]>()
 	?? new[] {
 		"http://localhost:3000",
 		"http://localhost:5173",
-		"https://fe-idea-system.onrender.com",
-		"*"
+		"https://fe-idea-system.onrender.com"
 	};
 
 builder.Services.AddCors(options =>
@@ -173,7 +159,7 @@ using (var scope = app.Services.CreateScope())
 	}
 }
 
-// 10. Middleware Pipeline (Đã gỡ bỏ UseCors("ReactPolicy") bị lỗi)
+// 10. Middleware Pipeline 
 app.UseSwagger();
 app.UseSwaggerUI();
 

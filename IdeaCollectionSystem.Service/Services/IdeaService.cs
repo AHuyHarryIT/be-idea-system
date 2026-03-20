@@ -1,4 +1,5 @@
 ﻿using IdeaCollectionIdea.Common.Constants;
+using Microsoft.Extensions.DependencyInjection;
 using IdeaCollectionSystem.ApplicationCore.Entitites;
 using IdeaCollectionSystem.Datalayer;
 using IdeaCollectionSystem.Service.Interfaces;
@@ -14,13 +15,18 @@ namespace IdeaCollectionSystem.Service.Services
 		private readonly UserManager<IdeaUser> _userManager;
 		private readonly IEmailService _emailService;
 
-		public IdeaService(IdeaCollectionDbContext context, UserManager<IdeaUser> userManager, IEmailService emailService)
+		private readonly IServiceScopeFactory _scopeFactory;
+
+		public IdeaService(IdeaCollectionDbContext context, UserManager<IdeaUser> userManager, IEmailService emailService, IServiceScopeFactory scopeFactory)
 		{
 			_context = context;
 			_userManager = userManager;
 			_emailService = emailService;
+
+			_scopeFactory = scopeFactory;
 		}
 
+		// Clouse DAte
 		public async Task<bool> IsClosureDatePassedAsync()
 		{
 			var latestSubmission = await _context.Submissions
@@ -31,6 +37,7 @@ namespace IdeaCollectionSystem.Service.Services
 			return DateTime.UtcNow > latestSubmission.ClousureDate;
 		}
 
+		// Final Clousure date
 		public async Task<bool> IsFinalClosureDatePassedAsync(Guid ideaId)
 		{
 			var idea = await _context.Ideas
@@ -41,12 +48,23 @@ namespace IdeaCollectionSystem.Service.Services
 			return DateTime.UtcNow > idea.Submission.FinalClousureDate;
 		}
 
-		//  CREATE IDEA & SEND EMAIL 
+		// Create Idea
 		public async Task<bool> CreateIdeaAsync(IdeaCreateDto dto, string userId)
 		{
 			var ideaUser = await _userManager.FindByIdAsync(userId);
 			if (ideaUser == null) return false;
 
+			
+			// 1. VALIDATE TERMS AND CONDITIONS ACCEPTANCE (Simplified)
+			
+			if (!dto.HasAcceptedTerms)
+			{
+				return false; // Đá văng ngay nếu user không chịu đồng ý điều khoản
+			}
+
+			
+			// 2. DETERMINE DEPARTMENT ID
+			
 			Guid departmentId;
 			if (dto.DepartmentId != Guid.Empty) departmentId = dto.DepartmentId;
 			else if (ideaUser.DepartmentId.HasValue && ideaUser.DepartmentId.Value != Guid.Empty) departmentId = ideaUser.DepartmentId.Value;
@@ -60,6 +78,9 @@ namespace IdeaCollectionSystem.Service.Services
 			if (!await _context.Departments.AnyAsync(d => d.Id == departmentId)) return false;
 			if (dto.CategoryId == Guid.Empty) return false;
 
+			
+			// 3. VALIDATE SUBMISSION TIMELINE
+			
 			Submission? submission;
 			if (dto.SubmissionId != Guid.Empty)
 				submission = await _context.Submissions.FirstOrDefaultAsync(s => s.Id == dto.SubmissionId);
@@ -68,6 +89,9 @@ namespace IdeaCollectionSystem.Service.Services
 
 			if (submission == null || DateTime.UtcNow > submission.ClousureDate) return false;
 
+			
+			// 4. CREATE IDEA ENTITY
+			
 			var idea = new Idea
 			{
 				Id = Guid.NewGuid(),
@@ -84,6 +108,9 @@ namespace IdeaCollectionSystem.Service.Services
 
 			await _context.Ideas.AddAsync(idea);
 
+			
+			// 5. HANDLE ATTACHED DOCUMENTS
+			
 			if (dto.FilePaths != null && dto.FilePaths.Any())
 			{
 				foreach (var path in dto.FilePaths)
@@ -102,26 +129,56 @@ namespace IdeaCollectionSystem.Service.Services
 				}
 			}
 
+			// Commit Idea và Documents vào DB
 			await _context.SaveChangesAsync();
 
-			// XỬ LÝ GỬI EMAIL THÔNG BÁO CHO QA COORDINATOR
-			try
+			
+			// 6. PROCESS SENDING EMAIL NOTIFICATION TO QA COORDINATOR 
+			
+
+			// Handle anonymity for the email body
+			var authorName = dto.IsAnonymous ? "An anonymous employee" : ideaUser.Name;
+			var ideaText = idea.Text;
+			var deptId = departmentId;
+
+			// Fire-and-forget background task using IServiceScopeFactory
+			_ = Task.Run(async () =>
 			{
-				var coordinators = await _userManager.GetUsersInRoleAsync(RoleConstants.QACoordinator);
-				var deptCoordinator = coordinators.FirstOrDefault(u => u.DepartmentId == departmentId);
-
-				if (deptCoordinator != null && !string.IsNullOrEmpty(deptCoordinator.Email))
+				try
 				{
-					string subject = "Hệ thống: Ý tưởng mới vừa được nộp";
-					string body = $"<h3>Xin chào {deptCoordinator.Name},</h3>" +
-								  $"<p>Một nhân viên trong Khoa của bạn vừa nộp một ý tưởng mới:</p>" +
-								  $"<p><strong>\"{idea.Text}\"</strong></p>" +
-								  $"<p>Vui lòng đăng nhập hệ thống để xem xét và đánh giá.</p>";
+					using var scope = _scopeFactory.CreateScope();
+					var userManager = scope.ServiceProvider.GetRequiredService<UserManager<IdeaUser>>();
+					var emailService = scope.ServiceProvider.GetRequiredService<IEmailService>();
 
-					_ = _emailService.SendEmailAsync(deptCoordinator.Email, subject, body);
+					// Target the QA Coordinator of the specific department
+					var coordinators = await userManager.GetUsersInRoleAsync(RoleConstants.QACoordinator);
+					var deptCoordinator = coordinators.FirstOrDefault(u => u.DepartmentId == deptId);
+
+					if (deptCoordinator != null && !string.IsNullOrEmpty(deptCoordinator.Email))
+					{
+						string subject = "💡 [Idea System] A new idea requires your review!";
+
+						string body = $@"
+			<div style='font-family: Arial, sans-serif; padding: 20px; border: 1px solid #eaeaea; border-radius: 8px;'>
+				<h3 style='color: #2c3e50;'>Hello {deptCoordinator.Name},</h3>
+				<p><strong>{authorName}</strong> from your Department has just submitted a new idea to the system.</p>
+				<div style='background-color: #f9f9f9; padding: 15px; border-left: 4px solid #007bff; margin: 15px 0;'>
+					<i>""{ideaText}""</i>
+				</div>
+				<p>Please log in to the system to review the attached files and evaluate it.</p>
+				<br/>
+				<p style='font-size: 12px; color: #888;'>This is an automated message, please do not reply to this email.</p>
+			</div>";
+
+						await emailService.SendEmailAsync(deptCoordinator.Email, subject, body);
+						Console.WriteLine($"[EMAIL SUCCESS]: Notification sent to QA {deptCoordinator.Email}");
+					}
 				}
-			}
-			catch { }
+				catch (Exception ex)
+				{
+					Console.WriteLine($"[EMAIL ERROR]: Background email task failed - {ex.Message}");
+				}
+			});
 
 			return true;
 		}

@@ -1,5 +1,4 @@
-﻿
-namespace IdeaCollectionIdea.Common.Constants
+﻿namespace IdeaCollectionIdea.Common.Constants
 {
 	public static class RoleConstants
 	{
@@ -16,15 +15,6 @@ namespace IdeaCollectionIdea.Common.Constants
 			{ Staff, "Academic and support staff" }
 		};
 
-		// Dashboard routes for each role
-		public static readonly Dictionary<string, string> RoleDashboards = new()
-		{
-			{ Administrator, "/Admin/Dashboard" },
-			{ QAManager, "/QAManager/Dashboard" },
-			{ QACoordinator, "/QACoordinator/Dashboard" },
-			{ Staff, "/Home/Index" }
-		};
-
 		public static List<string> GetAllRoles() => new()
 		{
 			Administrator,
@@ -32,10 +22,5 @@ namespace IdeaCollectionIdea.Common.Constants
 			QACoordinator,
 			Staff
 		};
-
-		public static string GetDashboardUrl(string role)
-		{
-			return RoleDashboards.TryGetValue(role, out var url) ? url : "/Home/Index";
-		}
 	}
 }

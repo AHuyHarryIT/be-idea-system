@@ -16,7 +16,7 @@ namespace IdeaCollectionSystem.ApplicationCore.Entitites
 
 		public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 		public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
-		public DateTime? DeletedAt { get; set; }
+		public DateTime? DeletedAt { get; set; } = DateTime.UtcNow;
 		public bool IsAnonymous { get; set; }
 
 		public string UserId { get; set; } = string.Empty;
@@ -25,5 +25,7 @@ namespace IdeaCollectionSystem.ApplicationCore.Entitites
 		[ForeignKey("IdeaId")]
 		public Guid IdeaId { get; set; }
 		public Idea? Idea { get; set; }
+
+
 	}
 }

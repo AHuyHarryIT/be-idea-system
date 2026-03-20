@@ -1,5 +1,6 @@
 ﻿using IdeaCollectionIdea.Common.Constants;
 using IdeaCollectionSystem.Service.Interfaces;
+using IdeaCollectionSystem.Service.Models.DTOs;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -50,10 +51,5 @@ namespace IdeaCollectionSystem.API.Controllers
 
 			return Ok(new { message = "Category deletion successful." });
 		}
-	}
-
-	public class CreateCategoryRequest
-	{
-		public string Name { get; set; } = string.Empty;
 	}
 }

@@ -15,6 +15,7 @@ namespace IdeaCollectionSystem.Service.Services
 			_userManager = userManager;
 		}
 
+		// Get all users
 		public async Task<IEnumerable<UserDto>> GetAllUsersAsync()
 		{
 			var users = await _userManager.Users.ToListAsync();
@@ -36,6 +37,7 @@ namespace IdeaCollectionSystem.Service.Services
 			return result;
 		}
 
+		// Update user role
 		public async Task<bool> UpdateUserRoleAsync(string userId, string newRole)
 		{
 			var user = await _userManager.FindByIdAsync(userId);
@@ -47,6 +49,7 @@ namespace IdeaCollectionSystem.Service.Services
 			return result.Succeeded;
 		}
 
+		// Delete user
 		public async Task<bool> DeleteUserAsync(string userId)
 		{
 			var user = await _userManager.FindByIdAsync(userId);

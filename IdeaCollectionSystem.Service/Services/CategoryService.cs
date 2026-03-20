@@ -26,15 +26,14 @@ namespace IdeaCollectionSystem.Service.Services
 				.ToListAsync();
 		}
 
-		public async Task<bool> CreateAsync(string name)
+		public async Task<bool> CreateAsync (String name)
 		{
 			var category = new Category
 			{
 				Id = Guid.NewGuid(),
-				Name = name
+				Name = name,
 			};
-
-			_context.Categories.Add(category);
+			_context.Categories.Add(category);	
 			return await _context.SaveChangesAsync() > 0;
 		}
 
