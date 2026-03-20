@@ -25,4 +25,8 @@
     <ProjectReference Include="..\IdeaCollectionSystem.Datalayer\IdeaCollectionSystem.Datalayer.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Services\NewFolder\" />
+  </ItemGroup>
+
 </Project>

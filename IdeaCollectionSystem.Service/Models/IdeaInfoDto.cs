@@ -7,7 +7,8 @@ public class IdeaInfoDto
 	public string Text { get; set; } = string.Empty;
 	public string CategoryName { get; set; } = string.Empty;
 	public string DepartmentName { get; set; } = string.Empty;
-	public string AuthorName { get; set; } = string.Empty;
+    public string UserId { get; set; } = string.Empty;
+    public string AuthorName { get; set; } = string.Empty;
 	public DateTime CreatedDate { get; set; } = DateTime.UtcNow;
 	public bool IsAnonymous { get; set; }
 

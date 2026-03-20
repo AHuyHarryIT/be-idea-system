@@ -5,6 +5,7 @@ using IdeaCollectionSystem.Service.Interfaces;
 using IdeaCollectionSystem.Service.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
@@ -103,6 +104,9 @@ builder.Services.AddScoped<IStatsService, StatsService>();
 builder.Services.AddScoped<IExportService, ExportService>();
 builder.Services.AddScoped<IDepartmentService, DepartmentService>();
 
+//builder.Services.AddHttpClient<IEmailService, .EmailService>();
+builder.Services.AddSingleton<IEmailQueue, EmailQueue>();
+builder.Services.AddHostedService<EmailBackgroundService>();
 // 8. Controllers + Swagger
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
