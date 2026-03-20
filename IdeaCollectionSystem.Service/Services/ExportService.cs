@@ -47,7 +47,7 @@ namespace IdeaCollectionSystem.Service.Services
 				}
 
 				csv.AppendLine(
-					$"{i.Id},\"{i.Text}\",\"{author}\",\"{i.Category?.Name}\"," +
+					$"{i.Id},\"{i.Title}\",\"{author}\",\"{i.Category?.Name}\"," +
 					$"\"{i.Department?.Name}\",\"{i.CreatedAt:yyyy-MM-dd HH:mm}\",{upvotes},{downvotes},{comments}");
 			}
 

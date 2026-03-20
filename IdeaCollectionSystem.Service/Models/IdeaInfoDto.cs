@@ -4,7 +4,7 @@ using IdeaCollectionSystem.Service.Models.DTOs;
 public class IdeaInfoDto
 {
 	public Guid Id { get; set; } 
-	public string Text { get; set; } = string.Empty;
+	public string Title { get; set; } = string.Empty;
 	public string CategoryName { get; set; } = string.Empty;
 	public string DepartmentName { get; set; } = string.Empty;
 	public string AuthorName { get; set; } = string.Empty;

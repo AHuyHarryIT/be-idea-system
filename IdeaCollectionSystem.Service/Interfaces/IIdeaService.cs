@@ -6,7 +6,7 @@ namespace IdeaCollectionSystem.Service.Interfaces
 	{
 		Task<bool> IsFinalClosureDatePassedAsync(Guid ideaId);
 		Task<IdeaInfoDto?> GetIdeaDetailAsync(Guid ideaId, string userId); 
-		Task<bool> AddCommentAsync(Guid ideaId, string userId, string text, bool isAnonymous);
+		//Task<bool> AddCommentAsync(Guid ideaId, string userId, string text, bool isAnonymous);
 		Task<bool> CreateIdeaAsync(IdeaCreateDto dto, string userId);
 		Task<IEnumerable<IdeaInfoDto>> GetIdeasByStaffAsync(string userId);
 		Task<IEnumerable<IdeaInfoDto>> GetAllIdeasAsync();
@@ -18,5 +18,10 @@ namespace IdeaCollectionSystem.Service.Interfaces
 		Task<IEnumerable<IdeaInfoDto>> GetIdeasWithoutCommentsAsync();
 
 		Task<PagedResult<IdeaInfoDto>> GetIdeasPagedAsync(IdeaQueryParameters parameters, string userId);
+
+
+		Task<bool> CreateCommentAsync(CommentCreateDto dto, string userId);
+
+
 	}
 }

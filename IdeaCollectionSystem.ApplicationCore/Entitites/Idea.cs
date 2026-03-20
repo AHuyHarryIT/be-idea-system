@@ -6,7 +6,7 @@ public class Idea
 	[Key]
 	public Guid Id { get; set; }
 
-	public string Text { get; set; } = string.Empty;
+	public string Title { get; set; } = string.Empty;
 	public string Description { get; set; } = string.Empty;
 
 	public DateTime CreatedAt { get; set; } = DateTime.UtcNow;

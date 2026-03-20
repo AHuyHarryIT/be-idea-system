@@ -60,7 +60,7 @@ namespace IdeaCollectionSystem.Service.Services
 				.Select(i => new IdeaInfoDto
 				{
 					Id = i.Id,
-					Text = i.Text,
+					Title = i.Title,
 					CategoryName = i.Category != null ? i.Category.Name : "No Category",
 					CreatedDate = i.CreatedAt,
 					IsAnonymous = i.IsAnonymous

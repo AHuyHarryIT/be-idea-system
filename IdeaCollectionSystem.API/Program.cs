@@ -9,7 +9,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using System.IdentityModel.Tokens.Jwt;
-using System.Reflection; // Bắt buộc phải có để lấy thời gian Build
+using System.Reflection; 
 using System.Text;
 using static System.Net.WebRequestMethods;
 
@@ -102,6 +102,7 @@ builder.Services.AddScoped<ISubmissionService, SubmissionService>();
 builder.Services.AddScoped<IStatsService, StatsService>();
 builder.Services.AddScoped<IExportService, ExportService>();
 builder.Services.AddScoped<IDepartmentService, DepartmentService>();
+
 
 // 8. Controllers + Swagger
 builder.Services.AddControllers();

@@ -72,13 +72,25 @@ namespace IdeaCollectionSystem.API.Controllers
 
 		// 5. Add Comment
 		[HttpPost("{id}/comments")]
-		public async Task<IActionResult> AddComment([FromRoute] Guid id, [FromBody] CommentDto request)
+		[Authorize] 
+		public async Task<IActionResult> CreateComment([FromRoute] Guid id, [FromBody] CommentDto request)
 		{
 			var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-			if (string.IsNullOrWhiteSpace(request.Text))
+
+	
+			if (string.IsNullOrEmpty(userId))
+				return Unauthorized(new { message = "Please log-in to comment" });
+
+			if (string.IsNullOrWhiteSpace(request.Title))
 				return BadRequest(new { message = "The comment section cannot be left blank." });
 
-			var success = await _ideaService.AddCommentAsync(id, userId!, request.Text, request.IsAnonymous);
+			var commentCreateDto = new CommentCreateDto
+			{
+				IdeaId = id,
+				Title = request.Title,
+				IsAnonymous = request.IsAnonymous
+			};
+			var success = await _ideaService.CreateCommentAsync(commentCreateDto, userId);
 
 			if (success) return Ok(new { message = "Comment added successfully." });
 
@@ -107,5 +119,7 @@ namespace IdeaCollectionSystem.API.Controllers
 			var pagedResult = await _ideaService.GetIdeasPagedAsync(parameters, userId);
 			return Ok(pagedResult);
 		}
+
+
 	}
 }

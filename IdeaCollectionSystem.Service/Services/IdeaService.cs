@@ -95,7 +95,7 @@ namespace IdeaCollectionSystem.Service.Services
 			var idea = new Idea
 			{
 				Id = Guid.NewGuid(),
-				Text = dto.Text,
+				Title = dto.Title,
 				Description = dto.Description,
 				CategoryId = dto.CategoryId,
 				DepartmentId = departmentId,
@@ -138,7 +138,7 @@ namespace IdeaCollectionSystem.Service.Services
 
 			// Handle anonymity for the email body
 			var authorName = dto.IsAnonymous ? "An anonymous employee" : ideaUser.Name;
-			var ideaText = idea.Text;
+			var ideaText = idea.Title;
 			var deptId = departmentId;
 
 			// Fire-and-forget background task using IServiceScopeFactory
@@ -210,7 +210,7 @@ namespace IdeaCollectionSystem.Service.Services
 				result.Add(new IdeaInfoDto
 				{
 					Id = i.Id,
-					Text = i.Text,
+					Title = i.Title,
 					CategoryName = i.Category?.Name ?? "No Category",
 					DepartmentName = i.Department?.Name ?? "",
 					AuthorName = author,
@@ -292,7 +292,7 @@ namespace IdeaCollectionSystem.Service.Services
 				resultItems.Add(new IdeaInfoDto
 				{
 					Id = idea.Id,
-					Text = idea.Text,
+					Title = idea.Title,
 					CategoryName = idea.Category?.Name ?? "No Category",
 					DepartmentName = idea.Department?.Name ?? "",
 					AuthorName = author,
@@ -339,7 +339,7 @@ namespace IdeaCollectionSystem.Service.Services
 				result.Add(new IdeaInfoDto
 				{
 					Id = i.Id,
-					Text = i.Text,
+					Title = i.Title,
 					CategoryName = i.Category?.Name ?? "No Category",
 					DepartmentName = i.Department?.Name ?? "",
 					AuthorName = i.IsAnonymous ? "Anonymous" : (user?.Name ?? user?.Email ?? "Unknown"),
@@ -368,7 +368,7 @@ namespace IdeaCollectionSystem.Service.Services
 			return ideas.Select(i => new IdeaInfoDto
 			{
 				Id = i.Id,
-				Text = i.Text,
+				Title = i.Title,
 				CategoryName = i.Category?.Name ?? "No Category",
 				CreatedDate = i.CreatedAt,
 				IsAnonymous = i.IsAnonymous,
@@ -410,7 +410,7 @@ namespace IdeaCollectionSystem.Service.Services
 				commentDtos.Add(new CommentDto
 				{
 					Id = c.Id,
-					Text = c.Text ?? "",
+					Title = c.Title ?? "",
 					CreatedDate = c.CreatedAt,
 					IsAnonymous = c.IsAnonymous,
 					AuthorName = commentAuthorName
@@ -420,7 +420,7 @@ namespace IdeaCollectionSystem.Service.Services
 			return new IdeaInfoDto
 			{
 				Id = idea.Id,
-				Text = idea.Text,
+				Title = idea.Title,
 				CategoryName = idea.Category?.Name ?? "No Category",
 				DepartmentName = idea.Department?.Name ?? "",
 				AuthorName = idea.IsAnonymous ? "Anonymous" : (user?.Name ?? user?.Email ?? "Unknown"),
@@ -461,7 +461,7 @@ namespace IdeaCollectionSystem.Service.Services
 				result.Add(new IdeaInfoDto
 				{
 					Id = i.Id,
-					Text = i.Text,
+					Title = i.Title,
 					CategoryName = i.Category?.Name ?? "No Category",
 					DepartmentName = i.Department?.Name ?? "",
 					AuthorName = author,
@@ -514,46 +514,108 @@ namespace IdeaCollectionSystem.Service.Services
 			return true;
 		}
 
-		public async Task<bool> AddCommentAsync(Guid ideaId, string userId, string text, bool isAnonymous)
+		// GET IDEAS
+		public async Task<string?> GetIdeasByUserAsync(string userId)
 		{
-			if (await IsFinalClosureDatePassedAsync(ideaId)) return false;
+			var ideas = await _context.Ideas
+				.Where(i => i.UserId == userId)
+				.Include(i => i.Comments)
+				.Select(i => i.Title)
+				.ToListAsync();
 
+			return ideas.Count == 0 ? null : string.Join(", ", ideas);
+		}
+
+
+		// Send email 
+		public async Task<bool> CreateCommentAsync(CommentCreateDto dto, string userId)
+		{
+			var commentUser = await _userManager.FindByIdAsync(userId);
+			if (commentUser == null) return false;
+
+			// 1. LẤY IDEA VÀ THÔNG TIN TÁC GIẢ
+			var idea = await _context.Ideas
+				.FirstOrDefaultAsync(i => i.Id == dto.IdeaId);
+
+			if (idea == null) return false;
+
+			// 2. KIỂM TRA HẠN CHÓT FINAL CLOSURE DATE
+			var submission = await _context.Submissions.FirstOrDefaultAsync(s => s.Id == idea.SubmissionId);
+
+			if (submission == null || DateTime.UtcNow > submission.FinalClousureDate)
+			{
+				return false; // Quá Hạn chót 2 -> Cấm comment
+			}
+
+			// 3. LƯU COMMENT VÀO DB
 			var comment = new Comment
 			{
 				Id = Guid.NewGuid(),
-				IdeaId = ideaId,
+				IdeaId = dto.IdeaId,
 				UserId = userId,
-				Text = text,
-				IsAnonymous = isAnonymous,
+				Title = dto.Title,
+				IsAnonymous = dto.IsAnonymous,
 				CreatedAt = DateTime.UtcNow,
 				UpdatedAt = DateTime.UtcNow
 			};
 
 			await _context.Comments.AddAsync(comment);
 			await _context.SaveChangesAsync();
+
+			// 4. CHẠY NGẦM GỬI EMAIL CHO TÁC GIẢ
+			var commenterName = dto.IsAnonymous ? "An anonymous employee" : commentUser.Name;
+			var commentText = comment.Title;
+			var ideaTitle = idea.Title;
+
+			var authorUser = await _userManager.FindByIdAsync(idea.UserId);
+			var authorEmail = authorUser?.Email;
+			var authorName = authorUser?.Name;
+
+			// Nếu tác giả tự comment bài mình -> Không gửi mail
+			var isSelfCommenting = (idea.UserId == userId);
+
+			if (!string.IsNullOrEmpty(authorEmail) && !isSelfCommenting)
+			{
+				_ = Task.Run(async () =>
+				{
+					try
+					{
+						using var scope = _scopeFactory.CreateScope();
+						var emailService = scope.ServiceProvider.GetRequiredService<IEmailService>();
+
+						string subject = "🔔 [Idea System] Someone commented on your idea!";
+
+						
+						string body = $@"
+                        <div style='font-family: Arial, sans-serif; padding: 20px; border: 1px solid #eaeaea; border-radius: 8px;'>
+                            <h3 style='color: #2c3e50;'>Hello {authorName},</h3>
+                            <p><strong>{commenterName}</strong> has just left a new comment on your idea.</p>
+                            
+                            <div style='background-color: #f1f8ff; padding: 10px; border-left: 4px solid #007bff; margin: 15px 0;'>
+                                <p style='margin: 0; color: #555; font-size: 13px;'>Your Idea:</p>
+                                <i>""{ideaTitle}""</i>
+                            </div>
+
+                            <div style='background-color: #f9f9f9; padding: 15px; border-left: 4px solid #28a745; margin: 15px 0;'>
+                                <p style='margin: 0; color: #555; font-size: 13px;'>New Comment:</p>
+                                <strong>""{commentText}""</strong>
+                            </div>
+                            
+                            <p>Log in to the system to reply and keep the discussion going!</p>
+                        </div>";
+
+						await emailService.SendEmailAsync(authorEmail, subject, body);
+						Console.WriteLine($"[EMAIL SUCCESS]: Đã gửi mail báo Comment cho Tác giả {authorEmail}");
+					}
+					catch (Exception ex)
+					{
+						Console.WriteLine($"[EMAIL ERROR]: Error to send - {ex.Message}");
+					}
+				});
+			}
+
 			return true;
 		}
 
-		public async Task<string?> GetIdeasByUserAsync(string userId)
-		{
-			var ideas = await _context.Ideas
-				.Where(i => i.UserId == userId)
-				.Include(i => i.Comments)
-				.Select(i => i.Text)
-				.ToListAsync();
-
-			return ideas.Count == 0 ? null : string.Join(", ", ideas);
-		}
-
-		// Các hàm Overload cũ (Fix lỗi crash Guid nếu lỡ bị gọi)
-		public async Task<bool> VoteIdeaAsync(int ideaId, string userId, bool isThumbsUp)
-		{
-			return await VoteIdeaAsync(new Guid(ideaId.ToString("D32")), userId, isThumbsUp);
-		}
-
-		public async Task<IdeaInfoDto?> GetIdeaDetailAsync(int ideaId)
-		{
-			return await GetIdeaDetailAsync(new Guid(ideaId.ToString("D32")), string.Empty);
-		}
 	}
 }
