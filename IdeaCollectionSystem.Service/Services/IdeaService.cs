@@ -109,27 +109,47 @@ namespace IdeaCollectionSystem.Service.Services
 
 			await _context.Ideas.AddAsync(idea);
 
-			
+
 			// 5. HANDLE ATTACHED DOCUMENTS
-			
-			if (dto.FilePaths != null && dto.FilePaths.Any())
+
+			// Đảm bảo bạn đã đổi tên biến trong DTO thành UploadedFiles (List<IFormFile>)
+			if (dto.UploadedFiles != null && dto.UploadedFiles.Any())
 			{
-				foreach (var path in dto.FilePaths)
+				// 1. Xác định thư mục lưu file trên Server (Ví dụ: wwwroot/uploads)
+				var uploadFolder = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads");
+
+				// Nếu thư mục chưa có thì tạo mới
+				if (!Directory.Exists(uploadFolder))
 				{
-					var doc = new IdeaDocument
+					Directory.CreateDirectory(uploadFolder);
+				}
+
+				foreach (var file in dto.UploadedFiles) // file lúc này là kiểu IFormFile
+				{
+					// 2. Tạo tên file mới độc nhất (chống trùng lặp/ghi đè file cũ)
+					var uniqueFileName = Guid.NewGuid().ToString() + "_" + file.FileName;
+
+					// Đây chính là cái "string" đường dẫn đầy đủ mà bạn cần!
+					var filePathString = Path.Combine(uploadFolder, uniqueFileName);
+
+					// 3. COPY FILE VẬT LÝ VÀO Ổ CỨNG SERVER
+					using (var fileStream = new FileStream(filePathString, FileMode.Create))
+					{
+						await file.CopyToAsync(fileStream);
+					}
+
+					// 4. LƯU THÔNG TIN (STRING) VÀO DATABASE
+					var ideaDocument = new IdeaDocument
 					{
 						Id = Guid.NewGuid(),
-						IdeaId = idea.Id,
-						StoredPath = path,
-						OriginalFileName = Path.GetFileName(path),
-						MimeType = "application/octet-stream",
-						FileSize = 0,
-						UploadedAt = DateTime.UtcNow
+						IdeaId = idea.Id, // ID của Idea vừa tạo ở trên
+						OriginalFileName = file.FileName, // Tên gốc để hiển thị cho người dùng
+						StoredPath = filePathString       // 👉 GÁN STRING VÀO ĐÂY LÀ HẾT BÁO LỖI!
 					};
-					await _context.IdeaDocuments.AddAsync(doc);
+
+					await _context.IdeaDocuments.AddAsync(ideaDocument);
 				}
 			}
-
 			// Commit Idea và Documents vào DB
 			await _context.SaveChangesAsync();
 

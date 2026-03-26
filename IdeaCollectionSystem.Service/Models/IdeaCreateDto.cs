@@ -1,4 +1,6 @@
-﻿namespace IdeaCollectionSystem.Service.Models.DTOs
+﻿using Microsoft.AspNetCore.Http;
+
+namespace IdeaCollectionSystem.Service.Models.DTOs
 {
 	public class IdeaCreateDto
 	{
@@ -8,7 +10,8 @@
 		public bool IsAnonymous { get; set; }
 		public bool HasAcceptedTerms { get; set; }
 		public Guid TermVersionId { get; set; } 
-		public List<string>? FilePaths { get; set; }
+
+		public List<IFormFile>? UploadedFiles { get; set; }
 
 		public Guid CategoryId { get; set; }
 		public Guid DepartmentId { get; set; }

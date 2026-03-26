@@ -22,12 +22,12 @@ namespace IdeaCollectionSystem.API.Controllers
 
 		// 1. Create Idea
 		[HttpPost]
-		public async Task<IActionResult> CreateIdea([FromBody] IdeaCreateDto request)
+		public async Task<IActionResult> CreateIdea([FromForm] IdeaCreateDto dto)
 		{
 			var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
 			if (string.IsNullOrEmpty(userId)) return Unauthorized();
 
-			var success = await _ideaService.CreateIdeaAsync(request, userId);
+			var success = await _ideaService.CreateIdeaAsync(dto, userId);
 			if (success) return Ok(new { message = "The idea has been submitted successfully." });
 
 			return BadRequest(new { message = "The submitted idea failed. Please double-check the closure date." });
