@@ -1,6 +1,7 @@
 ﻿using IdeaCollectionIdea.Common.Constants;
 using IdeaCollectionSystem.Service.Interfaces;
 using IdeaCollectionSystem.Service.Models.DTOs;
+using IdeaCollectionSystem.Service.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
@@ -81,13 +82,13 @@ namespace IdeaCollectionSystem.API.Controllers
 			if (string.IsNullOrEmpty(userId))
 				return Unauthorized(new { message = "Please log-in to comment" });
 
-			if (string.IsNullOrWhiteSpace(request.Title))
+			if (string.IsNullOrWhiteSpace(request.Content))
 				return BadRequest(new { message = "The comment section cannot be left blank." });
 
 			var commentCreateDto = new CommentCreateDto
 			{
 				IdeaId = id,
-				Title = request.Title,
+				Content = request.Content,
 				IsAnonymous = request.IsAnonymous
 			};
 			var success = await _ideaService.CreateCommentAsync(commentCreateDto, userId);
@@ -120,6 +121,19 @@ namespace IdeaCollectionSystem.API.Controllers
 			return Ok(pagedResult);
 		}
 
+		// PUT: api/idea/{id}/approve
+		[HttpPut("{id}/approve")]
+		[Authorize(Roles = RoleConstants.Administrator)]
+		public async Task<IActionResult> ApproveIdea(Guid id)
+		{
+			var success = await _ideaService.ApproveIdeaAsync(id);
 
+			if (!success)
+			{
+				return NotFound(new { message = "Idea not found in the system." });
+			}
+
+			return Ok(new { message = "The Idea has been successfully approved and is now visible to everyone." });
+		}
 	}
 }

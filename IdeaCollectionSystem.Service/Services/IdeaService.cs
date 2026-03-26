@@ -102,6 +102,7 @@ namespace IdeaCollectionSystem.Service.Services
 				UserId = userId,
 				SubmissionId = submission.Id,
 				IsAnonymous = dto.IsAnonymous,
+				IsApproved = false,
 				CreatedAt = DateTime.UtcNow,
 				UpdatedAt = DateTime.UtcNow
 			};
@@ -122,8 +123,8 @@ namespace IdeaCollectionSystem.Service.Services
 						StoredPath = path,
 						OriginalFileName = Path.GetFileName(path),
 						MimeType = "application/octet-stream",
-						FizeSize = 0,
-						UploadtedAt = DateTime.UtcNow
+						FileSize = 0,
+						UploadedAt = DateTime.UtcNow
 					};
 					await _context.IdeaDocuments.AddAsync(doc);
 				}
@@ -410,7 +411,7 @@ namespace IdeaCollectionSystem.Service.Services
 				commentDtos.Add(new CommentDto
 				{
 					Id = c.Id,
-					Title = c.Title ?? "",
+					Content = c.Content ?? "",
 					CreatedDate = c.CreatedAt,
 					IsAnonymous = c.IsAnonymous,
 					AuthorName = commentAuthorName
@@ -434,6 +435,22 @@ namespace IdeaCollectionSystem.Service.Services
 			};
 		}
 
+		// APPROVE IDEA 
+		public async Task<bool> ApproveIdeaAsync(Guid ideaId)
+		{
+			// Tìm Idea dưới DB
+			var idea = await _context.Ideas.FirstOrDefaultAsync(i => i.Id == ideaId);
+			if (idea == null) return false;
+
+			// Đổi cờ thành True
+			idea.IsApproved = true;
+			idea.UpdatedAt = DateTime.UtcNow;
+
+			_context.Ideas.Update(idea);
+			await _context.SaveChangesAsync();
+
+			return true;
+		}
 
 		public async Task<IEnumerable<IdeaInfoDto>> GetIdeasWithoutCommentsAsync()
 		{
@@ -553,7 +570,7 @@ namespace IdeaCollectionSystem.Service.Services
 				Id = Guid.NewGuid(),
 				IdeaId = dto.IdeaId,
 				UserId = userId,
-				Title = dto.Title,
+				Content = dto.Content,
 				IsAnonymous = dto.IsAnonymous,
 				CreatedAt = DateTime.UtcNow,
 				UpdatedAt = DateTime.UtcNow
@@ -564,7 +581,7 @@ namespace IdeaCollectionSystem.Service.Services
 
 			// 4. CHẠY NGẦM GỬI EMAIL CHO TÁC GIẢ
 			var commenterName = dto.IsAnonymous ? "An anonymous employee" : commentUser.Name;
-			var commentText = comment.Title;
+			var commentText = comment.Content;
 			var ideaTitle = idea.Title;
 
 			var authorUser = await _userManager.FindByIdAsync(idea.UserId);

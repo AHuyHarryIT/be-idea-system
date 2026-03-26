@@ -4,6 +4,7 @@ using IdeaCollectionSystem.Service.Models.DTOs;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims; 
 
 namespace IdeaCollectionSystem.API.Controllers
 {
@@ -79,13 +80,53 @@ namespace IdeaCollectionSystem.API.Controllers
 			return Ok(new { message = "Permissions successfully updated." });
 		}
 
-		//  4. Delete
-		// DELETE: api/user/{userId}
-		[HttpDelete("{userId}")]
-		public async Task<IActionResult> DeleteUser([FromRoute] string userId)
+
+		// DELETE: api/user/delete/{id}
+		[HttpDelete("delete/{id}")]
+		// 1. Ensure only Administrators can access this endpoint
+		[Authorize(Roles = RoleConstants.Administrator)]
+		public async Task<IActionResult> DeleteUser(string id)
 		{
-			await userService.DeleteUserAsync(userId);
-			return Ok(new { message = "Đã xóa tài khoản." });
+			// 2. Get the ID of the CURRENTLY LOGGED IN Admin (the one making the request)
+			var currentLoggedInUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+			// 3. VALIDATE 1: PREVENT SELF-DELETION
+			if (currentLoggedInUserId == id)
+			{
+				return BadRequest(new
+				{
+					message = "Action denied! As an Administrator, you cannot delete your own account."
+				});
+			}
+
+			// Find the target user to be deleted
+			var userToDelete = await _userManager.FindByIdAsync(id);
+			if (userToDelete == null)
+			{
+				return NotFound(new { message = "User not found in the system." });
+			}
+
+			// 4. VALIDATE 2: PREVENT ADMIN FROM DELETING ANOTHER ADMIN
+			// Since Admin is the highest role, they are typically not allowed to delete each other to prevent internal conflicts.
+			var isTargetUserAdmin = await _userManager.IsInRoleAsync(userToDelete, RoleConstants.Administrator);
+			if (isTargetUserAdmin)
+			{
+				return BadRequest(new
+				{
+					message = "Action denied! The target account is also an Administrator. You are not allowed to delete them."
+				});
+			}
+
+			// 5. EXECUTE DELETE (For Staff, QA Coordinator, QA Manager...)
+			var result = await _userManager.DeleteAsync(userToDelete);
+
+			if (result.Succeeded)
+			{
+				return Ok(new { message = $"Successfully deleted user: {userToDelete.Email}" });
+			}
+
+			// Return error if DB deletion fails (e.g., due to foreign key constraints)
+			return BadRequest(new { message = "An error occurred while deleting this user's data. They might have related records in the system." });
 		}
 	}
 

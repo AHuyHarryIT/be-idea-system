@@ -22,6 +22,8 @@ namespace IdeaCollectionSystem.Service.Interfaces
 
 		Task<bool> CreateCommentAsync(CommentCreateDto dto, string userId);
 
+		Task<bool> ApproveIdeaAsync(Guid ideaId);
+
 
 	}
 }

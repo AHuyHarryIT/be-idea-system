@@ -17,6 +17,8 @@ public class Idea
 
 	public int ViewCount { get; set; } = 0;
 	public string UserId { get; set; } = string.Empty;
+
+	public bool IsApproved { get; set; } = false;
 	public Guid SubmissionId { get; set; }
 	public Submission? Submission { get; set; }
 
