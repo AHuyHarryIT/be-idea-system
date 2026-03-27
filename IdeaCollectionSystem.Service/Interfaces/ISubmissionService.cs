@@ -7,5 +7,6 @@ namespace IdeaCollectionSystem.Service.Interfaces
 		Task<IEnumerable<SubmissionDto>> GetAllSubmissionsAsync();
 		Task<bool> CreateSubmissionAsync(SubmissionCreateDto dto);
 		Task<bool> UpdateSubmissionAsync(Guid id, SubmissionCreateDto dto);
+		Task<(bool Success, string Message)> DeleteSubmissionAsync(Guid id);
 	}
 }

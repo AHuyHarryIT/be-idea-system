@@ -23,6 +23,7 @@ namespace IdeaCollectionSystem.Service.Services
 				{
 					Id = s.Id,
 					Name = s.Name,
+					Description = s.Description,
 					AcademicYear = s.AcademicYear,
 					ClosureDate = s.ClousureDate,
 					FinalClosureDate = s.FinalClousureDate,
@@ -36,10 +37,26 @@ namespace IdeaCollectionSystem.Service.Services
 		// Create submission
 		public async Task<bool> CreateSubmissionAsync(SubmissionCreateDto dto)
 		{
+			if (string.IsNullOrWhiteSpace(dto.Name))
+			{
+				return false;
+			}
+
+			if (dto.ClosureDate < DateTime.UtcNow)
+			{
+				return false;
+			}
+
+			if (dto.FinalClosureDate <= dto.ClosureDate)
+			{
+				return false;
+			}
+
 			var submission = new Submission
 			{
 				Id = Guid.NewGuid(),
 				Name = dto.Name,
+				Description = dto.Description,
 				AcademicYear = dto.AcademicYear,
 				ClousureDate = dto.ClosureDate,
 				FinalClousureDate = dto.FinalClosureDate,
@@ -58,6 +75,7 @@ namespace IdeaCollectionSystem.Service.Services
 			if (submission == null) return false;
 
 			submission.Name = dto.Name;
+			submission.Description = dto.Description;
 			submission.AcademicYear = dto.AcademicYear;
 			submission.ClousureDate = dto.ClosureDate;
 			submission.FinalClousureDate = dto.FinalClosureDate;
@@ -65,5 +83,28 @@ namespace IdeaCollectionSystem.Service.Services
 
 			return await _context.SaveChangesAsync() > 0;
 		}
+		public async Task<(bool Success, string Message)> DeleteSubmissionAsync(Guid id)
+		{
+			// 1. Tìm Submission trong DB
+			var submission = await _context.Submissions.FirstOrDefaultAsync(s => s.Id == id);
+			if (submission == null)
+			{
+				return (false, "The submission does not exist.");
+			}
+
+			var hasIdeas = await _context.Ideas.AnyAsync(i => i.SubmissionId == id);
+			if (hasIdeas)
+			{
+				// Nếu có rồi -> Rút thẻ đỏ, cấm xóa!
+				return (false, "Cannot delete this submission because employees have already submitted ideas to it. Please close it instead.");
+			}
+
+			// 3. Nếu chưa có Idea nào -> An toàn để xóa
+			_context.Submissions.Remove(submission);
+			await _context.SaveChangesAsync();
+
+			return (true, "The submission has been deleted successfully.");
+		}
+
 	}
 }

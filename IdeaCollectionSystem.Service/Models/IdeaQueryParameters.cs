@@ -11,5 +11,7 @@
 
 
 		public string SortBy { get; set; } = "latest";
+		public Guid? DepartmentId { get; set; }
+
 	}
 }

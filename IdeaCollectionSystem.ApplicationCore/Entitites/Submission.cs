@@ -13,6 +13,8 @@ namespace IdeaCollectionSystem.ApplicationCore.Entitites
 		public Guid Id { get; set; } 
 		public DateTime AcademicYear { get; set; } = DateTime.UtcNow;
 		public string Name { get; set; } = string.Empty;
+		public string? Description { get; set; }
+
 
 		public DateTime ClousureDate { get; set; } = DateTime.UtcNow;
 		public DateTime FinalClousureDate { get; set; } = DateTime.UtcNow;

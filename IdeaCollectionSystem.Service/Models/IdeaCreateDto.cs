@@ -9,7 +9,6 @@ namespace IdeaCollectionSystem.Service.Models.DTOs
 
 		public bool IsAnonymous { get; set; }
 		public bool HasAcceptedTerms { get; set; }
-		public Guid TermVersionId { get; set; } 
 
 		public List<IFormFile>? UploadedFiles { get; set; }
 
@@ -17,5 +16,13 @@ namespace IdeaCollectionSystem.Service.Models.DTOs
 		public Guid DepartmentId { get; set; }
 
 		public Guid SubmissionId { get; set; }
+	}
+
+	public class IdeaView
+	{
+		public Guid Id { get; set; } = Guid.NewGuid();
+		public Guid IdeaId { get; set; }
+		public string UserId { get; set; }
+		public DateTime ViewedAt { get; set; } = DateTime.UtcNow;
 	}
 }

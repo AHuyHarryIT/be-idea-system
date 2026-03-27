@@ -18,8 +18,7 @@ namespace IdeaCollectionSystem.Service.Interfaces
 		Task<IEnumerable<IdeaInfoDto>> GetIdeasWithoutCommentsAsync();
 
 		Task<PagedResult<IdeaInfoDto>> GetIdeasPagedAsync(IdeaQueryParameters parameters, string userId);
-
-
+	
 		Task<bool> CreateCommentAsync(CommentCreateDto dto, string userId);
 
 		Task<bool> ApproveIdeaAsync(Guid ideaId);

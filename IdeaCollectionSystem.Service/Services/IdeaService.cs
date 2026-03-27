@@ -59,7 +59,7 @@ namespace IdeaCollectionSystem.Service.Services
 			
 			if (!dto.HasAcceptedTerms)
 			{
-				return false; // Đá văng ngay nếu user không chịu đồng ý điều khoản
+				return false; 
 			}
 
 			
@@ -98,7 +98,7 @@ namespace IdeaCollectionSystem.Service.Services
 				Title = dto.Title,
 				Description = dto.Description,
 				CategoryId = dto.CategoryId,
-				DepartmentId = departmentId,
+				//DepartmentId = departmentId,
 				UserId = userId,
 				SubmissionId = submission.Id,
 				IsAnonymous = dto.IsAnonymous,
@@ -112,52 +112,65 @@ namespace IdeaCollectionSystem.Service.Services
 
 			// 5. HANDLE ATTACHED DOCUMENTS
 
-			// Đảm bảo bạn đã đổi tên biến trong DTO thành UploadedFiles (List<IFormFile>)
 			if (dto.UploadedFiles != null && dto.UploadedFiles.Any())
 			{
-				// 1. Xác định thư mục lưu file trên Server (Ví dụ: wwwroot/uploads)
+				var allowedExtensions = new[] { ".pdf" };
+				var maxFileSize = 5 * 1024 * 1024;
 				var uploadFolder = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads");
 
-				// Nếu thư mục chưa có thì tạo mới
+
 				if (!Directory.Exists(uploadFolder))
 				{
 					Directory.CreateDirectory(uploadFolder);
 				}
 
-				foreach (var file in dto.UploadedFiles) // file lúc này là kiểu IFormFile
+				foreach (var file in dto.UploadedFiles) 
 				{
-					// 2. Tạo tên file mới độc nhất (chống trùng lặp/ghi đè file cũ)
+					if (file.Length > maxFileSize)
+					{
+						throw new Exception($"File '{file.FileName}' exceeds the 5MB size limit.");
+					}
+
+					var extension = Path.GetExtension(file.FileName).ToLowerInvariant();
+					if (string.IsNullOrEmpty(extension) || !allowedExtensions.Contains(extension))
+					{
+						throw new Exception($"File '{file.FileName}' is invalid. Only PDF files are allowed.");
+					}
+
+					if (file.ContentType.ToLower() != "application/pdf")
+					{
+						throw new Exception($"The content of file '{file.FileName}' is not a valid PDF.");
+					}
+
 					var uniqueFileName = Guid.NewGuid().ToString() + "_" + file.FileName;
 
-					// Đây chính là cái "string" đường dẫn đầy đủ mà bạn cần!
 					var filePathString = Path.Combine(uploadFolder, uniqueFileName);
 
-					// 3. COPY FILE VẬT LÝ VÀO Ổ CỨNG SERVER
+			
 					using (var fileStream = new FileStream(filePathString, FileMode.Create))
 					{
 						await file.CopyToAsync(fileStream);
 					}
 
-					// 4. LƯU THÔNG TIN (STRING) VÀO DATABASE
+			
 					var ideaDocument = new IdeaDocument
 					{
 						Id = Guid.NewGuid(),
-						IdeaId = idea.Id, // ID của Idea vừa tạo ở trên
-						OriginalFileName = file.FileName, // Tên gốc để hiển thị cho người dùng
-						StoredPath = filePathString       // 👉 GÁN STRING VÀO ĐÂY LÀ HẾT BÁO LỖI!
+						IdeaId = idea.Id,
+						OriginalFileName = file.FileName, 
+						StoredPath = filePathString      
 					};
 
 					await _context.IdeaDocuments.AddAsync(ideaDocument);
 				}
+
 			}
-			// Commit Idea và Documents vào DB
+	
 			await _context.SaveChangesAsync();
 
 			
-			// 6. PROCESS SENDING EMAIL NOTIFICATION TO QA COORDINATOR 
+			// 6. PROCESS SENDING EMAIL NOTIFICATION TO QA COORDINATOR
 			
-
-			// Handle anonymity for the email body
 			var authorName = dto.IsAnonymous ? "An anonymous employee" : ideaUser.Name;
 			var ideaText = idea.Title;
 			var deptId = departmentId;
@@ -264,6 +277,10 @@ namespace IdeaCollectionSystem.Service.Services
 				query = query.Where(i => i.SubmissionId == parameters.SubmissionId.Value);
 			}
 
+			if (parameters.DepartmentId.HasValue && parameters.DepartmentId.Value != Guid.Empty)
+			{
+				query = query.Where(i => i.DepartmentId == parameters.DepartmentId.Value);
+			}
 
 			switch (parameters.SortBy?.ToLower())
 			{
@@ -319,7 +336,7 @@ namespace IdeaCollectionSystem.Service.Services
 					AuthorName = author,
 					CreatedDate = idea.CreatedAt,
 					IsAnonymous = idea.IsAnonymous,
-					ViewCount = idea.ViewCount, // Đã có View Count ở bước trước
+					ViewCount = idea.ViewCount, 
 					ThumbsUpCount = idea.IdeaReactions.Count(r => r.Reaction == "thumbs_up"),
 					ThumbsDownCount = idea.IdeaReactions.Count(r => r.Reaction == "thumbs_down"),
 					CommentCount = idea.Comments.Count,
@@ -400,24 +417,27 @@ namespace IdeaCollectionSystem.Service.Services
 			}).ToList();
 		}
 
-		//  GET IDEA DETAILS (With Comments) 
+
+		//  GET IDEA DETAILS (Fixed ViewCount & ThumbStatus) 
+	
 		public async Task<IdeaInfoDto?> GetIdeaDetailAsync(Guid ideaId, string userId)
 		{
+	
 			var idea = await _context.Ideas
 				.Include(i => i.Category)
 				.Include(i => i.Department)
 				.Include(i => i.Submission)
-				.Include(i => i.Comments) // Kéo Comment lên
+				.Include(i => i.Comments)
 				.FirstOrDefaultAsync(i => i.Id == ideaId);
 
 			if (idea == null) return null;
 
+		
 			idea.ViewCount += 1;
 			await _context.SaveChangesAsync();
-
 			var user = await _userManager.FindByIdAsync(idea.UserId);
 			bool canComment = idea.Submission != null && DateTime.UtcNow <= idea.Submission.FinalClousureDate;
-
+			// 3. Xử lý danh sách Comment DTOs
 			var commentDtos = new List<CommentDto>();
 			foreach (var c in idea.Comments.OrderByDescending(c => c.CreatedAt))
 			{
@@ -437,11 +457,26 @@ namespace IdeaCollectionSystem.Service.Services
 					AuthorName = commentAuthorName
 				});
 			}
+			ThumbStatus currentStatus = ThumbStatus.NONE; // Mặc định là -1
 
+			if (!string.IsNullOrEmpty(userId))
+			{
+				// Truy vấn bảng Reaction để xem user này đã vote chưa
+				var reactionRecord = await _context.IdeaReactions
+					.FirstOrDefaultAsync(r => r.IdeaId == ideaId && r.UserId == userId);
+
+				if (reactionRecord != null)
+				{
+					currentStatus = reactionRecord.Reaction == "thumbs_up"
+									? ThumbStatus.LIKE
+									: ThumbStatus.DISLIKE;
+				}
+			}
 			return new IdeaInfoDto
 			{
 				Id = idea.Id,
 				Title = idea.Title,
+				Description = idea.Description,
 				CategoryName = idea.Category?.Name ?? "No Category",
 				DepartmentName = idea.Department?.Name ?? "",
 				AuthorName = idea.IsAnonymous ? "Anonymous" : (user?.Name ?? user?.Email ?? "Unknown"),
@@ -450,8 +485,10 @@ namespace IdeaCollectionSystem.Service.Services
 				ThumbsUpCount = await _context.IdeaReactions.CountAsync(r => r.IdeaId == idea.Id && r.Reaction == "thumbs_up"),
 				ThumbsDownCount = await _context.IdeaReactions.CountAsync(r => r.IdeaId == idea.Id && r.Reaction == "thumbs_down"),
 				CommentCount = idea.Comments.Count,
+				ViewCount = idea.ViewCount, 
 				CanComment = canComment,
-				Comments = commentDtos
+				Comments = commentDtos,
+				ThumbStatus = currentStatus
 			};
 		}
 

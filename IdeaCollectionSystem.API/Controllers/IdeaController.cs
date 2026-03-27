@@ -20,43 +20,56 @@ namespace IdeaCollectionSystem.API.Controllers
 			_ideaService = ideaService;
 		}
 
-		// 1. Create Idea
 		[HttpPost]
+		[Authorize]
 		public async Task<IActionResult> CreateIdea([FromForm] IdeaCreateDto dto)
 		{
+
+			if (!dto.HasAcceptedTerms)
+			{
+				return BadRequest(new
+				{
+					message = "You must agree to the Terms and Conditions before submitting an idea!"
+				});
+			}
+
+			// 2. Lấy ID người dùng
 			var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
 			if (string.IsNullOrEmpty(userId)) return Unauthorized();
 
+			// 3. Gọi Service xử lý
 			var success = await _ideaService.CreateIdeaAsync(dto, userId);
-			if (success) return Ok(new { message = "The idea has been submitted successfully." });
 
-			return BadRequest(new { message = "The submitted idea failed. Please double-check the closure date." });
+			if (success)
+			{
+				return Ok(new { message = "The idea has been submitted successfully." });
+			}
+
+			return BadRequest(new { message = "Failed to submit idea. The submission period might be closed." });
 		}
 
-		// 2. Get Ideas (All or by Department for QA Coordinator)
+	
+
+		// GET Idea 
 		[HttpGet]
-		public async Task<IActionResult> GetIdeas()
+		public async Task<IActionResult> GetIdeasPaged([FromQuery] IdeaQueryParameters parameters)
 		{
 			var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
 			if (string.IsNullOrEmpty(userId)) return Unauthorized();
 
-			if (User.IsInRole(RoleConstants.QACoordinator))
-			{
-				var deptIdeas = await _ideaService.GetIdeasByDepartmentAsync(userId);
-				return Ok(deptIdeas);
-			}
-
-			var allIdeas = await _ideaService.GetAllIdeasAsync();
-			return Ok(allIdeas);
+			var pagedResult = await _ideaService.GetIdeasPagedAsync(parameters, userId);
+			return Ok(pagedResult);
 		}
 
 		// 3. Get My Ideas
 		[HttpGet("my-ideas")]
-		public async Task<IActionResult> GetMyIdeas()
+		public async Task<IActionResult> GetMyIdeas([FromQuery] IdeaQueryParameters parameters)
 		{
 			var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-			var myIdeas = await _ideaService.GetIdeasByStaffAsync(userId!);
-			return Ok(myIdeas);
+			if (string.IsNullOrEmpty(userId)) return Unauthorized();
+
+			var pagedResult = await _ideaService.GetIdeasPagedAsync(parameters, userId);
+			return Ok(pagedResult);
 		}
 
 		// 4. Get Idea Details
@@ -69,6 +82,7 @@ namespace IdeaCollectionSystem.API.Controllers
 			if (ideaDetail == null) return NotFound(new { message = "No ideas found." });
 
 			return Ok(ideaDetail);
+
 		}
 
 		// 5. Add Comment
@@ -108,17 +122,6 @@ namespace IdeaCollectionSystem.API.Controllers
 			if (result) return Ok(new { success = true, message = "The votes have been recorded." });
 
 			return BadRequest(new { success = false, message = "The vote was a failure." });
-		}
-
-		// GET: api/idea/paged?pageNumber=1&sortBy=popular
-		[HttpGet("paged")]
-		public async Task<IActionResult> GetIdeasPaged([FromQuery] IdeaQueryParameters parameters)
-		{
-			var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-			if (string.IsNullOrEmpty(userId)) return Unauthorized();
-
-			var pagedResult = await _ideaService.GetIdeasPagedAsync(parameters, userId);
-			return Ok(pagedResult);
 		}
 
 		// PUT: api/idea/{id}/approve

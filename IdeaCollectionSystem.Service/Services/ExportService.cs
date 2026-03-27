@@ -135,10 +135,10 @@ namespace IdeaCollectionSystem.Service.Services
 				.Where(d => d.Idea.SubmissionId == submissionId)
 				.ToListAsync();
 
-			// 👉 2. LỌC THỰC TẾ: Bỏ qua những file bị lỗi/mất trên ổ cứng, chỉ lấy những file CÓ THẬT
+			// 2. Bỏ qua những file bị lỗi/mất trên ổ cứng, chỉ lấy những file CÓ THẬT
 			var validFiles = documents.Where(doc => System.IO.File.Exists(doc.StoredPath)).ToList();
 
-			// 3. NẾU KHÔNG CÓ FILE NÀO TỒN TẠI THẬT -> Trả về mảng rỗng để Controller chặn tải
+			// 3. NẾU KHÔNG CÓ FILE NÀO TỒN TẠI THẬT 
 			if (!validFiles.Any())
 			{
 				return Array.Empty<byte>();

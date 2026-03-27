@@ -41,6 +41,26 @@ namespace IdeaCollectionSystem.API.Controllers
 		{
 			await _submissionService.UpdateSubmissionAsync(id, dto);
 			return Ok(new { message = "The submission period has been updated as successful." });
+		}
+
+		// Xóa Submission
+		[HttpDelete("{id}")]
+		[Authorize(Roles = RoleConstants.Administrator + "," + RoleConstants.QAManager)]
+		public async Task<IActionResult> DeleteSubmission(Guid id)
+		{
+			var result = await _submissionService.DeleteSubmissionAsync(id);
+
+			if (!result.Success)
+			{
+			
+				if (result.Message.Contains("does not exist"))
+					return NotFound(new { message = result.Message });
+
+				return BadRequest(new { message = result.Message });
 			}
+
+			// Trả về 200 OK nếu xóa thành công
+			return Ok(new { message = result.Message });
+		}
 	}
 }
