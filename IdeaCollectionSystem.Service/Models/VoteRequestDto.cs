@@ -11,4 +11,5 @@
 		DISLIKE = 0,
 		NONE = -1
 	}
+
 }

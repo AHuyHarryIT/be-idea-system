@@ -1,36 +1,49 @@
 ﻿using IdeaCollectionSystem.ApplicationCore.Entitites.Identity;
+using IdeaCollectionSystem.Datalayer;
 using IdeaCollectionSystem.Service.Interfaces;
 using IdeaCollectionSystem.Service.Models.DTOs;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using static Microsoft.AspNetCore.Hosting.Internal.HostingApplication;
 
 namespace IdeaCollectionSystem.Service.Services
 {
 	public class UserService : IUserService
 	{
 		private readonly UserManager<IdeaUser> _userManager;
+		private readonly IdeaCollectionDbContext _context;
 
-		public UserService(UserManager<IdeaUser> userManager)
+		public UserService(UserManager<IdeaUser> userManager, IdeaCollectionDbContext context)
 		{
 			_userManager = userManager;
+			_context = context;
 		}
 
 		// Get all users
 		public async Task<IEnumerable<UserDto>> GetAllUsersAsync()
 		{
-			var users = await _userManager.Users.ToListAsync();
+
+			var users = await _userManager.Users
+				.Include(u => u.Department)
+				.AsNoTracking() 
+				.ToListAsync();
+
 			var result = new List<UserDto>();
 
 			foreach (var user in users)
 			{
+	
 				var roles = await _userManager.GetRolesAsync(user);
+
 				result.Add(new UserDto
 				{
 					Id = user.Id,
+					Email = user.Email,
 					Name = user.Name,
-					Email = user.Email ?? "",
-					Department = user.DepartmentId?.ToString() ?? string.Empty,
-					Role = roles.FirstOrDefault() ?? "No Role",
+					DepartmentId = user.DepartmentId,
+					DepartmentName = user.Department?.Name ?? "No Department",
+
+					Role = roles.FirstOrDefault() ?? "Staff"
 				});
 			}
 

@@ -98,7 +98,7 @@ namespace IdeaCollectionSystem.Service.Services
 				Title = dto.Title,
 				Description = dto.Description,
 				CategoryId = dto.CategoryId,
-				//DepartmentId = departmentId,
+				DepartmentId = departmentId,
 				UserId = userId,
 				SubmissionId = submission.Id,
 				IsAnonymous = dto.IsAnonymous,
@@ -281,6 +281,7 @@ namespace IdeaCollectionSystem.Service.Services
 			{
 				query = query.Where(i => i.DepartmentId == parameters.DepartmentId.Value);
 			}
+			query = query.Where(i => i.IsApproved == true);
 
 			switch (parameters.SortBy?.ToLower())
 			{
@@ -353,6 +354,7 @@ namespace IdeaCollectionSystem.Service.Services
 			};
 		}
 
+
 		// Get Ideas By Department
 		public async Task<IEnumerable<IdeaInfoDto>> GetIdeasByDepartmentAsync(string userId)
 		{
@@ -418,7 +420,7 @@ namespace IdeaCollectionSystem.Service.Services
 		}
 
 
-		//  GET IDEA DETAILS (Fixed ViewCount & ThumbStatus) 
+		//  GET IDEA DETAILS
 	
 		public async Task<IdeaInfoDto?> GetIdeaDetailAsync(Guid ideaId, string userId)
 		{
@@ -457,11 +459,11 @@ namespace IdeaCollectionSystem.Service.Services
 					AuthorName = commentAuthorName
 				});
 			}
-			ThumbStatus currentStatus = ThumbStatus.NONE; // Mặc định là -1
+			ThumbStatus currentStatus = ThumbStatus.NONE; 
 
 			if (!string.IsNullOrEmpty(userId))
 			{
-				// Truy vấn bảng Reaction để xem user này đã vote chưa
+				
 				var reactionRecord = await _context.IdeaReactions
 					.FirstOrDefaultAsync(r => r.IdeaId == ideaId && r.UserId == userId);
 
@@ -492,21 +494,18 @@ namespace IdeaCollectionSystem.Service.Services
 			};
 		}
 
-		// APPROVE IDEA 
-		public async Task<bool> ApproveIdeaAsync(Guid ideaId)
+		// REVIEW IDEA 
+		public async Task<bool> ReviewIdeaAsync(Guid ideaId, ReviewIdeaDto reviewDto)
 		{
-			// Tìm Idea dưới DB
+			
 			var idea = await _context.Ideas.FirstOrDefaultAsync(i => i.Id == ideaId);
 			if (idea == null) return false;
 
-			// Đổi cờ thành True
-			idea.IsApproved = true;
+			idea.IsApproved = reviewDto.IsApproved;
 			idea.UpdatedAt = DateTime.UtcNow;
 
 			_context.Ideas.Update(idea);
-			await _context.SaveChangesAsync();
-
-			return true;
+			return await _context.SaveChangesAsync() > 0;
 		}
 
 		public async Task<IEnumerable<IdeaInfoDto>> GetIdeasWithoutCommentsAsync()

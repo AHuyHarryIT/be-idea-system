@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -10,9 +11,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace IdeaCollectionSystem.Datalayer.Migrations
 {
     [DbContext(typeof(IdeaCollectionIdentityDbContext))]
-    partial class IdeaCollectionIdentityDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260327210945_AddVirtualDept")]
+    partial class AddVirtualDept
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -151,7 +154,7 @@ namespace IdeaCollectionSystem.Datalayer.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Departments", (string)null);
+                    b.ToTable("Department");
                 });
 
             modelBuilder.Entity("IdeaCollectionSystem.ApplicationCore.Entitites.IdeaDocument", b =>
@@ -350,8 +353,6 @@ namespace IdeaCollectionSystem.Datalayer.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("DepartmentId");
-
                     b.HasIndex("NormalizedEmail")
                         .HasDatabaseName("EmailIndex");
 
@@ -526,16 +527,6 @@ namespace IdeaCollectionSystem.Datalayer.Migrations
                         .IsRequired();
 
                     b.Navigation("Idea");
-                });
-
-            modelBuilder.Entity("IdeaUser", b =>
-                {
-                    b.HasOne("IdeaCollectionSystem.ApplicationCore.Entitites.Department", "Department")
-                        .WithMany()
-                        .HasForeignKey("DepartmentId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
-                    b.Navigation("Department");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>

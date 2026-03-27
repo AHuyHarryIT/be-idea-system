@@ -124,19 +124,19 @@ namespace IdeaCollectionSystem.API.Controllers
 			return BadRequest(new { success = false, message = "The vote was a failure." });
 		}
 
-		// PUT: api/idea/{id}/approve
-		[HttpPut("{id}/approve")]
-		[Authorize(Roles = RoleConstants.Administrator)]
-		public async Task<IActionResult> ApproveIdea(Guid id)
+
+
+		// PUT: api/Idea/{id}/review
+		[HttpPut("{id}/review")]
+		[Authorize(Roles = RoleConstants.Administrator + "," + RoleConstants.QAManager)]
+		public async Task<IActionResult> ReviewIdea(Guid id, [FromBody] ReviewIdeaDto dto)
 		{
-			var success = await _ideaService.ApproveIdeaAsync(id);
+			var result = await _ideaService.ReviewIdeaAsync(id, dto);
 
-			if (!success)
-			{
-				return NotFound(new { message = "Idea not found in the system." });
-			}
+			if (!result) return NotFound(new { message = "Idea not found or update failed." });
 
-			return Ok(new { message = "The Idea has been successfully approved and is now visible to everyone." });
+			string action = dto.IsApproved ? "approved" : "rejected";
+			return Ok(new { message = $"Idea has been {action} successfully." });
 		}
 	}
 }
