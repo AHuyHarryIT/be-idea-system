@@ -79,6 +79,7 @@ builder.Services.AddCors(options =>
 builder.Services.AddScoped<IIdeaService, IdeaService>();
 builder.Services.AddScoped<ICategoryService, CategoryService>();
 builder.Services.AddScoped<IQAManagerService, QAManagerService>();
+builder.Services.AddScoped<IDepartmentService, DepartmentService>();
 
 // ?? Controllers + Swagger ????????????????????????????????????
 builder.Services.AddControllers();
