@@ -64,7 +64,6 @@ namespace IdeaCollectionSystem.Datalayer
 					Email = email,
 					EmailConfirmed = true,
 					Name = name,
-					Avatar = "/images/default-avatar.png",
 					DepartmentId = firstDept?.Id
 				};
 				var result = await userManager.CreateAsync(user, defaultPassword);

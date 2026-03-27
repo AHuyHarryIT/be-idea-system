@@ -29,8 +29,8 @@ namespace IdeaCollectionSystem.Service.Services
 					Id = user.Id,
 					Name = user.Name,
 					Email = user.Email ?? "",
+					Department = user.DepartmentId?.ToString() ?? string.Empty,
 					Role = roles.FirstOrDefault() ?? "No Role",
-					Avatar = user.Avatar
 				});
 			}
 
