@@ -54,17 +54,15 @@ namespace IdeaCollectionSystem.Service.Services
 			var ideaUser = await _userManager.FindByIdAsync(userId);
 			if (ideaUser == null) return false;
 
-			
-			// 1. VALIDATE TERMS AND CONDITIONS ACCEPTANCE (Simplified)
-			
+			// 1. VALIDATE TERMS AND CONDITIONS ACCEPTANCE
 			if (!dto.HasAcceptedTerms)
 			{
-				return false; 
+				throw new ArgumentException("You must agree to the Terms and Conditions before submitting an idea!");
 			}
 
-			
+
 			// 2. DETERMINE DEPARTMENT ID
-			
+
 			Guid departmentId;
 			if (dto.DepartmentId != Guid.Empty) departmentId = dto.DepartmentId;
 			else if (ideaUser.DepartmentId.HasValue && ideaUser.DepartmentId.Value != Guid.Empty) departmentId = ideaUser.DepartmentId.Value;
@@ -305,7 +303,7 @@ namespace IdeaCollectionSystem.Service.Services
 					break;
 			}
 
-			//  PAGINATIOn
+			//  pagination
 			int totalCount = await query.CountAsync();
 
 
@@ -314,7 +312,7 @@ namespace IdeaCollectionSystem.Service.Services
 				.Take(parameters.PageSize)
 				.ToListAsync();
 
-			// 5. MAP SANG DTO
+			// map to Dto
 			var resultItems = new List<IdeaInfoDto>();
 			foreach (var idea in ideas)
 			{
@@ -421,7 +419,6 @@ namespace IdeaCollectionSystem.Service.Services
 
 
 		//  GET IDEA DETAILS
-	
 		public async Task<IdeaInfoDto?> GetIdeaDetailAsync(Guid ideaId, string userId)
 		{
 	
@@ -508,6 +505,8 @@ namespace IdeaCollectionSystem.Service.Services
 			return await _context.SaveChangesAsync() > 0;
 		}
 
+
+		// Get Idea without comment
 		public async Task<IEnumerable<IdeaInfoDto>> GetIdeasWithoutCommentsAsync()
 		{
 			// Lọc ra các Idea không có bất kỳ Comment nào

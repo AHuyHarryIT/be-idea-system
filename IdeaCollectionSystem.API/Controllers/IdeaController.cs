@@ -24,7 +24,7 @@ namespace IdeaCollectionSystem.API.Controllers
 		[Authorize]
 		public async Task<IActionResult> CreateIdea([FromForm] IdeaCreateDto dto)
 		{
-
+			// 1. Kiểm tra điều khoản (Validation ngay tại Controller)
 			if (!dto.HasAcceptedTerms)
 			{
 				return BadRequest(new
@@ -33,30 +33,46 @@ namespace IdeaCollectionSystem.API.Controllers
 				});
 			}
 
-			// 2. Lấy ID người dùng
+			// 2. Lấy ID người dùng từ Token JWT
 			var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-			if (string.IsNullOrEmpty(userId)) return Unauthorized();
-
-			// 3. Gọi Service xử lý
-			var success = await _ideaService.CreateIdeaAsync(dto, userId);
-
-			if (success)
+			if (string.IsNullOrEmpty(userId))
 			{
-				return Ok(new { message = "The idea has been submitted successfully." });
+				return Unauthorized(new { message = "You must be logged in to perform this action." });
 			}
 
-			return BadRequest(new { message = "Failed to submit idea. The submission period might be closed." });
+			// 3. Gọi Service xử lý (Bọc Try-Catch để bắt lỗi file)
+			try
+			{
+				var success = await _ideaService.CreateIdeaAsync(dto, userId);
+
+				if (success)
+				{
+					return Ok(new { message = "The idea has been submitted successfully." });
+				}
+
+				// Nếu trả về false (Thường là do sai Category, Department, hoặc quá Hạn chót)
+				return BadRequest(new { message = "Failed to submit idea. The submission period might be closed or the provided data is invalid." });
+			}
+			catch (Exception ex)
+			{
+				return BadRequest(new { message = ex.Message });
+			}
 		}
 
-	
+
 
 		// GET Idea 
 		[HttpGet]
+		[Authorize] 
 		public async Task<IActionResult> GetIdeasPaged([FromQuery] IdeaQueryParameters parameters)
 		{
 			var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-			if (string.IsNullOrEmpty(userId)) return Unauthorized();
 
+
+			if (string.IsNullOrEmpty(userId))
+			{
+				return Unauthorized(new { message = "You must be logged in to view ideas." });
+			}
 			var pagedResult = await _ideaService.GetIdeasPagedAsync(parameters, userId);
 			return Ok(pagedResult);
 		}

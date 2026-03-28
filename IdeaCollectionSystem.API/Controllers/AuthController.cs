@@ -44,6 +44,8 @@ namespace IdeaCollectionSystem.API.Controllers
 				return Unauthorized(new { message = "Email or password not match." });
 			var roles = await _userManager.GetRolesAsync(user);
 
+			var singleRole = roles.FirstOrDefault() ?? "";
+
 			var accessToken = GenerateJwtToken(user, roles);
 
 			return Ok(new
@@ -55,7 +57,7 @@ namespace IdeaCollectionSystem.API.Controllers
 					email = user.Email,
 					name = user.Name,
 					departmentId = user.DepartmentId,
-					roles = roles
+					role = singleRole 
 				}
 			});
 		}

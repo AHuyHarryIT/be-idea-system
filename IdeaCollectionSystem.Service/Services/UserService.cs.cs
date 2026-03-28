@@ -42,7 +42,6 @@ namespace IdeaCollectionSystem.Service.Services
 					Name = user.Name,
 					DepartmentId = user.DepartmentId,
 					DepartmentName = user.Department?.Name ?? "No Department",
-
 					Role = roles.FirstOrDefault() ?? "Staff"
 				});
 			}

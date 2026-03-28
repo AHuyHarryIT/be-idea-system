@@ -73,7 +73,7 @@ namespace IdeaCollectionSystem.Service.Services
 			var files = Directory.GetFiles(uploadPath);
 			if (files.Length == 0)
 			{
-				return Array.Empty<byte>(); // Trả về mảng rỗng để Controller báo lỗi 400 Bad Request
+				return Array.Empty<byte>(); 
 			}
 
 			// 3. Tiến hành nén ZIP khi chắc chắn đã có file
@@ -125,11 +125,11 @@ namespace IdeaCollectionSystem.Service.Services
 
 			return Encoding.UTF8.GetBytes(builder.ToString());
 		}
-
+		
 		// Export ZIP -> Submission ID
 		public async Task<byte[]> ExportDocumentsBySubmissionToZipAsync(Guid submissionId)
 		{
-			// 1. Tìm thông tin tài liệu thuộc về Submission này trong Database
+		
 			var documents = await _context.IdeaDocuments
 				.Include(d => d.Idea)
 				.Where(d => d.Idea.SubmissionId == submissionId)
