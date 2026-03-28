@@ -494,21 +494,62 @@ namespace IdeaCollectionSystem.Service.Services
 			};
 		}
 
-		// REVIEW IDEA 
-		public async Task<bool> ReviewIdeaAsync(Guid ideaId, ReviewIdeaDto reviewDto)
-		{
-			
-			var idea = await _context.Ideas.FirstOrDefaultAsync(i => i.Id == ideaId);
-			if (idea == null) return false;
+        // REVIEW IDEA 
+        public async Task<bool> ReviewIdeaAsync(Guid ideaId, ReviewIdeaDto reviewDto)
+        {
+            var idea = await _context.Ideas.FirstOrDefaultAsync(i => i.Id == ideaId);
+            if (idea == null) return false;
 
-			idea.IsApproved = reviewDto.IsApproved;
-			idea.UpdatedAt = DateTime.UtcNow;
+            idea.IsApproved = reviewDto.IsApproved;
+            idea.UpdatedAt = DateTime.UtcNow;
 
-			_context.Ideas.Update(idea);
-			return await _context.SaveChangesAsync() > 0;
-		}
+            _context.Ideas.Update(idea);
+            var isSaved = await _context.SaveChangesAsync() > 0;
 
-		public async Task<IEnumerable<IdeaInfoDto>> GetIdeasWithoutCommentsAsync()
+            // NẾU LƯU THÀNH CÔNG VÀO DB THÌ MỚI GỬI EMAIL
+            if (isSaved)
+            {
+                var authorUser = await _userManager.FindByIdAsync(idea.UserId);
+
+                if (authorUser != null && !string.IsNullOrEmpty(authorUser.Email))
+                {
+                    var staffEmail = authorUser.Email;
+                    var staffName = authorUser.Name ?? authorUser.Email;
+                    var ideaTitle = idea.Title;
+                    var isApproved = reviewDto.IsApproved;
+
+                    var rejectionReason = "Scope does not fit current quarter."; 
+
+                    _ = Task.Run(async () =>
+                    {
+                        try
+                        {
+                            using var scope = _scopeFactory.CreateScope();
+                            var emailService = scope.ServiceProvider.GetRequiredService<IEmailService>();
+
+                            if (isApproved)
+                            {
+                                await emailService.SendIdeaApprovedEmailAsync(staffEmail, staffName, ideaTitle);
+                                Console.WriteLine($"[EMAIL SUCCESS]: Approved notification sent to {staffEmail}");
+                            }
+                            else
+                            {
+                                await emailService.SendIdeaRejectedEmailAsync(staffEmail, staffName, ideaTitle, rejectionReason);
+                                Console.WriteLine($"[EMAIL SUCCESS]: Rejected notification sent to {staffEmail}");
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            Console.WriteLine($"[EMAIL ERROR]: Background review email task failed - {ex.Message}");
+                        }
+                    });
+                }
+            }
+
+            return isSaved;
+        }
+
+        public async Task<IEnumerable<IdeaInfoDto>> GetIdeasWithoutCommentsAsync()
 		{
 			// Lọc ra các Idea không có bất kỳ Comment nào
 			var ideas = await _context.Ideas
