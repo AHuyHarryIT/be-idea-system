@@ -6,7 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace IdeaCollectionSystem.API.Controllers
 {
 	[ApiController]
-	[Route("api/[controller]")]
+	[Route("api/export")]
 	// Đã khóa bảo mật ở cổng chính: Chỉ Admin và QA Manager mới được chui vào file này
 	[Authorize(Roles = RoleConstants.Administrator + "," + RoleConstants.QAManager)]
 	public class ExportController : ControllerBase

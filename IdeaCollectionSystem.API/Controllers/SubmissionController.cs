@@ -6,7 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace IdeaCollectionSystem.API.Controllers
 {
-	[Route("api/[controller]")]
+	[Route("api/submissions")]
 	[ApiController]
 	[Authorize(Roles = RoleConstants.Administrator + "," + RoleConstants.QAManager)]
 	public class SubmissionController : ControllerBase

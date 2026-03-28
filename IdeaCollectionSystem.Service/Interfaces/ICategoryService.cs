@@ -9,5 +9,6 @@ namespace IdeaCollectionSystem.Service.Interfaces
 		Task<bool> CreateAsync(string name);
 
 		Task<bool> DeleteIfUnusedAsync(Guid id);
-	}
+        Task<bool> UpdateAsync(Guid id, string newName);
+    }
 }

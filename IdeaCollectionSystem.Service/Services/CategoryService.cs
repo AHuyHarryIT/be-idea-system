@@ -37,7 +37,24 @@ namespace IdeaCollectionSystem.Service.Services
 			return await _context.SaveChangesAsync() > 0;
 		}
 
-		public async Task<bool> DeleteIfUnusedAsync(Guid id)
+        public async Task<bool> UpdateAsync(Guid id, string newName)
+        {
+            var category = await _context.Categories.FirstOrDefaultAsync(c => c.Id == id);
+
+            if (category == null)
+                return false;
+
+            var isNameExist = await _context.Categories.AnyAsync(c => c.Name.ToLower() == newName.ToLower() && c.Id != id);
+            if (isNameExist)
+                return false;
+
+            category.Name = newName;
+            _context.Categories.Update(category);
+
+            return await _context.SaveChangesAsync() > 0;
+        }
+
+        public async Task<bool> DeleteIfUnusedAsync(Guid id)
 		{
 			var category = await _context.Categories
 				.FirstOrDefaultAsync(c => c.Id == id);

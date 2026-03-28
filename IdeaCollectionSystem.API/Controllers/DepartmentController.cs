@@ -7,7 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace IdeaCollectionSystem.API.Controllers;
 
 [ApiController]
-[Route("api/[controller]")]
+[Route("api/departments")]
 [Authorize]
 public class DepartmentController : ControllerBase
 {

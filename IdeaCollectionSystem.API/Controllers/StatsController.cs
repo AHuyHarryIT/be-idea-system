@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace IdeaCollectionSystem.API.Controllers
 {
-	[Route("api/[controller]")]
+	[Route("api/stats")]
 	[ApiController]
 	[Authorize(Roles = RoleConstants.QAManager)] 
 	public class StatsController : ControllerBase
