@@ -25,7 +25,13 @@
 		public string Role { get; set; } = string.Empty;
 	}
 
-	public class LoginRequestDto
+    public class UpdateDepartmentRequest
+    {
+        public Guid DepartmentId { get; set; }
+        public string DepartmentName { get; set; } = string.Empty;
+    }
+
+    public class LoginRequestDto
 	{
 		public string Email { get; set; } = string.Empty;
 		public string Password { get; set; } = string.Empty;

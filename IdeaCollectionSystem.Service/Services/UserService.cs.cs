@@ -62,8 +62,28 @@ namespace IdeaCollectionSystem.Service.Services
 			return result.Succeeded;
 		}
 
-		// Delete user
-		public async Task<bool> DeleteUserAsync(string userId)
+        public async Task<bool> UpdateUserDepartmentAsync(string userId, Guid newDepartmentId)
+        {
+            // 1. Tìm user trong hệ thống
+            var user = await _userManager.FindByIdAsync(userId);
+            if (user == null) return false;
+
+            // 2. Kiểm tra xem Department mới có thực sự tồn tại trong Database không
+            // (Bước này rất quan trọng để tránh lỗi Foreign Key Constraint khi lưu xuống DB)
+            var departmentExists = await _context.Departments.AnyAsync(d => d.Id == newDepartmentId);
+            if (!departmentExists) return false;
+
+            // 3. Cập nhật trực tiếp thuộc tính DepartmentId
+            user.DepartmentId = newDepartmentId;
+
+            // 4. Dùng UserManager để lưu thay đổi xuống Database
+            var result = await _userManager.UpdateAsync(user);
+
+            return result.Succeeded;
+        }
+
+        // Delete user
+        public async Task<bool> DeleteUserAsync(string userId)
 		{
 			var user = await _userManager.FindByIdAsync(userId);
 			if (user == null) return false;

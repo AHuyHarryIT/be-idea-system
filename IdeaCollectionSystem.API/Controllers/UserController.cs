@@ -80,9 +80,25 @@ namespace IdeaCollectionSystem.API.Controllers
 			return Ok(new { message = "Permissions successfully updated." });
 		}
 
+        // PUT: api/users/{userId}/department
+        [HttpPut("{userId}/department")]
+        public async Task<IActionResult> UpdateUserDepartment([FromRoute] string userId, [FromBody] UpdateDepartmentRequest request)
+        {
+            // Kiểm tra Guid rỗng
+            if (request.DepartmentId == Guid.Empty)
+                return BadRequest(new { message = "The department ID cannot be empty." });
 
-		// DELETE: api/user/delete/{id}
-		[HttpDelete("delete/{id}")]
+            var success = await userService.UpdateUserDepartmentAsync(userId, request.DepartmentId);
+
+            if (!success)
+                return BadRequest(new { message = "Failed to update department. User or department might not exist." });
+
+            return Ok(new { message = "Department successfully updated." });
+        }
+
+
+        // DELETE: api/user/delete/{id}
+        [HttpDelete("delete/{id}")]
 		// 1. Ensure only Administrators can access this endpoint
 		[Authorize(Roles = RoleConstants.Administrator)]
 		public async Task<IActionResult> DeleteUser(string id)

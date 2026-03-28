@@ -6,6 +6,8 @@ namespace IdeaCollectionSystem.Service.Interfaces
 	{
 		Task<IEnumerable<UserDto>> GetAllUsersAsync();
 		Task<bool> UpdateUserRoleAsync(string userId, string newRole);
-		Task<bool> DeleteUserAsync(string userId);
+        Task<bool> UpdateUserDepartmentAsync(string userId, Guid newDepartmentId);
+
+        Task<bool> DeleteUserAsync(string userId);
 	}
 }
