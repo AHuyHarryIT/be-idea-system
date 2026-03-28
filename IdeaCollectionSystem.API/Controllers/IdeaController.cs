@@ -8,7 +8,7 @@ using System.Security.Claims;
 
 namespace IdeaCollectionSystem.API.Controllers
 {
-	[Route("api/[controller]")]
+	[Route("api/ideas")]
 	[ApiController]
 	[Authorize]
 	public class IdeaController : ControllerBase

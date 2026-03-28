@@ -8,7 +8,7 @@ using System.Security.Claims;
 
 namespace IdeaCollectionSystem.API.Controllers
 {
-	[Route("api/[controller]")]
+	[Route("api/users")]
 	[ApiController]
 	[Authorize(Roles = RoleConstants.Administrator)]
 	public class UserController : ControllerBase
