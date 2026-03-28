@@ -17,8 +17,7 @@ public class Idea
 
 	public int ViewCount { get; set; } = 0;
 	public string UserId { get; set; } = string.Empty;
-
-	public bool IsApproved { get; set; } = false;
+	public ReviewStatus ReviewStatus { get; set; }
 	public Guid SubmissionId { get; set; }
 	public Submission? Submission { get; set; }
 
@@ -31,4 +30,11 @@ public class Idea
 	public ICollection<Comment> Comments { get; set; } = new List<Comment>();
 	public ICollection<IdeaReaction> IdeaReactions { get; set; } = new List<IdeaReaction>();
 	public ICollection<IdeaDocument> IdeaDocuments { get; set; } = new List<IdeaDocument>();
+}
+
+public enum ReviewStatus
+{
+    PENDING = 0 ,
+    APPROVED = 1 ,
+	REJECTED = 2
 }

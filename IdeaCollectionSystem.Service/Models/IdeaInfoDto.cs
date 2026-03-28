@@ -14,6 +14,7 @@ public class IdeaInfoDto
 	public DateTime CreatedDate { get; set; } = DateTime.UtcNow;
 	public bool IsAnonymous { get; set; }
 
+	public ReviewStatus ReviewStatus { get; set; } = ReviewStatus.PENDING;
 	public ThumbStatus ThumbStatus { get; set; } = ThumbStatus.NONE;
 	public int ThumbsUpCount { get; set; }
 	public int ThumbsDownCount { get; set; }
@@ -23,4 +24,7 @@ public class IdeaInfoDto
 	public int ViewCount { get; set; }
 
 	public List<CommentDto> Comments { get; set; } = new List<CommentDto>();
+
+
 }
+

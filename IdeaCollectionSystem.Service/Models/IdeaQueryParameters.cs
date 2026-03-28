@@ -13,5 +13,8 @@
 		public string SortBy { get; set; } = "latest";
 		public Guid? DepartmentId { get; set; }
 
+		public ReviewStatus? ReviewStatus { get; set; }
+
+
 	}
 }

@@ -38,11 +38,11 @@ namespace IdeaCollectionSystem.MVC.Controllers
 		}
 
 		//  VIEW ALL IDEAS 
-		public async Task<IActionResult> AllIdeas()
-		{
-			var ideas = await _ideaService.GetAllIdeasAsync();
-			return View(ideas);
-		}
+		//public async Task<IActionResult> AllIdeas()
+		//{
+		//	var ideas = await _ideaService.GetAllIdeasAsync();
+		//	return View(ideas);
+		//}
 
 		//  CATEGORIES MANAGEMENT 
 		public async Task<IActionResult> Categories()

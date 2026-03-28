@@ -60,22 +60,27 @@ namespace IdeaCollectionSystem.API.Controllers
 		}
 
 
-
-		// GET Idea 
+		// GET Idea (Dùng chung cho cả Staff, QA Coordinator, QA Manager và Admin)
 		[HttpGet]
-		[Authorize] 
+		[Authorize]
 		public async Task<IActionResult> GetIdeasPaged([FromQuery] IdeaQueryParameters parameters)
 		{
 			var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-
 
 			if (string.IsNullOrEmpty(userId))
 			{
 				return Unauthorized(new { message = "You must be logged in to view ideas." });
 			}
-			var pagedResult = await _ideaService.GetIdeasPagedAsync(parameters, userId);
+
+			// Tự động nhận diện Role của người dùng đang gọi API
+			bool isManager = User.IsInRole(RoleConstants.Administrator) || User.IsInRole(RoleConstants.QAManager);
+
+			// Truyền cờ isManager xuống Service để xử lý lọc dữ liệu tương ứng
+			var pagedResult = await _ideaService.GetIdeasPagedAsync(parameters, userId, isManager);
+
 			return Ok(pagedResult);
 		}
+
 
 		// 3. Get My Ideas
 		[HttpGet("my-ideas")]
@@ -88,18 +93,18 @@ namespace IdeaCollectionSystem.API.Controllers
 			return Ok(pagedResult);
 		}
 
-		// 4. Get Idea Details
-		[HttpGet("{id}")]
-		public async Task<IActionResult> GetIdeaDetails([FromRoute] Guid id)
-		{
-			var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-			var ideaDetail = await _ideaService.GetIdeaDetailAsync(id, userId!);
+		//// 4. Get Idea Details
+		//[HttpGet("{id}")]
+		//public async Task<IActionResult> GetIdeaDetails([FromRoute] Guid id)
+		//{
+		//	var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+		//	var ideaDetail = await _ideaService.GetIdeaDetailAsync(id, userId!);
 
-			if (ideaDetail == null) return NotFound(new { message = "No ideas found." });
+		//	if (ideaDetail == null) return NotFound(new { message = "No ideas found." });
 
-			return Ok(ideaDetail);
+		//	return Ok(ideaDetail);
 
-		}
+		//}
 
 		// 5. Add Comment
 		[HttpPost("{id}/comments")]
@@ -149,10 +154,20 @@ namespace IdeaCollectionSystem.API.Controllers
 		{
 			var result = await _ideaService.ReviewIdeaAsync(id, dto);
 
-			if (!result) return NotFound(new { message = "Idea not found or update failed." });
+			if (!result)
+			{
+				return NotFound(new { message = "Idea not found or update failed." });
+			}
 
-			string action = dto.IsApproved ? "approved" : "rejected";
-			return Ok(new { message = $"Idea has been {action} successfully." });
+			string actionMessage = dto.Status switch
+			{
+				ReviewStatus.APPROVED => "approved",
+				ReviewStatus.REJECTED => "rejected",
+				ReviewStatus.PENDING => "set to pending",
+				_ => "updated" // Trường hợp dự phòng
+			};
+
+			return Ok(new { message = $"Idea has been {actionMessage} successfully." });
 		}
 	}
 }

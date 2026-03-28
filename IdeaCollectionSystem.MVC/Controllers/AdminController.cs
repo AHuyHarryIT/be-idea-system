@@ -71,11 +71,11 @@ namespace IdeaCollectionSystem.MVC.Controllers
 		}
 
 		//  IDEAS VIEW 
-		public async Task<IActionResult> AllIdeas()
-		{
-			var ideas = await _ideaService.GetAllIdeasAsync();
-			return View(ideas);
-		}
+		//public async Task<IActionResult> AllIdeas()
+		//{
+		//	var ideas = await _ideaService.GetAllIdeasAsync();
+		//	return View(ideas);
+		//}
 
 		//  CATEGORIES MANAGEMENT 
 		public async Task<IActionResult> Categories()
