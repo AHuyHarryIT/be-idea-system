@@ -102,6 +102,7 @@ builder.Services.AddScoped<ISubmissionService, SubmissionService>();
 builder.Services.AddScoped<IStatsService, StatsService>();
 builder.Services.AddScoped<IExportService, ExportService>();
 builder.Services.AddScoped<IDepartmentService, DepartmentService>();
+builder.Services.AddMemoryCache();
 
 
 // 8. Controllers + Swagger

@@ -6,193 +6,181 @@ using IdeaCollectionSystem.Service.Interfaces;
 using IdeaCollectionSystem.Service.Models.DTOs;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory; // 1. BỔ SUNG THƯ VIỆN CACHE
 
 namespace IdeaCollectionSystem.Service.Services
 {
-	public class IdeaService : IIdeaService
-	{
-		private readonly IdeaCollectionDbContext _context;
-		private readonly UserManager<IdeaUser> _userManager;
-		private readonly IEmailService _emailService;
+    public class IdeaService : IIdeaService
+    {
+        private readonly IdeaCollectionDbContext _context;
+        private readonly UserManager<IdeaUser> _userManager;
+        private readonly IEmailService _emailService;
+        private readonly IServiceScopeFactory _scopeFactory;
+        private readonly IMemoryCache _cache; // 2. KHAI BÁO BIẾN CACHE
 
-		private readonly IServiceScopeFactory _scopeFactory;
+        // 3. TIÊM IMEMORYCACHE VÀO CONSTRUCTOR
+        public IdeaService(
+            IdeaCollectionDbContext context,
+            UserManager<IdeaUser> userManager,
+            IEmailService emailService,
+            IServiceScopeFactory scopeFactory,
+            IMemoryCache cache)
+        {
+            _context = context;
+            _userManager = userManager;
+            _emailService = emailService;
+            _scopeFactory = scopeFactory;
+            _cache = cache;
+        }
 
-		public IdeaService(IdeaCollectionDbContext context, UserManager<IdeaUser> userManager, IEmailService emailService, IServiceScopeFactory scopeFactory)
-		{
-			_context = context;
-			_userManager = userManager;
-			_emailService = emailService;
+        // Clouse DAte
+        public async Task<bool> IsClosureDatePassedAsync()
+        {
+            var latestSubmission = await _context.Submissions
+                .OrderByDescending(s => s.ClousureDate)
+                .FirstOrDefaultAsync();
 
-			_scopeFactory = scopeFactory;
-		}
+            if (latestSubmission == null) return true;
+            return DateTime.UtcNow > latestSubmission.ClousureDate;
+        }
 
-		// Clouse DAte
-		public async Task<bool> IsClosureDatePassedAsync()
-		{
-			var latestSubmission = await _context.Submissions
-				.OrderByDescending(s => s.ClousureDate)
-				.FirstOrDefaultAsync();
+        // Final Clousure date
+        public async Task<bool> IsFinalClosureDatePassedAsync(Guid ideaId)
+        {
+            var idea = await _context.Ideas
+                .Include(i => i.Submission)
+                .FirstOrDefaultAsync(i => i.Id == ideaId);
 
-			if (latestSubmission == null) return true;
-			return DateTime.UtcNow > latestSubmission.ClousureDate;
-		}
+            if (idea?.Submission == null) return true;
+            return DateTime.UtcNow > idea.Submission.FinalClousureDate;
+        }
 
-		// Final Clousure date
-		public async Task<bool> IsFinalClosureDatePassedAsync(Guid ideaId)
-		{
-			var idea = await _context.Ideas
-				.Include(i => i.Submission)
-				.FirstOrDefaultAsync(i => i.Id == ideaId);
+        // Create Idea
+        public async Task<bool> CreateIdeaAsync(IdeaCreateDto dto, string userId)
+        {
+            var ideaUser = await _userManager.FindByIdAsync(userId);
+            if (ideaUser == null) return false;
 
-			if (idea?.Submission == null) return true;
-			return DateTime.UtcNow > idea.Submission.FinalClousureDate;
-		}
+            // 1. VALIDATE TERMS AND CONDITIONS ACCEPTANCE (Simplified)
+            if (!dto.HasAcceptedTerms)
+            {
+                return false;
+            }
 
-		// Create Idea
-		public async Task<bool> CreateIdeaAsync(IdeaCreateDto dto, string userId)
-		{
-			var ideaUser = await _userManager.FindByIdAsync(userId);
-			if (ideaUser == null) return false;
+            // 2. DETERMINE DEPARTMENT ID
+            Guid departmentId;
+            if (dto.DepartmentId != Guid.Empty) departmentId = dto.DepartmentId;
+            else if (ideaUser.DepartmentId.HasValue && ideaUser.DepartmentId.Value != Guid.Empty) departmentId = ideaUser.DepartmentId.Value;
+            else
+            {
+                var firstDept = await _context.Departments.FirstOrDefaultAsync();
+                if (firstDept == null) return false;
+                departmentId = firstDept.Id;
+            }
 
-			
-			// 1. VALIDATE TERMS AND CONDITIONS ACCEPTANCE (Simplified)
-			
-			if (!dto.HasAcceptedTerms)
-			{
-				return false; 
-			}
+            if (!await _context.Departments.AnyAsync(d => d.Id == departmentId)) return false;
+            if (dto.CategoryId == Guid.Empty) return false;
 
-			
-			// 2. DETERMINE DEPARTMENT ID
-			
-			Guid departmentId;
-			if (dto.DepartmentId != Guid.Empty) departmentId = dto.DepartmentId;
-			else if (ideaUser.DepartmentId.HasValue && ideaUser.DepartmentId.Value != Guid.Empty) departmentId = ideaUser.DepartmentId.Value;
-			else
-			{
-				var firstDept = await _context.Departments.FirstOrDefaultAsync();
-				if (firstDept == null) return false;
-				departmentId = firstDept.Id;
-			}
+            // 3. VALIDATE SUBMISSION TIMELINE
+            Submission? submission;
+            if (dto.SubmissionId != Guid.Empty)
+                submission = await _context.Submissions.FirstOrDefaultAsync(s => s.Id == dto.SubmissionId);
+            else
+                submission = await _context.Submissions.OrderByDescending(s => s.ClousureDate).FirstOrDefaultAsync();
 
-			if (!await _context.Departments.AnyAsync(d => d.Id == departmentId)) return false;
-			if (dto.CategoryId == Guid.Empty) return false;
+            if (submission == null || DateTime.UtcNow > submission.ClousureDate) return false;
 
-			
-			// 3. VALIDATE SUBMISSION TIMELINE
-			
-			Submission? submission;
-			if (dto.SubmissionId != Guid.Empty)
-				submission = await _context.Submissions.FirstOrDefaultAsync(s => s.Id == dto.SubmissionId);
-			else
-				submission = await _context.Submissions.OrderByDescending(s => s.ClousureDate).FirstOrDefaultAsync();
+            // 4. CREATE IDEA ENTITY
+            var idea = new Idea
+            {
+                Id = Guid.NewGuid(),
+                Title = dto.Title,
+                Description = dto.Description,
+                CategoryId = dto.CategoryId,
+                DepartmentId = departmentId,
+                UserId = userId,
+                SubmissionId = submission.Id,
+                IsAnonymous = dto.IsAnonymous,
+                IsApproved = false,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            };
 
-			if (submission == null || DateTime.UtcNow > submission.ClousureDate) return false;
+            await _context.Ideas.AddAsync(idea);
 
-			
-			// 4. CREATE IDEA ENTITY
-			
-			var idea = new Idea
-			{
-				Id = Guid.NewGuid(),
-				Title = dto.Title,
-				Description = dto.Description,
-				CategoryId = dto.CategoryId,
-				DepartmentId = departmentId,
-				UserId = userId,
-				SubmissionId = submission.Id,
-				IsAnonymous = dto.IsAnonymous,
-				IsApproved = false,
-				CreatedAt = DateTime.UtcNow,
-				UpdatedAt = DateTime.UtcNow
-			};
+            // 5. HANDLE ATTACHED DOCUMENTS
+            if (dto.UploadedFiles != null && dto.UploadedFiles.Any())
+            {
+                var allowedExtensions = new[] { ".pdf" };
+                var maxFileSize = 5 * 1024 * 1024;
+                var uploadFolder = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads");
 
-			await _context.Ideas.AddAsync(idea);
+                if (!Directory.Exists(uploadFolder))
+                {
+                    Directory.CreateDirectory(uploadFolder);
+                }
 
+                foreach (var file in dto.UploadedFiles)
+                {
+                    if (file.Length > maxFileSize)
+                    {
+                        throw new Exception($"File '{file.FileName}' exceeds the 5MB size limit.");
+                    }
 
-			// 5. HANDLE ATTACHED DOCUMENTS
+                    var extension = Path.GetExtension(file.FileName).ToLowerInvariant();
+                    if (string.IsNullOrEmpty(extension) || !allowedExtensions.Contains(extension))
+                    {
+                        throw new Exception($"File '{file.FileName}' is invalid. Only PDF files are allowed.");
+                    }
 
-			if (dto.UploadedFiles != null && dto.UploadedFiles.Any())
-			{
-				var allowedExtensions = new[] { ".pdf" };
-				var maxFileSize = 5 * 1024 * 1024;
-				var uploadFolder = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads");
+                    if (file.ContentType.ToLower() != "application/pdf")
+                    {
+                        throw new Exception($"The content of file '{file.FileName}' is not a valid PDF.");
+                    }
 
+                    var uniqueFileName = Guid.NewGuid().ToString() + "_" + file.FileName;
+                    var filePathString = Path.Combine(uploadFolder, uniqueFileName);
 
-				if (!Directory.Exists(uploadFolder))
-				{
-					Directory.CreateDirectory(uploadFolder);
-				}
+                    using (var fileStream = new FileStream(filePathString, FileMode.Create))
+                    {
+                        await file.CopyToAsync(fileStream);
+                    }
 
-				foreach (var file in dto.UploadedFiles) 
-				{
-					if (file.Length > maxFileSize)
-					{
-						throw new Exception($"File '{file.FileName}' exceeds the 5MB size limit.");
-					}
+                    var ideaDocument = new IdeaDocument
+                    {
+                        Id = Guid.NewGuid(),
+                        IdeaId = idea.Id,
+                        OriginalFileName = file.FileName,
+                        StoredPath = filePathString
+                    };
 
-					var extension = Path.GetExtension(file.FileName).ToLowerInvariant();
-					if (string.IsNullOrEmpty(extension) || !allowedExtensions.Contains(extension))
-					{
-						throw new Exception($"File '{file.FileName}' is invalid. Only PDF files are allowed.");
-					}
+                    await _context.IdeaDocuments.AddAsync(ideaDocument);
+                }
+            }
 
-					if (file.ContentType.ToLower() != "application/pdf")
-					{
-						throw new Exception($"The content of file '{file.FileName}' is not a valid PDF.");
-					}
+            await _context.SaveChangesAsync();
 
-					var uniqueFileName = Guid.NewGuid().ToString() + "_" + file.FileName;
+            // 6. PROCESS SENDING EMAIL NOTIFICATION TO QA COORDINATOR
+            var authorName = dto.IsAnonymous ? "An anonymous employee" : ideaUser.Name;
+            var ideaText = idea.Title;
+            var deptId = departmentId;
 
-					var filePathString = Path.Combine(uploadFolder, uniqueFileName);
+            // Fire-and-forget background task using IServiceScopeFactory
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    using var scope = _scopeFactory.CreateScope();
+                    var userManager = scope.ServiceProvider.GetRequiredService<UserManager<IdeaUser>>();
+                    var emailService = scope.ServiceProvider.GetRequiredService<IEmailService>();
 
-			
-					using (var fileStream = new FileStream(filePathString, FileMode.Create))
-					{
-						await file.CopyToAsync(fileStream);
-					}
+                    var coordinators = await userManager.GetUsersInRoleAsync(RoleConstants.QACoordinator);
+                    var deptCoordinator = coordinators.FirstOrDefault(u => u.DepartmentId == deptId);
 
-			
-					var ideaDocument = new IdeaDocument
-					{
-						Id = Guid.NewGuid(),
-						IdeaId = idea.Id,
-						OriginalFileName = file.FileName, 
-						StoredPath = filePathString      
-					};
-
-					await _context.IdeaDocuments.AddAsync(ideaDocument);
-				}
-
-			}
-	
-			await _context.SaveChangesAsync();
-
-			
-			// 6. PROCESS SENDING EMAIL NOTIFICATION TO QA COORDINATOR
-			
-			var authorName = dto.IsAnonymous ? "An anonymous employee" : ideaUser.Name;
-			var ideaText = idea.Title;
-			var deptId = departmentId;
-
-			// Fire-and-forget background task using IServiceScopeFactory
-			_ = Task.Run(async () =>
-			{
-				try
-				{
-					using var scope = _scopeFactory.CreateScope();
-					var userManager = scope.ServiceProvider.GetRequiredService<UserManager<IdeaUser>>();
-					var emailService = scope.ServiceProvider.GetRequiredService<IEmailService>();
-
-					// Target the QA Coordinator of the specific department
-					var coordinators = await userManager.GetUsersInRoleAsync(RoleConstants.QACoordinator);
-					var deptCoordinator = coordinators.FirstOrDefault(u => u.DepartmentId == deptId);
-
-					if (deptCoordinator != null && !string.IsNullOrEmpty(deptCoordinator.Email))
-					{
-						string subject = "💡 [Idea System] A new idea requires your review!";
-
-						string body = $@"
+                    if (deptCoordinator != null && !string.IsNullOrEmpty(deptCoordinator.Email))
+                    {
+                        string subject = "💡 [Idea System] A new idea requires your review!";
+                        string body = $@"
 			<div style='font-family: Arial, sans-serif; padding: 20px; border: 1px solid #eaeaea; border-radius: 8px;'>
 				<h3 style='color: #2c3e50;'>Hello {deptCoordinator.Name},</h3>
 				<p><strong>{authorName}</strong> from your Department has just submitted a new idea to the system.</p>
@@ -204,295 +192,324 @@ namespace IdeaCollectionSystem.Service.Services
 				<p style='font-size: 12px; color: #888;'>This is an automated message, please do not reply to this email.</p>
 			</div>";
 
-						await emailService.SendEmailAsync(deptCoordinator.Email, subject, body);
-						Console.WriteLine($"[EMAIL SUCCESS]: Notification sent to QA {deptCoordinator.Email}");
-					}
-				}
-				catch (Exception ex)
-				{
-					Console.WriteLine($"[EMAIL ERROR]: Background email task failed - {ex.Message}");
-				}
-			});
+                        await emailService.SendEmailAsync(deptCoordinator.Email, subject, body);
+                        Console.WriteLine($"[EMAIL SUCCESS]: Notification sent to QA {deptCoordinator.Email}");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[EMAIL ERROR]: Background email task failed - {ex.Message}");
+                }
+            });
 
-			return true;
-		}
+            return true;
+        }
 
-		//  Get all IDEAS 
-		public async Task<IEnumerable<IdeaInfoDto>> GetAllIdeasAsync()
-		{
-			var ideas = await _context.Ideas
-				.Include(i => i.Category)
-				.Include(i => i.Department)
-				.Include(i => i.Submission)
-				.Include(i => i.Comments)
-				.OrderByDescending(i => i.CreatedAt)
-				.ToListAsync();
+        //  Get all IDEAS 
+        public async Task<IEnumerable<IdeaInfoDto>> GetAllIdeasAsync()
+        {
+            var ideas = await _context.Ideas
+                .Include(i => i.Category)
+                .Include(i => i.Department)
+                .Include(i => i.Submission)
+                .Include(i => i.Comments)
+                .OrderByDescending(i => i.CreatedAt)
+                .ToListAsync();
 
-			var result = new List<IdeaInfoDto>();
-			foreach (var i in ideas)
-			{
-				var author = "Unknown";
-				if (!i.IsAnonymous)
-				{
-					var user = await _userManager.FindByIdAsync(i.UserId);
-					author = user?.Name ?? user?.Email ?? "Unknown";
-				}
-				else author = "Anonymous";
+            var result = new List<IdeaInfoDto>();
+            foreach (var i in ideas)
+            {
+                var author = "Unknown";
+                if (!i.IsAnonymous)
+                {
+                    var user = await _userManager.FindByIdAsync(i.UserId);
+                    author = user?.Name ?? user?.Email ?? "Unknown";
+                }
+                else author = "Anonymous";
 
-				bool canComment = i.Submission != null && DateTime.UtcNow <= i.Submission.FinalClousureDate;
+                bool canComment = i.Submission != null && DateTime.UtcNow <= i.Submission.FinalClousureDate;
 
-				result.Add(new IdeaInfoDto
-				{
-					Id = i.Id,
-					Title = i.Title,
-					CategoryName = i.Category?.Name ?? "No Category",
-					DepartmentName = i.Department?.Name ?? "",
-					AuthorName = author,
-					CreatedDate = i.CreatedAt,
-					IsAnonymous = i.IsAnonymous,
-					ThumbsUpCount = await _context.IdeaReactions.CountAsync(r => r.IdeaId == i.Id && r.Reaction == "thumbs_up"),
-					ThumbsDownCount = await _context.IdeaReactions.CountAsync(r => r.IdeaId == i.Id && r.Reaction == "thumbs_down"),
-					CommentCount = i.Comments.Count,
-					CanComment = canComment
-				});
-			}
-			return result;
-		}
+                result.Add(new IdeaInfoDto
+                {
+                    Id = i.Id,
+                    Title = i.Title,
+                    CategoryName = i.Category?.Name ?? "No Category",
+                    DepartmentName = i.Department?.Name ?? "",
+                    AuthorName = author,
+                    CreatedDate = i.CreatedAt,
+                    IsAnonymous = i.IsAnonymous,
+                    ThumbsUpCount = await _context.IdeaReactions.CountAsync(r => r.IdeaId == i.Id && r.Reaction == "thumbs_up"),
+                    ThumbsDownCount = await _context.IdeaReactions.CountAsync(r => r.IdeaId == i.Id && r.Reaction == "thumbs_down"),
+                    CommentCount = i.Comments.Count,
+                    CanComment = canComment
+                });
+            }
+            return result;
+        }
 
-		// Pagination, sorting, filtering
-		public async Task<PagedResult<IdeaInfoDto>> GetIdeasPagedAsync(IdeaQueryParameters parameters, string userId)
-		{
+        // Pagination, sorting, filtering
+        public async Task<PagedResult<IdeaInfoDto>> GetIdeasPagedAsync(IdeaQueryParameters parameters, string userId)
+        {
+            var query = _context.Ideas
+                .Include(i => i.Category)
+                .Include(i => i.Department)
+                .Include(i => i.Submission)
+                .Include(i => i.Comments)
+                .Include(i => i.IdeaReactions)
+                .AsQueryable();
 
-			var query = _context.Ideas
-				.Include(i => i.Category)
-				.Include(i => i.Department)
-				.Include(i => i.Submission)
-				.Include(i => i.Comments)
-				.Include(i => i.IdeaReactions)
-				.AsQueryable();
+            //  filtering: 
+            if (parameters.SubmissionId.HasValue && parameters.SubmissionId.Value != Guid.Empty)
+            {
+                query = query.Where(i => i.SubmissionId == parameters.SubmissionId.Value);
+            }
 
-			//  filtering: 
-			if (parameters.SubmissionId.HasValue && parameters.SubmissionId.Value != Guid.Empty)
-			{
-				query = query.Where(i => i.SubmissionId == parameters.SubmissionId.Value);
-			}
+            if (parameters.DepartmentId.HasValue && parameters.DepartmentId.Value != Guid.Empty)
+            {
+                query = query.Where(i => i.DepartmentId == parameters.DepartmentId.Value);
+            }
+            query = query.Where(i => i.IsApproved == true);
 
-			if (parameters.DepartmentId.HasValue && parameters.DepartmentId.Value != Guid.Empty)
-			{
-				query = query.Where(i => i.DepartmentId == parameters.DepartmentId.Value);
-			}
-			query = query.Where(i => i.IsApproved == true);
+            switch (parameters.SortBy?.ToLower())
+            {
+                case "popular":
+                    query = query.OrderByDescending(i =>
+                        i.IdeaReactions.Count(r => r.Reaction == "thumbs_up") -
+                        i.IdeaReactions.Count(r => r.Reaction == "thumbs_down"));
+                    break;
 
-			switch (parameters.SortBy?.ToLower())
-			{
-				case "popular":
-					query = query.OrderByDescending(i =>
-						i.IdeaReactions.Count(r => r.Reaction == "thumbs_up") -
-						i.IdeaReactions.Count(r => r.Reaction == "thumbs_down"));
-					break;
+                case "viewed":
+                    query = query.OrderByDescending(i => i.ViewCount);
+                    break;
 
-				case "viewed":
-					query = query.OrderByDescending(i => i.ViewCount);
-					break;
+                case "latest_comments":
+                    query = query.OrderByDescending(i => i.Comments.Any() ? i.Comments.Max(c => c.CreatedAt) : DateTime.MinValue);
+                    break;
 
-				case "latest_comments":
-					query = query.OrderByDescending(i => i.Comments.Any() ? i.Comments.Max(c => c.CreatedAt) : DateTime.MinValue);
-					break;
+                case "latest":
+                default:
+                    query = query.OrderByDescending(i => i.CreatedAt);
+                    break;
+            }
 
-				case "latest":
-				default:
-					query = query.OrderByDescending(i => i.CreatedAt);
-					break;
-			}
+            //  PAGINATIOn
+            int totalCount = await query.CountAsync();
 
-			//  PAGINATIOn
-			int totalCount = await query.CountAsync();
+            var ideas = await query
+                .Skip((parameters.PageNumber - 1) * parameters.PageSize)
+                .Take(parameters.PageSize)
+                .ToListAsync();
 
+            // 5. MAP SANG DTO
+            var resultItems = new List<IdeaInfoDto>();
+            foreach (var idea in ideas)
+            {
+                var author = "Unknown";
+                if (!idea.IsAnonymous)
+                {
+                    var user = await _userManager.FindByIdAsync(idea.UserId);
+                    author = user?.Name ?? user?.Email ?? "Unknown";
+                }
+                else author = "Anonymous";
 
-			var ideas = await query
-				.Skip((parameters.PageNumber - 1) * parameters.PageSize)
-				.Take(parameters.PageSize)
-				.ToListAsync();
+                bool canComment = idea.Submission != null && DateTime.UtcNow <= idea.Submission.FinalClousureDate;
 
-			// 5. MAP SANG DTO
-			var resultItems = new List<IdeaInfoDto>();
-			foreach (var idea in ideas)
-			{
-				var author = "Unknown";
-				if (!idea.IsAnonymous)
-				{
-					var user = await _userManager.FindByIdAsync(idea.UserId);
-					author = user?.Name ?? user?.Email ?? "Unknown";
-				}
-				else author = "Anonymous";
+                resultItems.Add(new IdeaInfoDto
+                {
+                    Id = idea.Id,
+                    Title = idea.Title,
+                    CategoryName = idea.Category?.Name ?? "No Category",
+                    DepartmentName = idea.Department?.Name ?? "",
+                    AuthorName = author,
+                    CreatedDate = idea.CreatedAt,
+                    IsAnonymous = idea.IsAnonymous,
+                    ViewCount = idea.ViewCount,
+                    ThumbsUpCount = idea.IdeaReactions.Count(r => r.Reaction == "thumbs_up"),
+                    ThumbsDownCount = idea.IdeaReactions.Count(r => r.Reaction == "thumbs_down"),
+                    CommentCount = idea.Comments.Count,
+                    CanComment = canComment
+                });
+            }
 
-				bool canComment = idea.Submission != null && DateTime.UtcNow <= idea.Submission.FinalClousureDate;
-
-				resultItems.Add(new IdeaInfoDto
-				{
-					Id = idea.Id,
-					Title = idea.Title,
-					CategoryName = idea.Category?.Name ?? "No Category",
-					DepartmentName = idea.Department?.Name ?? "",
-					AuthorName = author,
-					CreatedDate = idea.CreatedAt,
-					IsAnonymous = idea.IsAnonymous,
-					ViewCount = idea.ViewCount, 
-					ThumbsUpCount = idea.IdeaReactions.Count(r => r.Reaction == "thumbs_up"),
-					ThumbsDownCount = idea.IdeaReactions.Count(r => r.Reaction == "thumbs_down"),
-					CommentCount = idea.Comments.Count,
-					CanComment = canComment
-				});
-			}
-
-			return new PagedResult<IdeaInfoDto>
-			{
-				Items = resultItems,
-				TotalCount = totalCount,
-				PageNumber = parameters.PageNumber,
-				PageSize = parameters.PageSize
-			};
-		}
+            return new PagedResult<IdeaInfoDto>
+            {
+                Items = resultItems,
+                TotalCount = totalCount,
+                PageNumber = parameters.PageNumber,
+                PageSize = parameters.PageSize
+            };
+        }
 
 
-		// Get Ideas By Department
-		public async Task<IEnumerable<IdeaInfoDto>> GetIdeasByDepartmentAsync(string userId)
-		{
-			var ideaUser = await _userManager.FindByIdAsync(userId);
-			if (ideaUser == null || ideaUser.DepartmentId == null) return Enumerable.Empty<IdeaInfoDto>();
+        // Get Ideas By Department
+        public async Task<IEnumerable<IdeaInfoDto>> GetIdeasByDepartmentAsync(string userId)
+        {
+            var ideaUser = await _userManager.FindByIdAsync(userId);
+            if (ideaUser == null || ideaUser.DepartmentId == null) return Enumerable.Empty<IdeaInfoDto>();
 
-			var ideas = await _context.Ideas
-				.Include(i => i.Category)
-				.Include(i => i.Department)
-				.Include(i => i.Submission)
-				.Include(i => i.Comments)
-				.Where(i => i.DepartmentId == ideaUser.DepartmentId.Value)
-				.OrderByDescending(i => i.CreatedAt)
-				.ToListAsync();
+            var ideas = await _context.Ideas
+                .Include(i => i.Category)
+                .Include(i => i.Department)
+                .Include(i => i.Submission)
+                .Include(i => i.Comments)
+                .Where(i => i.DepartmentId == ideaUser.DepartmentId.Value)
+                .OrderByDescending(i => i.CreatedAt)
+                .ToListAsync();
 
-			var result = new List<IdeaInfoDto>();
-			foreach (var i in ideas)
-			{
-				var user = await _userManager.FindByIdAsync(i.UserId);
-				bool canComment = i.Submission != null && DateTime.UtcNow <= i.Submission.FinalClousureDate;
+            var result = new List<IdeaInfoDto>();
+            foreach (var i in ideas)
+            {
+                var user = await _userManager.FindByIdAsync(i.UserId);
+                bool canComment = i.Submission != null && DateTime.UtcNow <= i.Submission.FinalClousureDate;
 
-				result.Add(new IdeaInfoDto
-				{
-					Id = i.Id,
-					Title = i.Title,
-					CategoryName = i.Category?.Name ?? "No Category",
-					DepartmentName = i.Department?.Name ?? "",
-					AuthorName = i.IsAnonymous ? "Anonymous" : (user?.Name ?? user?.Email ?? "Unknown"),
-					CreatedDate = i.CreatedAt,
-					IsAnonymous = i.IsAnonymous,
-					ThumbsUpCount = await _context.IdeaReactions.CountAsync(r => r.IdeaId == i.Id && r.Reaction == "thumbs_up"),
-					ThumbsDownCount = await _context.IdeaReactions.CountAsync(r => r.IdeaId == i.Id && r.Reaction == "thumbs_down"),
-					CommentCount = i.Comments.Count,
-					CanComment = canComment
-				});
-			}
-			return result;
-		}
+                result.Add(new IdeaInfoDto
+                {
+                    Id = i.Id,
+                    Title = i.Title,
+                    CategoryName = i.Category?.Name ?? "No Category",
+                    DepartmentName = i.Department?.Name ?? "",
+                    AuthorName = i.IsAnonymous ? "Anonymous" : (user?.Name ?? user?.Email ?? "Unknown"),
+                    CreatedDate = i.CreatedAt,
+                    IsAnonymous = i.IsAnonymous,
+                    ThumbsUpCount = await _context.IdeaReactions.CountAsync(r => r.IdeaId == i.Id && r.Reaction == "thumbs_up"),
+                    ThumbsDownCount = await _context.IdeaReactions.CountAsync(r => r.IdeaId == i.Id && r.Reaction == "thumbs_down"),
+                    CommentCount = i.Comments.Count,
+                    CanComment = canComment
+                });
+            }
+            return result;
+        }
 
-		// Get Ideas By Staff
-		public async Task<IEnumerable<IdeaInfoDto>> GetIdeasByStaffAsync(string userId)
-		{
-			var ideas = await _context.Ideas
-				.Include(i => i.Category)
-				.Include(i => i.Submission)
-				.Include(i => i.Comments)
-				.Where(i => i.UserId == userId)
-				.OrderByDescending(i => i.CreatedAt)
-				.ToListAsync();
+        // Get Ideas By Staff
+        public async Task<IEnumerable<IdeaInfoDto>> GetIdeasByStaffAsync(string userId)
+        {
+            var ideas = await _context.Ideas
+                .Include(i => i.Category)
+                .Include(i => i.Submission)
+                .Include(i => i.Comments)
+                .Where(i => i.UserId == userId)
+                .OrderByDescending(i => i.CreatedAt)
+                .ToListAsync();
 
-			return ideas.Select(i => new IdeaInfoDto
-			{
-				Id = i.Id,
-				Title = i.Title,
-				CategoryName = i.Category?.Name ?? "No Category",
-				CreatedDate = i.CreatedAt,
-				IsAnonymous = i.IsAnonymous,
-				ThumbsUpCount = _context.IdeaReactions.Count(r => r.IdeaId == i.Id && r.Reaction == "thumbs_up"),
-				ThumbsDownCount = _context.IdeaReactions.Count(r => r.IdeaId == i.Id && r.Reaction == "thumbs_down"),
-				CommentCount = i.Comments.Count,
-				CanComment = i.Submission != null && DateTime.UtcNow <= i.Submission.FinalClousureDate,
-			}).ToList();
-		}
+            return ideas.Select(i => new IdeaInfoDto
+            {
+                Id = i.Id,
+                Title = i.Title,
+                CategoryName = i.Category?.Name ?? "No Category",
+                CreatedDate = i.CreatedAt,
+                IsAnonymous = i.IsAnonymous,
+                ThumbsUpCount = _context.IdeaReactions.Count(r => r.IdeaId == i.Id && r.Reaction == "thumbs_up"),
+                ThumbsDownCount = _context.IdeaReactions.Count(r => r.IdeaId == i.Id && r.Reaction == "thumbs_down"),
+                CommentCount = i.Comments.Count,
+                CanComment = i.Submission != null && DateTime.UtcNow <= i.Submission.FinalClousureDate,
+            }).ToList();
+        }
 
 
-		//  GET IDEA DETAILS
-	
-		public async Task<IdeaInfoDto?> GetIdeaDetailAsync(Guid ideaId, string userId)
-		{
-	
-			var idea = await _context.Ideas
-				.Include(i => i.Category)
-				.Include(i => i.Department)
-				.Include(i => i.Submission)
-				.Include(i => i.Comments)
-				.FirstOrDefaultAsync(i => i.Id == ideaId);
+        //  GET IDEA DETAILS (ĐÃ CẬP NHẬT LOGIC CHẶN SPAM VIEW TẠI ĐÂY)
+        public async Task<IdeaInfoDto?> GetIdeaDetailAsync(Guid ideaId, string userId)
+        {
+            var idea = await _context.Ideas
+                .Include(i => i.Category)
+                .Include(i => i.Department)
+                .Include(i => i.Submission)
+                .Include(i => i.Comments)
+                .FirstOrDefaultAsync(i => i.Id == ideaId);
 
-			if (idea == null) return null;
+            if (idea == null) return null;
 
-		
-			idea.ViewCount += 1;
-			await _context.SaveChangesAsync();
-			var user = await _userManager.FindByIdAsync(idea.UserId);
-			bool canComment = idea.Submission != null && DateTime.UtcNow <= idea.Submission.FinalClousureDate;
-			// 3. Xử lý danh sách Comment DTOs
-			var commentDtos = new List<CommentDto>();
-			foreach (var c in idea.Comments.OrderByDescending(c => c.CreatedAt))
-			{
-				string commentAuthorName = "Anonymous";
-				if (!c.IsAnonymous)
-				{
-					var commentUser = await _userManager.FindByIdAsync(c.UserId);
-					commentAuthorName = commentUser?.Name ?? commentUser?.Email ?? "Unknown";
-				}
+            // --- XỬ LÝ TĂNG VIEW COUNT VỚI IMEMORYCACHE ---
+            bool shouldIncrementView = false;
 
-				commentDtos.Add(new CommentDto
-				{
-					Id = c.Id,
-					Content = c.Content ?? "",
-					CreatedDate = c.CreatedAt,
-					IsAnonymous = c.IsAnonymous,
-					AuthorName = commentAuthorName
-				});
-			}
-			ThumbStatus currentStatus = ThumbStatus.NONE; 
+            if (!string.IsNullOrEmpty(userId))
+            {
+                // Tạo key độc nhất dựa trên ideaId và userId
+                string cacheKey = $"viewed_{ideaId}_{userId}";
 
-			if (!string.IsNullOrEmpty(userId))
-			{
-				
-				var reactionRecord = await _context.IdeaReactions
-					.FirstOrDefaultAsync(r => r.IdeaId == ideaId && r.UserId == userId);
+                // Kiểm tra xem key này có trong bộ nhớ tạm chưa
+                if (!_cache.TryGetValue(cacheKey, out _))
+                {
+                    shouldIncrementView = true; // Cho phép tăng view
 
-				if (reactionRecord != null)
-				{
-					currentStatus = reactionRecord.Reaction == "thumbs_up"
-									? ThumbStatus.LIKE
-									: ThumbStatus.DISLIKE;
-				}
-			}
-			return new IdeaInfoDto
-			{
-				Id = idea.Id,
-				Title = idea.Title,
-				Description = idea.Description,
-				CategoryName = idea.Category?.Name ?? "No Category",
-				DepartmentName = idea.Department?.Name ?? "",
-				AuthorName = idea.IsAnonymous ? "Anonymous" : (user?.Name ?? user?.Email ?? "Unknown"),
-				CreatedDate = idea.CreatedAt,
-				IsAnonymous = idea.IsAnonymous,
-				ThumbsUpCount = await _context.IdeaReactions.CountAsync(r => r.IdeaId == idea.Id && r.Reaction == "thumbs_up"),
-				ThumbsDownCount = await _context.IdeaReactions.CountAsync(r => r.IdeaId == idea.Id && r.Reaction == "thumbs_down"),
-				CommentCount = idea.Comments.Count,
-				ViewCount = idea.ViewCount, 
-				CanComment = canComment,
-				Comments = commentDtos,
-				ThumbStatus = currentStatus
-			};
-		}
+                    // Đánh dấu là user này đã xem, lưu cờ này trong 5 phút
+                    var cacheOptions = new MemoryCacheEntryOptions()
+                        .SetAbsoluteExpiration(TimeSpan.FromMinutes(5));
+
+                    _cache.Set(cacheKey, true, cacheOptions);
+                }
+            }
+            else
+            {
+                // Khách vãng lai (không đăng nhập) thì cho phép tăng view
+                shouldIncrementView = true;
+            }
+
+            // Nếu thỏa điều kiện thì mới cập nhật ViewCount xuống Database
+            if (shouldIncrementView)
+            {
+                idea.ViewCount += 1;
+                await _context.SaveChangesAsync();
+            }
+            // --- KẾT THÚC XỬ LÝ TĂNG VIEW ---
+
+            var user = await _userManager.FindByIdAsync(idea.UserId);
+            bool canComment = idea.Submission != null && DateTime.UtcNow <= idea.Submission.FinalClousureDate;
+
+            // Xử lý danh sách Comment DTOs
+            var commentDtos = new List<CommentDto>();
+            foreach (var c in idea.Comments.OrderByDescending(c => c.CreatedAt))
+            {
+                string commentAuthorName = "Anonymous";
+                if (!c.IsAnonymous)
+                {
+                    var commentUser = await _userManager.FindByIdAsync(c.UserId);
+                    commentAuthorName = commentUser?.Name ?? commentUser?.Email ?? "Unknown";
+                }
+
+                commentDtos.Add(new CommentDto
+                {
+                    Id = c.Id,
+                    Content = c.Content ?? "",
+                    CreatedDate = c.CreatedAt,
+                    IsAnonymous = c.IsAnonymous,
+                    AuthorName = commentAuthorName
+                });
+            }
+
+            ThumbStatus currentStatus = ThumbStatus.NONE;
+
+            if (!string.IsNullOrEmpty(userId))
+            {
+                var reactionRecord = await _context.IdeaReactions
+                    .FirstOrDefaultAsync(r => r.IdeaId == ideaId && r.UserId == userId);
+
+                if (reactionRecord != null)
+                {
+                    currentStatus = reactionRecord.Reaction == "thumbs_up"
+                                    ? ThumbStatus.LIKE
+                                    : ThumbStatus.DISLIKE;
+                }
+            }
+
+            return new IdeaInfoDto
+            {
+                Id = idea.Id,
+                Title = idea.Title,
+                Description = idea.Description,
+                CategoryName = idea.Category?.Name ?? "No Category",
+                DepartmentName = idea.Department?.Name ?? "",
+                AuthorName = idea.IsAnonymous ? "Anonymous" : (user?.Name ?? user?.Email ?? "Unknown"),
+                CreatedDate = idea.CreatedAt,
+                IsAnonymous = idea.IsAnonymous,
+                ThumbsUpCount = await _context.IdeaReactions.CountAsync(r => r.IdeaId == idea.Id && r.Reaction == "thumbs_up"),
+                ThumbsDownCount = await _context.IdeaReactions.CountAsync(r => r.IdeaId == idea.Id && r.Reaction == "thumbs_down"),
+                CommentCount = idea.Comments.Count,
+                ViewCount = idea.ViewCount,
+                CanComment = canComment,
+                Comments = commentDtos,
+                ThumbStatus = currentStatus
+            };
+        }
 
         // REVIEW IDEA 
         public async Task<bool> ReviewIdeaAsync(Guid ideaId, ReviewIdeaDto reviewDto)
@@ -506,7 +523,6 @@ namespace IdeaCollectionSystem.Service.Services
             _context.Ideas.Update(idea);
             var isSaved = await _context.SaveChangesAsync() > 0;
 
-            // NẾU LƯU THÀNH CÔNG VÀO DB THÌ MỚI GỬI EMAIL
             if (isSaved)
             {
                 var authorUser = await _userManager.FindByIdAsync(idea.UserId);
@@ -518,7 +534,7 @@ namespace IdeaCollectionSystem.Service.Services
                     var ideaTitle = idea.Title;
                     var isApproved = reviewDto.IsApproved;
 
-                    var rejectionReason = "Scope does not fit current quarter."; 
+                    var rejectionReason = "Scope does not fit current quarter.";
 
                     _ = Task.Run(async () =>
                     {
@@ -550,157 +566,150 @@ namespace IdeaCollectionSystem.Service.Services
         }
 
         public async Task<IEnumerable<IdeaInfoDto>> GetIdeasWithoutCommentsAsync()
-		{
-			// Lọc ra các Idea không có bất kỳ Comment nào
-			var ideas = await _context.Ideas
-				.Include(i => i.Category)
-				.Include(i => i.Department)
-				.Include(i => i.Submission)
-				.Include(i => i.Comments)
-				.Where(i => i.Comments.Count == 0) // Điều kiện lọc
-				.OrderByDescending(i => i.CreatedAt)
-				.ToListAsync();
+        {
+            var ideas = await _context.Ideas
+                .Include(i => i.Category)
+                .Include(i => i.Department)
+                .Include(i => i.Submission)
+                .Include(i => i.Comments)
+                .Where(i => i.Comments.Count == 0)
+                .OrderByDescending(i => i.CreatedAt)
+                .ToListAsync();
 
-			var result = new List<IdeaInfoDto>();
-			foreach (var i in ideas)
-			{
-				var author = "Unknown";
-				if (!i.IsAnonymous)
-				{
-					var user = await _userManager.FindByIdAsync(i.UserId);
-					author = user?.Name ?? user?.Email ?? "Unknown";
-				}
-				else author = "Anonymous";
+            var result = new List<IdeaInfoDto>();
+            foreach (var i in ideas)
+            {
+                var author = "Unknown";
+                if (!i.IsAnonymous)
+                {
+                    var user = await _userManager.FindByIdAsync(i.UserId);
+                    author = user?.Name ?? user?.Email ?? "Unknown";
+                }
+                else author = "Anonymous";
 
-				result.Add(new IdeaInfoDto
-				{
-					Id = i.Id,
-					Title = i.Title,
-					CategoryName = i.Category?.Name ?? "No Category",
-					DepartmentName = i.Department?.Name ?? "",
-					AuthorName = author,
-					CreatedDate = i.CreatedAt,
-					IsAnonymous = i.IsAnonymous,
-					ThumbsUpCount = await _context.IdeaReactions.CountAsync(r => r.IdeaId == i.Id && r.Reaction == "thumbs_up"),
-					ThumbsDownCount = await _context.IdeaReactions.CountAsync(r => r.IdeaId == i.Id && r.Reaction == "thumbs_down"),
-					CommentCount = 0, // Chắc chắn là 0
-					CanComment = i.Submission != null && DateTime.UtcNow <= i.Submission.FinalClousureDate
-				});
-			}
-			return result;
-		}
+                result.Add(new IdeaInfoDto
+                {
+                    Id = i.Id,
+                    Title = i.Title,
+                    CategoryName = i.Category?.Name ?? "No Category",
+                    DepartmentName = i.Department?.Name ?? "",
+                    AuthorName = author,
+                    CreatedDate = i.CreatedAt,
+                    IsAnonymous = i.IsAnonymous,
+                    ThumbsUpCount = await _context.IdeaReactions.CountAsync(r => r.IdeaId == i.Id && r.Reaction == "thumbs_up"),
+                    ThumbsDownCount = await _context.IdeaReactions.CountAsync(r => r.IdeaId == i.Id && r.Reaction == "thumbs_down"),
+                    CommentCount = 0,
+                    CanComment = i.Submission != null && DateTime.UtcNow <= i.Submission.FinalClousureDate
+                });
+            }
+            return result;
+        }
 
-		//  INTERACT & OTHERS 
-		public async Task<bool> VoteIdeaAsync(Guid ideaId, string userId, bool isThumbsUp)
-		{
-			var idea = await _context.Ideas.FirstOrDefaultAsync(i => i.Id == ideaId);
-			if (idea == null) return false;
+        //  INTERACT & OTHERS 
+        public async Task<bool> VoteIdeaAsync(Guid ideaId, string userId, bool isThumbsUp)
+        {
+            var idea = await _context.Ideas.FirstOrDefaultAsync(i => i.Id == ideaId);
+            if (idea == null) return false;
 
-			var existingReaction = await _context.IdeaReactions
-				.FirstOrDefaultAsync(r => r.IdeaId == idea.Id && r.UserId == userId);
+            var existingReaction = await _context.IdeaReactions
+                .FirstOrDefaultAsync(r => r.IdeaId == idea.Id && r.UserId == userId);
 
-			var reactionType = isThumbsUp ? "thumbs_up" : "thumbs_down";
+            var reactionType = isThumbsUp ? "thumbs_up" : "thumbs_down";
 
-			if (existingReaction != null)
-			{
-				if (existingReaction.Reaction == reactionType)
-					_context.IdeaReactions.Remove(existingReaction);
-				else
-				{
-					existingReaction.Reaction = reactionType;
-					existingReaction.UpdatedAt = DateTime.UtcNow;
-				}
-			}
-			else
-			{
-				await _context.IdeaReactions.AddAsync(new IdeaReaction
-				{
-					Id = Guid.NewGuid(),
-					IdeaId = idea.Id,
-					UserId = userId,
-					Reaction = reactionType,
-					CreatedAt = DateTime.UtcNow,
-					UpdatedAt = DateTime.UtcNow
-				});
-			}
+            if (existingReaction != null)
+            {
+                if (existingReaction.Reaction == reactionType)
+                    _context.IdeaReactions.Remove(existingReaction);
+                else
+                {
+                    existingReaction.Reaction = reactionType;
+                    existingReaction.UpdatedAt = DateTime.UtcNow;
+                }
+            }
+            else
+            {
+                await _context.IdeaReactions.AddAsync(new IdeaReaction
+                {
+                    Id = Guid.NewGuid(),
+                    IdeaId = idea.Id,
+                    UserId = userId,
+                    Reaction = reactionType,
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow
+                });
+            }
 
-			await _context.SaveChangesAsync();
-			return true;
-		}
+            await _context.SaveChangesAsync();
+            return true;
+        }
 
-		// GET IDEAS
-		public async Task<string?> GetIdeasByUserAsync(string userId)
-		{
-			var ideas = await _context.Ideas
-				.Where(i => i.UserId == userId)
-				.Include(i => i.Comments)
-				.Select(i => i.Title)
-				.ToListAsync();
+        // GET IDEAS
+        public async Task<string?> GetIdeasByUserAsync(string userId)
+        {
+            var ideas = await _context.Ideas
+                .Where(i => i.UserId == userId)
+                .Include(i => i.Comments)
+                .Select(i => i.Title)
+                .ToListAsync();
 
-			return ideas.Count == 0 ? null : string.Join(", ", ideas);
-		}
+            return ideas.Count == 0 ? null : string.Join(", ", ideas);
+        }
 
 
-		// Send email 
-		public async Task<bool> CreateCommentAsync(CommentCreateDto dto, string userId)
-		{
-			var commentUser = await _userManager.FindByIdAsync(userId);
-			if (commentUser == null) return false;
+        // Send email 
+        public async Task<bool> CreateCommentAsync(CommentCreateDto dto, string userId)
+        {
+            var commentUser = await _userManager.FindByIdAsync(userId);
+            if (commentUser == null) return false;
 
-			// 1. LẤY IDEA VÀ THÔNG TIN TÁC GIẢ
-			var idea = await _context.Ideas
-				.FirstOrDefaultAsync(i => i.Id == dto.IdeaId);
+            var idea = await _context.Ideas
+                .FirstOrDefaultAsync(i => i.Id == dto.IdeaId);
 
-			if (idea == null) return false;
+            if (idea == null) return false;
 
-			// 2. KIỂM TRA HẠN CHÓT FINAL CLOSURE DATE
-			var submission = await _context.Submissions.FirstOrDefaultAsync(s => s.Id == idea.SubmissionId);
+            var submission = await _context.Submissions.FirstOrDefaultAsync(s => s.Id == idea.SubmissionId);
 
-			if (submission == null || DateTime.UtcNow > submission.FinalClousureDate)
-			{
-				return false; // Quá Hạn chót 2 -> Cấm comment
-			}
+            if (submission == null || DateTime.UtcNow > submission.FinalClousureDate)
+            {
+                return false;
+            }
 
-			// 3. LƯU COMMENT VÀO DB
-			var comment = new Comment
-			{
-				Id = Guid.NewGuid(),
-				IdeaId = dto.IdeaId,
-				UserId = userId,
-				Content = dto.Content,
-				IsAnonymous = dto.IsAnonymous,
-				CreatedAt = DateTime.UtcNow,
-				UpdatedAt = DateTime.UtcNow
-			};
+            var comment = new Comment
+            {
+                Id = Guid.NewGuid(),
+                IdeaId = dto.IdeaId,
+                UserId = userId,
+                Content = dto.Content,
+                IsAnonymous = dto.IsAnonymous,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            };
 
-			await _context.Comments.AddAsync(comment);
-			await _context.SaveChangesAsync();
+            await _context.Comments.AddAsync(comment);
+            await _context.SaveChangesAsync();
 
-			// 4. CHẠY NGẦM GỬI EMAIL CHO TÁC GIẢ
-			var commenterName = dto.IsAnonymous ? "An anonymous employee" : commentUser.Name;
-			var commentText = comment.Content;
-			var ideaTitle = idea.Title;
+            var commenterName = dto.IsAnonymous ? "An anonymous employee" : commentUser.Name;
+            var commentText = comment.Content;
+            var ideaTitle = idea.Title;
 
-			var authorUser = await _userManager.FindByIdAsync(idea.UserId);
-			var authorEmail = authorUser?.Email;
-			var authorName = authorUser?.Name;
+            var authorUser = await _userManager.FindByIdAsync(idea.UserId);
+            var authorEmail = authorUser?.Email;
+            var authorName = authorUser?.Name;
 
-			// Nếu tác giả tự comment bài mình -> Không gửi mail
-			var isSelfCommenting = (idea.UserId == userId);
+            var isSelfCommenting = (idea.UserId == userId);
 
-			if (!string.IsNullOrEmpty(authorEmail) && !isSelfCommenting)
-			{
-				_ = Task.Run(async () =>
-				{
-					try
-					{
-						using var scope = _scopeFactory.CreateScope();
-						var emailService = scope.ServiceProvider.GetRequiredService<IEmailService>();
+            if (!string.IsNullOrEmpty(authorEmail) && !isSelfCommenting)
+            {
+                _ = Task.Run(async () =>
+                {
+                    try
+                    {
+                        using var scope = _scopeFactory.CreateScope();
+                        var emailService = scope.ServiceProvider.GetRequiredService<IEmailService>();
 
-						string subject = "🔔 [Idea System] Someone commented on your idea!";
+                        string subject = "🔔 [Idea System] Someone commented on your idea!";
 
-						
-						string body = $@"
+                        string body = $@"
                         <div style='font-family: Arial, sans-serif; padding: 20px; border: 1px solid #eaeaea; border-radius: 8px;'>
                             <h3 style='color: #2c3e50;'>Hello {authorName},</h3>
                             <p><strong>{commenterName}</strong> has just left a new comment on your idea.</p>
@@ -718,18 +727,18 @@ namespace IdeaCollectionSystem.Service.Services
                             <p>Log in to the system to reply and keep the discussion going!</p>
                         </div>";
 
-						await emailService.SendEmailAsync(authorEmail, subject, body);
-						Console.WriteLine($"[EMAIL SUCCESS]: Đã gửi mail báo Comment cho Tác giả {authorEmail}");
-					}
-					catch (Exception ex)
-					{
-						Console.WriteLine($"[EMAIL ERROR]: Error to send - {ex.Message}");
-					}
-				});
-			}
+                        await emailService.SendEmailAsync(authorEmail, subject, body);
+                        Console.WriteLine($"[EMAIL SUCCESS]: Đã gửi mail báo Comment cho Tác giả {authorEmail}");
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"[EMAIL ERROR]: Error to send - {ex.Message}");
+                    }
+                });
+            }
 
-			return true;
-		}
+            return true;
+        }
 
-	}
+    }
 }
