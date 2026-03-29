@@ -7,9 +7,9 @@
 
 	public enum ThumbStatus
 	{
-		LIKE = 1,
-		DISLIKE = 0,
-		NONE = -1
+		NONE = 0,    
+		LIKE = 1,     
+		DISLIKE = -1  
 	}
 
 }

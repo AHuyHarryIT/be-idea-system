@@ -21,9 +21,9 @@ namespace IdeaCollectionSystem.Service.Interfaces
 
 		Task<bool> CreateCommentAsync(CommentCreateDto dto, string userId);
 
-		Task<bool> ReviewIdeaAsync(Guid ideaId, ReviewIdeaDto dto);
+		Task<bool> ReviewIdeaAsync(Guid ideaId, ReviewIdeaDto dto, string reviewerId);
 
-		//Task<IEnumerable<IdeaInfoDto>> GetPendingIdeasAsync();
+		Task<PagedResult<IdeaInfoDto>> GetMyIdeasPagedAsync(IdeaQueryParameters parameters, string userId);
 
 
 	}

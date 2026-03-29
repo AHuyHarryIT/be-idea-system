@@ -55,20 +55,30 @@ namespace IdeaCollectionSystem.Service.Services
 		}
 		#endregion
 
-		// Check Closure Date
+
+
+		// Check  Closure date
 		public async Task<bool> IsClosureDatePassedAsync()
 		{
-			var latestSubmission = await _context.Submissions.OrderByDescending(s => s.ClousureDate).FirstOrDefaultAsync();
+			var latestSubmission = await _context.Submissions
+				.OrderByDescending(s => s.ClousureDate)
+				.FirstOrDefaultAsync();
+
 			if (latestSubmission == null) return true;
-			return DateTime.UtcNow > latestSubmission.ClousureDate;
+
+			return DateTime.UtcNow.Date > latestSubmission.ClousureDate.Date;
 		}
 
 		// Check Final Closure date
 		public async Task<bool> IsFinalClosureDatePassedAsync(Guid ideaId)
 		{
-			var idea = await _context.Ideas.Include(i => i.Submission).FirstOrDefaultAsync(i => i.Id == ideaId);
+			var idea = await _context.Ideas
+				.Include(i => i.Submission)
+				.FirstOrDefaultAsync(i => i.Id == ideaId);
+
 			if (idea?.Submission == null) return true;
-			return DateTime.UtcNow > idea.Submission.FinalClousureDate;
+
+			return DateTime.UtcNow.Date > idea.Submission.FinalClousureDate.Date;
 		}
 
 		// CREATE IDEA
@@ -301,13 +311,39 @@ namespace IdeaCollectionSystem.Service.Services
 		}
 
 		// REVIEW IDEA
-		public async Task<bool> ReviewIdeaAsync(Guid ideaId, ReviewIdeaDto reviewDto)
+		public async Task<bool> ReviewIdeaAsync(Guid ideaId, ReviewIdeaDto reviewDto, string reviewerId)
 		{
 			var idea = await _context.Ideas.FirstOrDefaultAsync(i => i.Id == ideaId);
 			if (idea == null) return false;
 
-			//  Cập nhật đúng trường ReviewStatus thay vì IsApproved
-			idea.ReviewStatus = (ReviewStatus)reviewDto.Status;
+			// 1. KIỂM TRA PHÂN QUYỀN THEO PHÒNG BAN (DEPARTMENT)
+			var reviewer = await _userManager.FindByIdAsync(reviewerId);
+			if (reviewer == null) return false;
+
+			// Kiểm tra xem người duyệt có phải là Admin hoặc QA Manager
+			var roles = await _userManager.GetRolesAsync(reviewer);
+			bool isGlobalReviewer = roles.Contains(RoleConstants.Administrator) || roles.Contains(RoleConstants.QAManager);
+
+			// Nếu không phải quyền Global (tức là QA Coordinator), bắt buộc phải cùng phòng ban với Idea
+			if (!isGlobalReviewer)
+			{
+				if (reviewer.DepartmentId == null || reviewer.DepartmentId != idea.DepartmentId)
+				{
+					throw new UnauthorizedAccessException("You can only review ideas submitted by staff within your own department.");
+				}
+			}
+
+			// 2. STATUS (REJECT -> PENDING)
+			if (reviewDto.Status == ReviewStatus.REJECTED)
+			{
+				
+				idea.ReviewStatus = ReviewStatus.PENDING;
+			}
+			else
+			{
+				idea.ReviewStatus = reviewDto.Status;
+			}
+
 			idea.UpdatedAt = DateTime.UtcNow;
 
 			_context.Ideas.Update(idea);
@@ -446,6 +482,78 @@ namespace IdeaCollectionSystem.Service.Services
 			}
 
 			return true;
+		}
+
+		// GET MY IDEAS (PAGINATION, SORTING, FILTERING)
+		public async Task<PagedResult<IdeaInfoDto>> GetMyIdeasPagedAsync(IdeaQueryParameters parameters, string userId)
+		{
+			var query = _context.Ideas
+				.Include(i => i.Category)
+				.Include(i => i.Department)
+				.Include(i => i.Submission)
+				.Include(i => i.Comments)
+				.Include(i => i.IdeaReactions)
+				.Where(i => i.UserId == userId) 
+				.AsQueryable();
+
+		
+			if (parameters.SubmissionId.HasValue && parameters.SubmissionId.Value != Guid.Empty)
+			{
+				query = query.Where(i => i.SubmissionId == parameters.SubmissionId.Value);
+			}
+
+			if (parameters.DepartmentId.HasValue && parameters.DepartmentId.Value != Guid.Empty)
+			{
+				query = query.Where(i => i.DepartmentId == parameters.DepartmentId.Value);
+			}
+
+			// Cho phép user xem bài của mình đang ở trạng thái nào (Pending/Approved/Rejected)
+			if (parameters.ReviewStatus.HasValue)
+			{
+				query = query.Where(i => i.ReviewStatus == parameters.ReviewStatus.Value);
+			}
+
+			// 2. SORTING
+			switch (parameters.SortBy?.ToLower())
+			{
+				case "popular":
+					query = query.OrderByDescending(i =>
+						(i.IdeaReactions != null ? i.IdeaReactions.Count(r => r.Reaction == "thumbs_up") : 0) -
+						(i.IdeaReactions != null ? i.IdeaReactions.Count(r => r.Reaction == "thumbs_down") : 0));
+					break;
+				case "viewed":
+					query = query.OrderByDescending(i => i.ViewCount);
+					break;
+				case "latest_comments":
+					query = query.OrderByDescending(i => (i.Comments != null && i.Comments.Any()) ? i.Comments.Max(c => c.CreatedAt) : DateTime.MinValue);
+					break;
+				case "latest":
+				default:
+					query = query.OrderByDescending(i => i.CreatedAt);
+					break;
+			}
+
+			// 3. PAGINATION
+			int totalCount = await query.CountAsync();
+			var ideas = await query
+				.Skip((parameters.PageNumber - 1) * parameters.PageSize)
+				.Take(parameters.PageSize)
+				.ToListAsync();
+
+			// 4. MAP TO DTO (Sử dụng hàm Helper MapToDtoAsync đã viết ở bước trước cho gọn)
+			var resultItems = new List<IdeaInfoDto>();
+			foreach (var idea in ideas)
+			{
+				resultItems.Add(await MapToDtoAsync(idea));
+			}
+
+			return new PagedResult<IdeaInfoDto>
+			{
+				Items = resultItems,
+				TotalCount = totalCount,
+				PageNumber = parameters.PageNumber,
+				PageSize = parameters.PageSize
+			};
 		}
 	}
 }

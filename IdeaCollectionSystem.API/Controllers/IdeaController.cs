@@ -84,12 +84,17 @@ namespace IdeaCollectionSystem.API.Controllers
 
 		// 3. Get My Ideas
 		[HttpGet("my-ideas")]
+		[Authorize] 
 		public async Task<IActionResult> GetMyIdeas([FromQuery] IdeaQueryParameters parameters)
 		{
 			var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-			if (string.IsNullOrEmpty(userId)) return Unauthorized();
+			if (string.IsNullOrEmpty(userId))
+			{
+				return Unauthorized(new { message = "You must be logged in to view your ideas." });
+			}
 
-			var pagedResult = await _ideaService.GetIdeasPagedAsync(parameters, userId);
+			// 👉 Đổi thành gọi hàm chuyên dụng cho My Ideas
+			var pagedResult = await _ideaService.GetMyIdeasPagedAsync(parameters, userId);
 			return Ok(pagedResult);
 		}
 
@@ -108,12 +113,12 @@ namespace IdeaCollectionSystem.API.Controllers
 
 		// 5. Add Comment
 		[HttpPost("{id}/comments")]
-		[Authorize] 
+		[Authorize]
 		public async Task<IActionResult> CreateComment([FromRoute] Guid id, [FromBody] CommentDto request)
 		{
 			var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
 
-	
+
 			if (string.IsNullOrEmpty(userId))
 				return Unauthorized(new { message = "Please log-in to comment" });
 
@@ -149,25 +154,46 @@ namespace IdeaCollectionSystem.API.Controllers
 
 		// PUT: api/Idea/{id}/review
 		[HttpPut("{id}/review")]
-		[Authorize(Roles = RoleConstants.Administrator + "," + RoleConstants.QAManager)]
+		[Authorize(Roles = RoleConstants.Administrator + "," + RoleConstants.QAManager + "," + RoleConstants.QACoordinator)]
 		public async Task<IActionResult> ReviewIdea(Guid id, [FromBody] ReviewIdeaDto dto)
 		{
-			var result = await _ideaService.ReviewIdeaAsync(id, dto);
+			var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
 
-			if (!result)
+			if (string.IsNullOrEmpty(userId))
 			{
-				return NotFound(new { message = "Idea not found or update failed." });
+				return Unauthorized(new { message = "You must be logged in to perform this action." });
 			}
 
-			string actionMessage = dto.Status switch
+			try
 			{
-				ReviewStatus.APPROVED => "approved",
-				ReviewStatus.REJECTED => "rejected",
-				ReviewStatus.PENDING => "set to pending",
-				_ => "updated" // Trường hợp dự phòng
-			};
+				// Truyền thêm userId vào Service
+				var result = await _ideaService.ReviewIdeaAsync(id, dto, userId);
 
-			return Ok(new { message = $"Idea has been {actionMessage} successfully." });
+				if (!result)
+				{
+					return NotFound(new { message = "Idea not found or update failed." });
+				}
+
+				// Đổi câu thông báo cho hợp lý với luồng Reject -> Pending
+				string actionMessage = dto.Status switch
+				{
+					ReviewStatus.APPROVED => "pproved",
+					ReviewStatus.REJECTED => "set back to pending (rejected)",
+					ReviewStatus.PENDING => "set to pending",
+					_ => "updated"
+				};
+
+				return Ok(new { message = $"Idea has been {actionMessage} successfully." });
+			}
+			catch (UnauthorizedAccessException ex)
+			{
+				// Trả về lỗi 403 nếu QA Coordinator duyệt nhầm phòng ban
+				return StatusCode(StatusCodes.Status403Forbidden, new { message = ex.Message });
+			}
+			catch (Exception ex)
+			{
+				return StatusCode(StatusCodes.Status500InternalServerError, new { message = "An error occurred.", details = ex.Message });
+			}
 		}
 	}
 }

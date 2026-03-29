@@ -24,7 +24,7 @@ namespace IdeaCollectionSystem.Service.Services
 					Id = s.Id,
 					Name = s.Name,
 					Description = s.Description,
-					AcademicYear = s.AcademicYear,
+					//AcademicYear = s.AcademicYear,
 					ClosureDate = s.ClousureDate,
 					FinalClosureDate = s.FinalClousureDate,
 					IdeaCount = s.Ideas.Count(),

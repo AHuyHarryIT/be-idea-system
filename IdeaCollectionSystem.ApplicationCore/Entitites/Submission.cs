@@ -10,8 +10,8 @@ namespace IdeaCollectionSystem.ApplicationCore.Entitites
 	public class Submission
 	{
 		[Key]
-		public Guid Id { get; set; } 
-		public DateTime AcademicYear { get; set; } = DateTime.UtcNow;
+		public Guid Id { get; set; }
+		public int AcademicYear { get; set; }
 		public string Name { get; set; } = string.Empty;
 		public string? Description { get; set; }
 
