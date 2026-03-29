@@ -18,15 +18,27 @@ namespace IdeaCollectionSystem.API.Controllers
 			_submissionService = submissionService;
 		}
 
-		//  GET: Ai cũng xem được (Để Staff còn biết Deadline mà nộp bài)
+		//  GET: ClosureDates
 		[HttpGet]
 		public async Task<IActionResult> GetClosureDates()
 		{
-			var submissions = await _submissionService.GetAllSubmissionsAsync();
-			return Ok(submissions);
+			try
+			{
+				var submissions = await _submissionService.GetAllSubmissionsAsync();
+				return Ok(submissions);
+			}
+			catch (Exception ex)
+			{
+				var realError = ex.InnerException?.Message ?? ex.Message;
+				return StatusCode(500, new
+				{
+					message = "Database error on the server:",
+					details = realError
+				});
+			}
 		}
 
-		//  POST: CHỈ ADMIN/QA MANAGER mới được TẠO đợt nộp bài
+		//  POST: CreateSubmission
 		[HttpPost]
 		[Authorize(Roles = RoleConstants.Administrator + "," + RoleConstants.QAManager)]
 		public async Task<IActionResult> CreateSubmission([FromBody] SubmissionCreateDto dto)
@@ -35,7 +47,7 @@ namespace IdeaCollectionSystem.API.Controllers
 			return Ok(new { message = "Create a successful submission period." });
 		}
 
-		//  PUT: CHỈ ADMIN/QA MANAGER mới được SỬA đợt nộp bài
+		//  PUT: UpdateSubmission
 		[HttpPut("{id}")]
 		[Authorize(Roles = RoleConstants.Administrator + "," + RoleConstants.QAManager)]
 		public async Task<IActionResult> UpdateSubmission([FromRoute] Guid id, [FromBody] SubmissionCreateDto dto)
@@ -44,7 +56,7 @@ namespace IdeaCollectionSystem.API.Controllers
 			return Ok(new { message = "The submission period has been updated as successful." });
 		}
 
-		//  DELETE: CHỈ ADMIN/QA MANAGER mới được XÓA đợt nộp bài (Bạn đã làm đúng)
+		//  DELETE: DeleteSubmission
 		[HttpDelete("{id}")]
 		[Authorize(Roles = RoleConstants.Administrator + "," + RoleConstants.QAManager)]
 		public async Task<IActionResult> DeleteSubmission(Guid id)

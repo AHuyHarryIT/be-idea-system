@@ -316,7 +316,7 @@ namespace IdeaCollectionSystem.Service.Services
 			var idea = await _context.Ideas.FirstOrDefaultAsync(i => i.Id == ideaId);
 			if (idea == null) return false;
 
-			// 1. KIỂM TRA PHÂN QUYỀN THEO PHÒNG BAN (DEPARTMENT)
+			// 1. Check role constant (DEPARTMENT)
 			var reviewer = await _userManager.FindByIdAsync(reviewerId);
 			if (reviewer == null) return false;
 
@@ -482,6 +482,32 @@ namespace IdeaCollectionSystem.Service.Services
 			}
 
 			return true;
+		}
+
+
+		// GET IDEA DETAIL (Kèm chức năng tăng ViewCount)
+		public async Task<IdeaInfoDto?> GetIdeaDetailAsync(Guid id, string userId)
+		{
+			var idea = await _context.Ideas
+				.Include(i => i.Category)
+				.Include(i => i.Department)
+				.Include(i => i.Submission)
+				.Include(i => i.Comments)
+				.Include(i => i.IdeaReactions)
+				.Include(i => i.IdeaDocuments) 
+				.FirstOrDefaultAsync(i => i.Id == id);
+
+		
+			if (idea == null)
+			{
+				return null;
+			}
+			idea.ViewCount += 1;
+			_context.Ideas.Update(idea);
+			await _context.SaveChangesAsync();
+			var ideaDto = await MapToDtoAsync(idea);
+
+			return ideaDto;
 		}
 
 		// GET MY IDEAS (PAGINATION, SORTING, FILTERING)

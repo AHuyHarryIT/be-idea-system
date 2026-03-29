@@ -1,7 +1,6 @@
 ﻿using IdeaCollectionIdea.Common.Constants;
 using IdeaCollectionSystem.Service.Interfaces;
 using IdeaCollectionSystem.Service.Models.DTOs;
-using IdeaCollectionSystem.Service.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
@@ -24,23 +23,17 @@ namespace IdeaCollectionSystem.API.Controllers
 		[Authorize]
 		public async Task<IActionResult> CreateIdea([FromForm] IdeaCreateDto dto)
 		{
-			// 1. Kiểm tra điều khoản (Validation ngay tại Controller)
 			if (!dto.HasAcceptedTerms)
 			{
-				return BadRequest(new
-				{
-					message = "You must agree to the Terms and Conditions before submitting an idea!"
-				});
+				return BadRequest(new { message = "You must agree to the Terms and Conditions before submitting an idea!" });
 			}
 
-			// 2. Lấy ID người dùng từ Token JWT
 			var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
 			if (string.IsNullOrEmpty(userId))
 			{
 				return Unauthorized(new { message = "You must be logged in to perform this action." });
 			}
 
-			// 3. Gọi Service xử lý (Bọc Try-Catch để bắt lỗi file)
 			try
 			{
 				var success = await _ideaService.CreateIdeaAsync(dto, userId);
@@ -50,7 +43,6 @@ namespace IdeaCollectionSystem.API.Controllers
 					return Ok(new { message = "The idea has been submitted successfully." });
 				}
 
-				// Nếu trả về false (Thường là do sai Category, Department, hoặc quá Hạn chót)
 				return BadRequest(new { message = "Failed to submit idea. The submission period might be closed or the provided data is invalid." });
 			}
 			catch (Exception ex)
@@ -58,7 +50,6 @@ namespace IdeaCollectionSystem.API.Controllers
 				return BadRequest(new { message = ex.Message });
 			}
 		}
-
 
 		// GET Idea (Dùng chung cho cả Staff, QA Coordinator, QA Manager và Admin)
 		[HttpGet]
@@ -72,19 +63,15 @@ namespace IdeaCollectionSystem.API.Controllers
 				return Unauthorized(new { message = "You must be logged in to view ideas." });
 			}
 
-			// Tự động nhận diện Role của người dùng đang gọi API
 			bool isManager = User.IsInRole(RoleConstants.Administrator) || User.IsInRole(RoleConstants.QAManager);
-
-			// Truyền cờ isManager xuống Service để xử lý lọc dữ liệu tương ứng
 			var pagedResult = await _ideaService.GetIdeasPagedAsync(parameters, userId, isManager);
 
 			return Ok(pagedResult);
 		}
 
-
 		// 3. Get My Ideas
 		[HttpGet("my-ideas")]
-		[Authorize] 
+		[Authorize]
 		public async Task<IActionResult> GetMyIdeas([FromQuery] IdeaQueryParameters parameters)
 		{
 			var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
@@ -93,23 +80,24 @@ namespace IdeaCollectionSystem.API.Controllers
 				return Unauthorized(new { message = "You must be logged in to view your ideas." });
 			}
 
-			// 👉 Đổi thành gọi hàm chuyên dụng cho My Ideas
 			var pagedResult = await _ideaService.GetMyIdeasPagedAsync(parameters, userId);
 			return Ok(pagedResult);
 		}
 
-		//// 4. Get Idea Details
-		//[HttpGet("{id}")]
-		//public async Task<IActionResult> GetIdeaDetails([FromRoute] Guid id)
-		//{
-		//	var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-		//	var ideaDetail = await _ideaService.GetIdeaDetailAsync(id, userId!);
+		// 4.  Get Idea Details
+		[HttpGet("{id}")]
+		[Authorize]
+		public async Task<IActionResult> GetIdeaDetails([FromRoute] Guid id)
+		{
+			var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+			if (string.IsNullOrEmpty(userId)) return Unauthorized();
 
-		//	if (ideaDetail == null) return NotFound(new { message = "No ideas found." });
+			var ideaDetail = await _ideaService.GetIdeaDetailAsync(id, userId);
 
-		//	return Ok(ideaDetail);
+			if (ideaDetail == null) return NotFound(new { message = "No idea found." });
 
-		//}
+			return Ok(ideaDetail);
+		}
 
 		// 5. Add Comment
 		[HttpPost("{id}/comments")]
@@ -117,7 +105,6 @@ namespace IdeaCollectionSystem.API.Controllers
 		public async Task<IActionResult> CreateComment([FromRoute] Guid id, [FromBody] CommentDto request)
 		{
 			var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-
 
 			if (string.IsNullOrEmpty(userId))
 				return Unauthorized(new { message = "Please log-in to comment" });
@@ -140,17 +127,18 @@ namespace IdeaCollectionSystem.API.Controllers
 
 		// 6. Vote (Thumbs Up / Down)
 		[HttpPost("{id}/vote")]
+		[Authorize] 
 		public async Task<IActionResult> Vote([FromRoute] Guid id, [FromBody] VoteRequestDto request)
 		{
 			var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-			var result = await _ideaService.VoteIdeaAsync(id, userId!, request.IsThumbsUp);
+			if (string.IsNullOrEmpty(userId)) return Unauthorized();
+
+			var result = await _ideaService.VoteIdeaAsync(id, userId, request.IsThumbsUp);
 
 			if (result) return Ok(new { success = true, message = "The votes have been recorded." });
 
 			return BadRequest(new { success = false, message = "The vote was a failure." });
 		}
-
-
 
 		// PUT: api/Idea/{id}/review
 		[HttpPut("{id}/review")]
@@ -166,7 +154,6 @@ namespace IdeaCollectionSystem.API.Controllers
 
 			try
 			{
-				// Truyền thêm userId vào Service
 				var result = await _ideaService.ReviewIdeaAsync(id, dto, userId);
 
 				if (!result)
@@ -174,10 +161,9 @@ namespace IdeaCollectionSystem.API.Controllers
 					return NotFound(new { message = "Idea not found or update failed." });
 				}
 
-				// Đổi câu thông báo cho hợp lý với luồng Reject -> Pending
 				string actionMessage = dto.Status switch
 				{
-					ReviewStatus.APPROVED => "pproved",
+					ReviewStatus.APPROVED => "approved", 
 					ReviewStatus.REJECTED => "set back to pending (rejected)",
 					ReviewStatus.PENDING => "set to pending",
 					_ => "updated"
@@ -187,7 +173,6 @@ namespace IdeaCollectionSystem.API.Controllers
 			}
 			catch (UnauthorizedAccessException ex)
 			{
-				// Trả về lỗi 403 nếu QA Coordinator duyệt nhầm phòng ban
 				return StatusCode(StatusCodes.Status403Forbidden, new { message = ex.Message });
 			}
 			catch (Exception ex)

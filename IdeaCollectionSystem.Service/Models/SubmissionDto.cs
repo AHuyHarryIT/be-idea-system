@@ -7,7 +7,7 @@ namespace IdeaCollectionSystem.Service.Models.DTOs
 		public Guid Id { get; set; }
 		public string Name { get; set; } = string.Empty;
 		public string? Description { get; set; }
-		public DateTime AcademicYear { get; set; } = DateTime.UtcNow;
+		public int AcademicYear { get; set; }
 		public DateTime ClosureDate { get; set; } = DateTime.UtcNow;
 		public DateTime FinalClosureDate { get; set; } = DateTime.UtcNow;
 		public int IdeaCount { get; set; }

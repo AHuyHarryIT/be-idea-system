@@ -19,18 +19,19 @@ namespace IdeaCollectionSystem.Service.Services
 		public async Task<IEnumerable<SubmissionDto>> GetAllSubmissionsAsync()
 		{
 			return await _context.Submissions
+
+				.OrderByDescending(s => s.AcademicYear)
 				.Select(s => new SubmissionDto
 				{
 					Id = s.Id,
 					Name = s.Name,
 					Description = s.Description,
-					//AcademicYear = s.AcademicYear,
+					AcademicYear = s.AcademicYear, 
 					ClosureDate = s.ClousureDate,
 					FinalClosureDate = s.FinalClousureDate,
 					IdeaCount = s.Ideas.Count(),
-					IsActive = DateTime.UtcNow <= s.ClousureDate
+					IsActive = DateTime.UtcNow.Date <= s.ClousureDate.Date
 				})
-				.OrderByDescending(s => s.AcademicYear)
 				.ToListAsync();
 		}
 
