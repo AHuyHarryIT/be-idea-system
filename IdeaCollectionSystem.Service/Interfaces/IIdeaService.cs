@@ -18,12 +18,12 @@ namespace IdeaCollectionSystem.Service.Interfaces
 
 		Task<PagedResult<IdeaInfoDto>> GetIdeasPagedAsync(IdeaQueryParameters parameters, string userId, bool isManager = false);
 
-		Task<bool> CreateCommentAsync(CommentCreateDto dto, string userId);
-
 		Task<bool> ReviewIdeaAsync(Guid ideaId, ReviewIdeaDto dto, string reviewerId);
 
 		Task<PagedResult<IdeaInfoDto>> GetMyIdeasPagedAsync(IdeaQueryParameters parameters, string userId);
 
 		Task<IdeaInfoDto?> GetIdeaDetailAsync(Guid id, string userId);
+
+		Task<CommentDto?> CreateCommentAsync(CommentCreateDto dto, string userId);
 	}
 }

@@ -21,6 +21,9 @@ namespace IdeaCollectionSystem.ApplicationCore.Entitites
 
 		public string UserId { get; set; } = string.Empty;
 
+		[ForeignKey("UserId")]
+		public IdeaUser? User { get; set; }
+
 
 		[ForeignKey("IdeaId")]
 		public Guid IdeaId { get; set; }

@@ -25,7 +25,7 @@ namespace IdeaCollectionSystem.Service.Services
 		}
 
 		#region PRIVATE HELPER METHOD
-		// Hàm dùng chung để Map Entity sang DTO, giúp giảm hàng trăm dòng code lặp
+	
 		private async Task<IdeaInfoDto> MapToDtoAsync(Idea idea)
 		{
 			var author = "Anonymous";
@@ -37,22 +37,38 @@ namespace IdeaCollectionSystem.Service.Services
 
 			bool canComment = idea.Submission != null && DateTime.UtcNow <= idea.Submission.FinalClousureDate;
 
-			return new IdeaInfoDto
+			var dto = new IdeaInfoDto
 			{
 				Id = idea.Id,
 				Title = idea.Title,
+				Description = idea.Description, // Thêm Description nếu DTO yêu cầu
 				CategoryName = idea.Category?.Name ?? "No Category",
 				DepartmentName = idea.Department?.Name ?? "",
 				AuthorName = author,
 				CreatedDate = idea.CreatedAt,
 				IsAnonymous = idea.IsAnonymous,
 				ViewCount = idea.ViewCount,
+				ReviewStatus = idea.ReviewStatus,
 				ThumbsUpCount = idea.IdeaReactions?.Count(r => r.Reaction == "thumbs_up") ?? 0,
 				ThumbsDownCount = idea.IdeaReactions?.Count(r => r.Reaction == "thumbs_down") ?? 0,
 				CommentCount = idea.Comments?.Count ?? 0,
-				CanComment = canComment
+				CanComment = canComment,
+
+				// 🚀 QUAN TRỌNG: Map danh sách Comment từ Entity sang DTO
+				Comments = idea.Comments?.Select(c => new CommentDto
+				{
+					Id = c.Id,
+					Content = c.Content,
+					CreatedDate = c.CreatedAt,
+					IsAnonymous = c.IsAnonymous,
+					// Nếu ẩn danh thì hiện Anonymous, ngược lại hiện tên User (đã lấy qua ThenInclude)
+					AuthorName = c.IsAnonymous ? "Anonymous" : (c.User?.Name ?? "Unknown User")
+				}).OrderByDescending(c => c.CreatedDate).ToList() ?? new List<CommentDto>()
 			};
+
+			return dto;
 		}
+		
 		#endregion
 
 
@@ -333,16 +349,7 @@ namespace IdeaCollectionSystem.Service.Services
 				}
 			}
 
-			// 2. STATUS (REJECT -> PENDING)
-			if (reviewDto.Status == ReviewStatus.REJECTED)
-			{
-				
-				idea.ReviewStatus = ReviewStatus.PENDING;
-			}
-			else
-			{
-				idea.ReviewStatus = reviewDto.Status;
-			}
+			idea.ReviewStatus = reviewDto.Status;
 
 			idea.UpdatedAt = DateTime.UtcNow;
 
@@ -416,16 +423,16 @@ namespace IdeaCollectionSystem.Service.Services
 		}
 
 		// CREATE COMMENT & EMAIL NOTIFICATION
-		public async Task<bool> CreateCommentAsync(CommentCreateDto dto, string userId)
+		public async Task<CommentDto?> CreateCommentAsync(CommentCreateDto dto, string userId)
 		{
 			var commentUser = await _userManager.FindByIdAsync(userId);
-			if (commentUser == null) return false;
+			if (commentUser == null) return null; // Sửa thành return null
 
 			var idea = await _context.Ideas.FirstOrDefaultAsync(i => i.Id == dto.IdeaId);
-			if (idea == null) return false;
+			if (idea == null) return null; // Sửa thành return null
 
 			var submission = await _context.Submissions.FirstOrDefaultAsync(s => s.Id == idea.SubmissionId);
-			if (submission == null || DateTime.UtcNow > submission.FinalClousureDate) return false;
+			if (submission == null || DateTime.UtcNow.Date > submission.FinalClousureDate) return null; // Sửa thành return null
 
 			var comment = new Comment
 			{
@@ -441,10 +448,20 @@ namespace IdeaCollectionSystem.Service.Services
 			await _context.Comments.AddAsync(comment);
 			await _context.SaveChangesAsync();
 
+			var newCommentDto = new CommentDto
+			{
+				Id = comment.Id,
+				Content = comment.Content,
+				CreatedDate = comment.CreatedAt,
+				IsAnonymous = comment.IsAnonymous,
+				AuthorName = comment.IsAnonymous ? "Anonymous" : commentUser.Name
+			};
+
 			var commenterName = dto.IsAnonymous ? "An anonymous employee" : commentUser.Name;
 			var authorUser = await _userManager.FindByIdAsync(idea.UserId);
 			var isSelfCommenting = (idea.UserId == userId);
 
+			// THÔNG BÁO EMAIL (Chạy ngầm)
 			if (authorUser != null && !string.IsNullOrEmpty(authorUser.Email) && !isSelfCommenting)
 			{
 				var authorEmail = authorUser.Email;
@@ -461,41 +478,40 @@ namespace IdeaCollectionSystem.Service.Services
 
 						string subject = "🔔 [Idea System] Someone commented on your idea!";
 						string body = $@"
-                        <div style='font-family: Arial, sans-serif; padding: 20px; border: 1px solid #eaeaea; border-radius: 8px;'>
-                            <h3 style='color: #2c3e50;'>Hello {authorName},</h3>
-                            <p><strong>{commenterName}</strong> has just left a new comment on your idea.</p>
-                            <div style='background-color: #f1f8ff; padding: 10px; border-left: 4px solid #007bff; margin: 15px 0;'>
-                                <p style='margin: 0; color: #555; font-size: 13px;'>Your Idea:</p>
-                                <i>""{ideaTitle}""</i>
-                            </div>
-                            <div style='background-color: #f9f9f9; padding: 15px; border-left: 4px solid #28a745; margin: 15px 0;'>
-                                <p style='margin: 0; color: #555; font-size: 13px;'>New Comment:</p>
-                                <strong>""{commentText}""</strong>
-                            </div>
-                            <p>Log in to the system to reply and keep the discussion going!</p>
-                        </div>";
+                    <div style='font-family: Arial, sans-serif; padding: 20px; border: 1px solid #eaeaea; border-radius: 8px;'>
+                        <h3 style='color: #2c3e50;'>Hello {authorName},</h3>
+                        <p><strong>{commenterName}</strong> has just left a new comment on your idea.</p>
+                        <div style='background-color: #f1f8ff; padding: 10px; border-left: 4px solid #007bff; margin: 15px 0;'>
+                            <p style='margin: 0; color: #555; font-size: 13px;'>Your Idea:</p>
+                            <i>""{ideaTitle}""</i>
+                        </div>
+                        <div style='background-color: #f9f9f9; padding: 15px; border-left: 4px solid #28a745; margin: 15px 0;'>
+                            <p style='margin: 0; color: #555; font-size: 13px;'>New Comment:</p>
+                            <strong>""{commentText}""</strong>
+                        </div>
+                        <p>Log in to the system to reply and keep the discussion going!</p>
+                    </div>";
 
 						await emailService.SendEmailAsync(authorEmail, subject, body);
 					}
 					catch (Exception ex) { Console.WriteLine($"[EMAIL ERROR]: {ex.Message}"); }
 				});
 			}
-
-			return true;
+			return newCommentDto;
 		}
-
 
 		// GET IDEA DETAIL 
 
 		public async Task<IdeaInfoDto?> GetIdeaDetailAsync(Guid id, string userId)
 		{
 			var idea = await _context.Ideas
-				.Include(i => i.Category)
-				.Include(i => i.Department)
-				.Include(i => i.Submission)
-				.Include(i => i.Comments)
-				.Include(i => i.IdeaReactions)
-				.FirstOrDefaultAsync(i => i.Id == id);
+		.Include(i => i.Category)
+		.Include(i => i.Department)
+		.Include(i => i.Submission)
+		.Include(i => i.Comments)
+		.ThenInclude(c => c.User) 
+		.Include(i => i.IdeaReactions)
+		.FirstOrDefaultAsync(i => i.Id == id);
 
 			if (idea == null)
 			{
@@ -531,16 +547,16 @@ namespace IdeaCollectionSystem.Service.Services
 		// GET MY IDEAS (PAGINATION, SORTING, FILTERING)
 		public async Task<PagedResult<IdeaInfoDto>> GetMyIdeasPagedAsync(IdeaQueryParameters parameters, string userId)
 		{
-			var query = _context.Ideas
-				.Include(i => i.Category)
-				.Include(i => i.Department)
-				.Include(i => i.Submission)
-				.Include(i => i.Comments)
-				.Include(i => i.IdeaReactions)
-				.Where(i => i.UserId == userId) 
-				.AsQueryable();
+					var query = _context.Ideas
+			.Include(i => i.Category)
+			.Include(i => i.Department)
+			.Include(i => i.Submission)
+			.Include(i => i.Comments)
+			.ThenInclude(c => c.User) 
+			.Include(i => i.IdeaReactions)
+			.AsQueryable();
 
-		
+
 			if (parameters.SubmissionId.HasValue && parameters.SubmissionId.Value != Guid.Empty)
 			{
 				query = query.Where(i => i.SubmissionId == parameters.SubmissionId.Value);

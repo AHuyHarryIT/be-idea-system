@@ -100,6 +100,12 @@ namespace IdeaCollectionSystem.Datalayer
 
 				entity.Property(x => x.UserId).IsRequired().HasMaxLength(450);
 
+			
+				entity.HasOne(x => x.User)
+					.WithMany()
+					.HasForeignKey(x => x.UserId)
+					.OnDelete(DeleteBehavior.Cascade);
+
 				entity.HasOne(x => x.Idea)
 					.WithMany(x => x.Comments)
 					.HasForeignKey(x => x.IdeaId)

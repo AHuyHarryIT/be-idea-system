@@ -112,17 +112,39 @@ namespace IdeaCollectionSystem.API.Controllers
 			if (string.IsNullOrWhiteSpace(request.Content))
 				return BadRequest(new { message = "The comment section cannot be left blank." });
 
-			var commentCreateDto = new CommentCreateDto
+			try
 			{
-				IdeaId = id,
-				Content = request.Content,
-				IsAnonymous = request.IsAnonymous
-			};
-			var success = await _ideaService.CreateCommentAsync(commentCreateDto, userId);
+				var commentCreateDto = new CommentCreateDto
+				{
+					IdeaId = id,
+					Content = request.Content,
+					IsAnonymous = request.IsAnonymous
+				};
 
-			if (success) return Ok(new { message = "Comment added successfully." });
+				// Gọi hàm service, hứng kết quả trả về là CommentDto
+				var createdComment = await _ideaService.CreateCommentAsync(commentCreateDto, userId);
 
-			return BadRequest(new { message = "Unable to comment (The idea does not exist or is outdated)." });
+				// Nếu createdComment khác null nghĩa là tạo thành công
+				if (createdComment != null)
+				{
+					return Ok(new
+					{
+						message = "Comment added successfully.",
+						data = createdComment // Truyền trực tiếp CommentDto xuống cho Frontend hiển thị
+					});
+				}
+
+				// Nếu trả về null
+				return BadRequest(new { message = "Unable to comment (The idea does not exist or is outdated)." });
+			}
+			catch (Exception ex)
+			{
+				return StatusCode(StatusCodes.Status500InternalServerError, new
+				{
+					message = "Server crashed!",
+					details = ex.InnerException?.Message ?? ex.Message
+				});
+			}
 		}
 
 		// 6. Vote (Thumbs Up / Down)
