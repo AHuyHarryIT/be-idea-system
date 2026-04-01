@@ -68,15 +68,26 @@ namespace IdeaCollectionSystem.API.Controllers
 			return Ok(new { message = "Account created successfully." });
 		}
 
-		// PUT: api/user/{userId}/role
-		[HttpPut("{id}")] 
-		public async Task<IActionResult> UpdateUserRole([FromRoute] string id, [FromBody] UpdateRoleRequest request)
+		// PUT: api/users/{id}
+		[HttpPut("{id}")]
+		[Authorize(Roles = RoleConstants.Administrator)]
+		public async Task<IActionResult> UpdateUser([FromRoute] string id, [FromBody] UpdateUserRequest request)
 		{
 			if (string.IsNullOrWhiteSpace(request.Role))
 				return BadRequest(new { message = "The role cannot be left blank." });
 
-			await userService.UpdateUserRoleAsync(id, request.Role);
-			return Ok(new { message = "Permissions successfully updated." });
+			if (string.IsNullOrWhiteSpace(request.Name))
+				return BadRequest(new { message = "The name cannot be left blank." });
+
+			
+			var result = await userService.UpdateUserAsync(id, request);
+
+			if (result)
+			{
+				return Ok(new { message = "User information updated successfully." });
+			}
+
+			return BadRequest(new { message = "Failed to update user." });
 		}
 
 

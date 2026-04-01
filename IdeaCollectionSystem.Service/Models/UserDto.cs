@@ -20,8 +20,10 @@
 		public string Role { get; set; } = string.Empty;
 	}
 
-	public class UpdateRoleRequest
+	public class UpdateUserRequest
 	{
+		public string Name { get; set; } = string.Empty;
+		public Guid? DepartmentId { get; set; }
 		public string Role { get; set; } = string.Empty;
 	}
 

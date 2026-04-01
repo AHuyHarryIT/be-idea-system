@@ -220,33 +220,56 @@ namespace IdeaCollectionSystem.Service.Services
 		}
 
 		// GET ALL IDEAS (PAGINATION, SORTING, FILTERING)
+
 		public async Task<PagedResult<IdeaInfoDto>> GetIdeasPagedAsync(IdeaQueryParameters parameters, string userId, bool isManager)
 		{
+			var user = await _userManager.FindByIdAsync(userId);
+			var roles = user != null ? await _userManager.GetRolesAsync(user) : new List<string>();
+
+			bool isAdminOrQAManager = roles.Contains(RoleConstants.Administrator) || roles.Contains(RoleConstants.QAManager);
+			bool isQACoordinator = roles.Contains(RoleConstants.QACoordinator);
+
 			var query = _context.Ideas
 				.Include(i => i.Category)
 				.Include(i => i.Department)
 				.Include(i => i.Submission)
 				.Include(i => i.Comments)
+					.ThenInclude(c => c.User)
 				.Include(i => i.IdeaReactions)
 				.AsQueryable();
 
+			// Lọc theo Submission (nếu có)
 			if (parameters.SubmissionId.HasValue && parameters.SubmissionId.Value != Guid.Empty)
 				query = query.Where(i => i.SubmissionId == parameters.SubmissionId.Value);
 
-			if (parameters.DepartmentId.HasValue && parameters.DepartmentId.Value != Guid.Empty)
-				query = query.Where(i => i.DepartmentId == parameters.DepartmentId.Value);
-
-			// Xử lý quyền và lọc trạng thái chuẩn xác
-			if (!isManager)
+			// 2. XỬ LÝ QUYỀN VÀ LỌC TRẠNG THÁI / PHÒNG BAN CHUẨN XÁC
+			if (isAdminOrQAManager)
 			{
+				// Admin & QA Manager: Thấy TẤT CẢ phòng ban, TẤT CẢ trạng thái (tuỳ chọn filter)
+				if (parameters.DepartmentId.HasValue && parameters.DepartmentId.Value != Guid.Empty)
+					query = query.Where(i => i.DepartmentId == parameters.DepartmentId.Value);
+
+				if (parameters.ReviewStatus.HasValue)
+					query = query.Where(i => i.ReviewStatus == parameters.ReviewStatus.Value);
+			}
+			else if (isQACoordinator)
+			{
+				// QA Coordinator: CHỈ THẤY phòng ban của mình (dept only), nhưng thấy TẤT CẢ trạng thái để duyệt
+				query = query.Where(i => i.DepartmentId == user.DepartmentId);
+
+				if (parameters.ReviewStatus.HasValue)
+					query = query.Where(i => i.ReviewStatus == parameters.ReviewStatus.Value);
+			}
+			else
+			{
+			
 				query = query.Where(i => i.ReviewStatus == ReviewStatus.APPROVED);
-			}
-			else if (parameters.ReviewStatus.HasValue)
-			{
-				// Truyền trực tiếp value từ Enum, bao gồm cả PENDING
-				query = query.Where(i => (int)i.ReviewStatus == (int)parameters.ReviewStatus.Value);
+
+				if (parameters.DepartmentId.HasValue && parameters.DepartmentId.Value != Guid.Empty)
+					query = query.Where(i => i.DepartmentId == parameters.DepartmentId.Value);
 			}
 
+			// 3. SORTING
 			switch (parameters.SortBy?.ToLower())
 			{
 				case "popular":
@@ -266,6 +289,7 @@ namespace IdeaCollectionSystem.Service.Services
 					break;
 			}
 
+			// 4. PAGINATION
 			int totalCount = await query.CountAsync();
 			var ideas = await query
 				.Skip((parameters.PageNumber - 1) * parameters.PageSize)

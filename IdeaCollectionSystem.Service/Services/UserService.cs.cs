@@ -1,4 +1,5 @@
-﻿using IdeaCollectionSystem.ApplicationCore.Entitites.Identity;
+﻿using IdeaCollectionSystem.ApplicationCore.Entitites;
+using IdeaCollectionSystem.ApplicationCore.Entitites.Identity;
 using IdeaCollectionSystem.Datalayer;
 using IdeaCollectionSystem.Service.Interfaces;
 using IdeaCollectionSystem.Service.Models.DTOs;
@@ -49,16 +50,38 @@ namespace IdeaCollectionSystem.Service.Services
 			return result;
 		}
 
-		// Update user role
-		public async Task<bool> UpdateUserRoleAsync(string userId, string newRole)
+		// Update user information 
+		public async Task<bool> UpdateUserAsync(string userId, UpdateUserRequest request)
 		{
+			
 			var user = await _userManager.FindByIdAsync(userId);
 			if (user == null) return false;
 
-			var currentRoles = await _userManager.GetRolesAsync(user);
-			await _userManager.RemoveFromRolesAsync(user, currentRoles);
-			var result = await _userManager.AddToRoleAsync(user, newRole);
-			return result.Succeeded;
+			if (!string.IsNullOrWhiteSpace(request.Name))
+			{
+				user.Name = request.Name;
+			}
+			user.DepartmentId = request.DepartmentId;
+
+			var updateResult = await _userManager.UpdateAsync(user);
+			if (!updateResult.Succeeded) return false;
+			if (!string.IsNullOrWhiteSpace(request.Role))
+			{
+
+				var currentRoles = await _userManager.GetRolesAsync(user);
+
+				if (currentRoles.Any())
+				{
+					var removeResult = await _userManager.RemoveFromRolesAsync(user, currentRoles);
+					if (!removeResult.Succeeded) return false;
+				}
+
+				var roleResult = await _userManager.AddToRoleAsync(user, request.Role);
+				return roleResult.Succeeded;
+			}
+
+			// Nếu sửa thông tin thành công mà không đổi Role thì vẫn trả về true
+			return true;
 		}
 
 		// Delete user
