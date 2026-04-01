@@ -3,8 +3,8 @@
 	public static class RoleConstants
 	{
 		public const string Administrator = "Administrator";
-		public const string QAManager = "QA Manager";
-		public const string QACoordinator = "QA Coordinator";
+		public const string QAManager = "QA_Manager";
+		public const string QACoordinator = "QA_Coordinator";
 		public const string Staff = "Staff";
 
 		public static readonly Dictionary<string, string> RoleDescriptions = new()

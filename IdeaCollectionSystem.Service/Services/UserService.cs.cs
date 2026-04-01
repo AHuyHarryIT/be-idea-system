@@ -53,34 +53,45 @@ namespace IdeaCollectionSystem.Service.Services
 		// Update user information 
 		public async Task<bool> UpdateUserAsync(string userId, UpdateUserRequest request)
 		{
-			
 			var user = await _userManager.FindByIdAsync(userId);
-			if (user == null) return false;
+			if (user == null)
+				throw new Exception("User not found in the system.");
 
+			
 			if (!string.IsNullOrWhiteSpace(request.Name))
 			{
 				user.Name = request.Name;
 			}
+
+			// Đảm bảo xử lý Department (nếu Frontend gửi rỗng hoặc null thì set null)
 			user.DepartmentId = request.DepartmentId;
 
 			var updateResult = await _userManager.UpdateAsync(user);
-			if (!updateResult.Succeeded) return false;
+			if (!updateResult.Succeeded)
+			{
+				var errors = string.Join(", ", updateResult.Errors.Select(e => e.Description));
+				throw new Exception($"Failed to update user data: {errors}");
+			}
+
+
 			if (!string.IsNullOrWhiteSpace(request.Role))
 			{
-
 				var currentRoles = await _userManager.GetRolesAsync(user);
+
 
 				if (currentRoles.Any())
 				{
-					var removeResult = await _userManager.RemoveFromRolesAsync(user, currentRoles);
-					if (!removeResult.Succeeded) return false;
+					await _userManager.RemoveFromRolesAsync(user, currentRoles);
 				}
 
 				var roleResult = await _userManager.AddToRoleAsync(user, request.Role);
-				return roleResult.Succeeded;
+				if (!roleResult.Succeeded)
+				{
+					var errors = string.Join(", ", roleResult.Errors.Select(e => e.Description));
+					throw new Exception($"Failed to update user role. Make sure the role '{request.Role}' exists. Errors: {errors}");
+				}
 			}
 
-			// Nếu sửa thông tin thành công mà không đổi Role thì vẫn trả về true
 			return true;
 		}
 

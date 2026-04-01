@@ -79,15 +79,23 @@ namespace IdeaCollectionSystem.API.Controllers
 			if (string.IsNullOrWhiteSpace(request.Name))
 				return BadRequest(new { message = "The name cannot be left blank." });
 
-			
-			var result = await userService.UpdateUserAsync(id, request);
-
-			if (result)
+			try
 			{
-				return Ok(new { message = "User information updated successfully." });
-			}
+				// Gọi service mới
+				var result = await userService.UpdateUserAsync(id, request);
 
-			return BadRequest(new { message = "Failed to update user." });
+				if (result)
+				{
+					return Ok(new { message = "User information updated successfully." });
+				}
+
+				return BadRequest(new { message = "Failed to update user (Unknown error)." });
+			}
+			catch (Exception ex)
+			{
+			
+				return BadRequest(new { message = ex.Message });
+			}
 		}
 
 
