@@ -59,7 +59,7 @@ namespace IdeaCollectionSystem.Datalayer
 				entity.ToTable("Ideas");
 				entity.HasKey(x => x.Id);
 
-				// UserId là string (Identity ID). Đặt MaxLength(450) để khớp chuẩn Identity
+			
 				entity.Property(x => x.UserId).IsRequired().HasMaxLength(450);
 
 				entity.HasOne(x => x.Submission)
@@ -124,6 +124,7 @@ namespace IdeaCollectionSystem.Datalayer
 			});
 			#endregion
 
+			
 			#region EmailOutBox
 			modelBuilder.Entity<EmailOutBox>(entity =>
 			{
@@ -137,12 +138,9 @@ namespace IdeaCollectionSystem.Datalayer
 			});
 			#endregion
 
-			#region Bổ sung các bảng bị thiếu
-			modelBuilder.Entity<IdeaView>(entity =>
-			{
-				entity.ToTable("IdeaViews");
-				entity.HasKey(x => x.Id);
-			});
+			#region IdeaView
+			modelBuilder.Entity<IdeaView>()
+		.HasKey(v => new { v.IdeaId, v.UserId });
 
 			modelBuilder.Entity<TermVersion>(entity =>
 			{

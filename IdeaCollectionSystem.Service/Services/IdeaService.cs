@@ -485,7 +485,8 @@ namespace IdeaCollectionSystem.Service.Services
 		}
 
 
-		// GET IDEA DETAIL (Kèm chức năng tăng ViewCount)
+		// GET IDEA DETAIL 
+
 		public async Task<IdeaInfoDto?> GetIdeaDetailAsync(Guid id, string userId)
 		{
 			var idea = await _context.Ideas
@@ -494,19 +495,36 @@ namespace IdeaCollectionSystem.Service.Services
 				.Include(i => i.Submission)
 				.Include(i => i.Comments)
 				.Include(i => i.IdeaReactions)
-				.Include(i => i.IdeaDocuments) 
 				.FirstOrDefaultAsync(i => i.Id == id);
 
-		
 			if (idea == null)
 			{
 				return null;
 			}
-			idea.ViewCount += 1;
-			_context.Ideas.Update(idea);
-			await _context.SaveChangesAsync();
-			var ideaDto = await MapToDtoAsync(idea);
 
+			var hasViewed = await _context.IdeaViews
+								  .AnyAsync(v => v.IdeaId == id && v.UserId == userId);
+
+			var userExists = await _context.Set<IdeaUser>().AnyAsync(u => u.Id == userId);
+
+			if (!hasViewed && userExists)
+			{
+		
+				var newViewRecord = new IdeaCollectionSystem.ApplicationCore.Entitites.IdeaView
+				{
+					IdeaId = id,
+					UserId = userId,
+					ViewedAt = DateTime.UtcNow
+				};
+
+				_context.IdeaViews.Add(newViewRecord);
+				idea.ViewCount += 1;
+				_context.Ideas.Update(idea);
+
+				await _context.SaveChangesAsync();
+			}
+
+			var ideaDto = await MapToDtoAsync(idea);
 			return ideaDto;
 		}
 
