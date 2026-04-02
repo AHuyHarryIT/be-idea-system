@@ -350,39 +350,95 @@ namespace IdeaCollectionSystem.Service.Services
 			return result;
 		}
 
-		// REVIEW IDEA
-		public async Task<bool> ReviewIdeaAsync(Guid ideaId, ReviewIdeaDto reviewDto, string reviewerId)
-		{
-			var idea = await _context.Ideas.FirstOrDefaultAsync(i => i.Id == ideaId);
-			if (idea == null) return false;
+        // REVIEW IDEA
+        public async Task<bool> ReviewIdeaAsync(Guid ideaId, ReviewIdeaDto reviewDto, string reviewerId)
+        {
+            var idea = await _context.Ideas.FirstOrDefaultAsync(i => i.Id == ideaId);
+            if (idea == null) return false;
 
-			// 1. Check role constant (DEPARTMENT)
-			var reviewer = await _userManager.FindByIdAsync(reviewerId);
-			if (reviewer == null) return false;
+            // 1. Check role constant (DEPARTMENT)
+            var reviewer = await _userManager.FindByIdAsync(reviewerId);
+            if (reviewer == null) return false;
 
-			// Kiểm tra xem người duyệt có phải là Admin hoặc QA Manager
-			var roles = await _userManager.GetRolesAsync(reviewer);
-			bool isGlobalReviewer = roles.Contains(RoleConstants.Administrator) || roles.Contains(RoleConstants.QAManager);
+            // Kiểm tra xem người duyệt có phải là Admin hoặc QA Manager
+            var roles = await _userManager.GetRolesAsync(reviewer);
+            bool isGlobalReviewer = roles.Contains(RoleConstants.Administrator) || roles.Contains(RoleConstants.QAManager);
 
-			// Nếu không phải quyền Global (tức là QA Coordinator), bắt buộc phải cùng phòng ban với Idea
-			if (!isGlobalReviewer)
-			{
-				if (reviewer.DepartmentId == null || reviewer.DepartmentId != idea.DepartmentId)
-				{
-					throw new UnauthorizedAccessException("You can only review ideas submitted by staff within your own department.");
-				}
-			}
+            // Nếu không phải quyền Global (tức là QA Coordinator), bắt buộc phải cùng phòng ban với Idea
+            if (!isGlobalReviewer)
+            {
+                if (reviewer.DepartmentId == null || reviewer.DepartmentId != idea.DepartmentId)
+                {
+                    throw new UnauthorizedAccessException("You can only review ideas submitted by staff within your own department.");
+                }
+            }
 
-			idea.ReviewStatus = reviewDto.Status;
+            // Ghi nhận trạng thái cũ để so sánh xem có thực sự thay đổi không
+            var oldStatus = idea.ReviewStatus;
 
-			idea.UpdatedAt = DateTime.UtcNow;
+            idea.ReviewStatus = reviewDto.Status;
+            idea.UpdatedAt = DateTime.UtcNow;
 
-			_context.Ideas.Update(idea);
-			return await _context.SaveChangesAsync() > 0;
-		}
+            _context.Ideas.Update(idea);
+            bool isSaved = await _context.SaveChangesAsync() > 0;
 
-		// GET IDEAS WITHOUT COMMENT
-		public async Task<IEnumerable<IdeaInfoDto>> GetIdeasWithoutCommentsAsync()
+            // 2. BACKGROUND EMAIL TASK (Chỉ gửi khi Lưu DB thành công và Trạng thái có thay đổi thành Approved/Rejected)
+            if (isSaved && oldStatus != reviewDto.Status &&
+                (reviewDto.Status == ReviewStatus.APPROVED || reviewDto.Status == ReviewStatus.REJECTED))
+            {
+                var ideaTitle = idea.Title;
+                var authorId = idea.UserId;
+                var newStatus = reviewDto.Status;
+
+                _ = Task.Run(async () =>
+                {
+                    try
+                    {
+                        using var scope = _scopeFactory.CreateScope();
+                        var userManager = scope.ServiceProvider.GetRequiredService<UserManager<IdeaUser>>();
+                        var emailService = scope.ServiceProvider.GetRequiredService<IEmailService>();
+
+                        // Lấy thông tin tác giả của Idea
+                        var author = await userManager.FindByIdAsync(authorId);
+
+                        if (author != null && !string.IsNullOrEmpty(author.Email))
+                        {
+                            bool isApproved = newStatus == ReviewStatus.APPROVED;
+                            string statusText = isApproved ? "APPROVED" : "REJECTED";
+                            string statusColor = isApproved ? "#28a745" : "#dc3545"; // Xanh cho Approve, Đỏ cho Reject
+
+                            string subject = $"🔔 [Idea System] Your idea has been {statusText}";
+                            string body = $@"
+                    <div style='font-family: Arial, sans-serif; padding: 20px; border: 1px solid #eaeaea; border-radius: 8px;'>
+                        <h3 style='color: #2c3e50;'>Hello {author.Name},</h3>
+                        <p>We are writing to inform you about the status of your recent idea submission.</p>
+                        <div style='background-color: #f9f9f9; padding: 15px; border-left: 4px solid {statusColor}; margin: 15px 0;'>
+                            <p style='margin: 0; color: #555; font-size: 13px;'>Idea Title:</p>
+                            <i>""{ideaTitle}""</i>
+                            <br/><br/>
+                            <p style='margin: 0; color: #555; font-size: 13px;'>Review Status:</p>
+                            <strong style='color: {statusColor}; font-size: 16px;'>{statusText}</strong>
+                        </div>
+                        <p>{(isApproved ? "Congratulations! Your idea is moving forward." : "Thank you for your effort. Please don't hesitate to submit more ideas in the future!")}</p>
+                        <br/>
+                        <p style='font-size: 12px; color: #888;'>This is an automated message, please do not reply to this email.</p>
+                    </div>";
+
+                            await emailService.SendEmailAsync(author.Email, subject, body);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"[EMAIL ERROR]: {ex.Message}");
+                    }
+                });
+            }
+
+            return isSaved;
+        }
+
+        // GET IDEAS WITHOUT COMMENT
+        public async Task<IEnumerable<IdeaInfoDto>> GetIdeasWithoutCommentsAsync()
 		{
 			var ideas = await _context.Ideas
 				.Include(i => i.Category)
