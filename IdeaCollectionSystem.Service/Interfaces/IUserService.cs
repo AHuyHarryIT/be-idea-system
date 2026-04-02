@@ -4,7 +4,8 @@ namespace IdeaCollectionSystem.Service.Interfaces
 {
 	public interface IUserService
 	{
-		Task<IEnumerable<UserDto>> GetAllUsersAsync();
+
+		Task<PagedResult<UserDto>> GetAllUsersAsync(PaginationFilter filter);
 
 		Task<string> CreateUserAsync(CreateUserRequest request, string roleToAssign);
 

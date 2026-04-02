@@ -16,18 +16,53 @@ public class DepartmentService : IDepartmentService
 		_context = context;
 	}
 
+
+	public async Task<PagedResult<DepartmentDto>> GetAllDepartmentsAsync(PaginationFilter filter)
+	{
+		var query = _context.Departments.AsNoTracking();
+
+		// 1. Áp dụng Search theo Tên Department (Nếu có nhập searchTerm)
+		if (!string.IsNullOrWhiteSpace(filter.SearchTerm))
+		{
+			var search = filter.SearchTerm.ToLower().Trim();
+			query = query.Where(d => d.Name.ToLower().Contains(search));
+		}
+
+		// 2. Count tổng số lượng record
+		var totalCount = await query.CountAsync();
+
+		// 3. Phân trang (Sắp xếp theo tên phòng ban)
+		var departments = await query
+			.OrderBy(d => d.Name)
+			.Skip((filter.PageNumber - 1) * filter.PageSize)
+			.Take(filter.PageSize)
+			.ToListAsync();
+
+		// 4. Map sang DTO
+		var result = departments.Select(d => new DepartmentDto
+		{
+			Id = d.Id,
+			Name = d.Name
+		}).ToList();
+
+		// 5. Trả về PagedResult
+		return new PagedResult<DepartmentDto>(result, totalCount, filter.PageNumber, filter.PageSize);
+	}
+
 	public async Task<IEnumerable<DepartmentDto>> GetAllDepartmentsAsync()
 	{
-		return await _context.Departments
+		var departments = await _context.Departments
 			.AsNoTracking()
-			.Select(d => new DepartmentDto
-			{
-				Id = d.Id,
-				Name = d.Name,
-				Description = d.Description
-			})
+			.OrderBy(d => d.Name)
 			.ToListAsync();
+
+		return departments.Select(d => new DepartmentDto
+		{
+			Id = d.Id,
+			Name = d.Name
+		});
 	}
+
 
 	public async Task<DepartmentDto?> GetDepartmentByIdAsync(Guid id) // Đổi sang Guid
 	{

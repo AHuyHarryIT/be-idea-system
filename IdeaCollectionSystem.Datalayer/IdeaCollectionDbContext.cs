@@ -29,7 +29,8 @@ namespace IdeaCollectionSystem.Datalayer
 		protected override void OnModelCreating(ModelBuilder modelBuilder)
 		{
 			base.OnModelCreating(modelBuilder);
-
+			modelBuilder.Entity<IdeaUser>()
+					.ToTable("AspNetUsers", t => t.ExcludeFromMigrations());
 			#region Master Entities
 			modelBuilder.Entity<Department>(entity =>
 			{

@@ -35,13 +35,13 @@ namespace IdeaCollectionSystem.Service.Services
 				author = user?.Name ?? user?.Email ?? "Unknown";
 			}
 
-			bool canComment = idea.Submission != null && DateTime.UtcNow <= idea.Submission.FinalClousureDate;
+			bool canComment = idea.Submission != null && DateTime.UtcNow <= idea.Submission.FinalClosureDate;
 
 			var dto = new IdeaInfoDto
 			{
 				Id = idea.Id,
 				Title = idea.Title,
-				Description = idea.Description, // Thêm Description nếu DTO yêu cầu
+				Description = idea.Description, 
 				CategoryName = idea.Category?.Name ?? "No Category",
 				DepartmentName = idea.Department?.Name ?? "",
 				AuthorName = author,
@@ -54,14 +54,13 @@ namespace IdeaCollectionSystem.Service.Services
 				CommentCount = idea.Comments?.Count ?? 0,
 				CanComment = canComment,
 
-				// 🚀 QUAN TRỌNG: Map danh sách Comment từ Entity sang DTO
+			
 				Comments = idea.Comments?.Select(c => new CommentDto
 				{
 					Id = c.Id,
 					Content = c.Content,
 					CreatedDate = c.CreatedAt,
 					IsAnonymous = c.IsAnonymous,
-					// Nếu ẩn danh thì hiện Anonymous, ngược lại hiện tên User (đã lấy qua ThenInclude)
 					AuthorName = c.IsAnonymous ? "Anonymous" : (c.User?.Name ?? "Unknown User")
 				}).OrderByDescending(c => c.CreatedDate).ToList() ?? new List<CommentDto>()
 			};
@@ -77,12 +76,12 @@ namespace IdeaCollectionSystem.Service.Services
 		public async Task<bool> IsClosureDatePassedAsync()
 		{
 			var latestSubmission = await _context.Submissions
-				.OrderByDescending(s => s.ClousureDate)
+				.OrderByDescending(s => s.ClosureDate)
 				.FirstOrDefaultAsync();
 
 			if (latestSubmission == null) return true;
 
-			return DateTime.UtcNow.Date > latestSubmission.ClousureDate.Date;
+			return DateTime.UtcNow.Date > latestSubmission.ClosureDate.Date;
 		}
 
 		// Check Final Closure date
@@ -94,7 +93,7 @@ namespace IdeaCollectionSystem.Service.Services
 
 			if (idea?.Submission == null) return true;
 
-			return DateTime.UtcNow.Date > idea.Submission.FinalClousureDate.Date;
+			return DateTime.UtcNow.Date > idea.Submission.FinalClosureDate.Date;
 		}
 
 		// CREATE IDEA
@@ -123,9 +122,9 @@ namespace IdeaCollectionSystem.Service.Services
 			if (dto.SubmissionId != Guid.Empty)
 				submission = await _context.Submissions.FirstOrDefaultAsync(s => s.Id == dto.SubmissionId);
 			else
-				submission = await _context.Submissions.OrderByDescending(s => s.ClousureDate).FirstOrDefaultAsync();
+				submission = await _context.Submissions.OrderByDescending(s => s.ClosureDate).FirstOrDefaultAsync();
 
-			if (submission == null || DateTime.UtcNow.Date > submission.ClousureDate.Date) return null;
+			if (submission == null || DateTime.UtcNow.Date > submission.ClosureDate.Date) return null;
 
 			var idea = new Idea
 			{
@@ -237,6 +236,12 @@ namespace IdeaCollectionSystem.Service.Services
 					.ThenInclude(c => c.User)
 				.Include(i => i.IdeaReactions)
 				.AsQueryable();
+
+			if (!string.IsNullOrWhiteSpace(parameters.SearchTerm))
+			{
+				var search = parameters.SearchTerm.ToLower().Trim();
+				query = query.Where(i => i.Title.ToLower().Contains(search) || i.Description.ToLower().Contains(search));
+			}
 
 			// Lọc theo Submission (nếu có)
 			if (parameters.SubmissionId.HasValue && parameters.SubmissionId.Value != Guid.Empty)
@@ -456,7 +461,7 @@ namespace IdeaCollectionSystem.Service.Services
 			if (idea == null) return null; // Sửa thành return null
 
 			var submission = await _context.Submissions.FirstOrDefaultAsync(s => s.Id == idea.SubmissionId);
-			if (submission == null || DateTime.UtcNow.Date > submission.FinalClousureDate) return null; // Sửa thành return null
+			if (submission == null || DateTime.UtcNow.Date > submission.FinalClosureDate) return null; // Sửa thành return null
 
 			var comment = new Comment
 			{
@@ -577,6 +582,11 @@ namespace IdeaCollectionSystem.Service.Services
 			.Include(i => i.IdeaReactions)
 			.AsQueryable();
 
+			if (!string.IsNullOrWhiteSpace(parameters.SearchTerm))
+			{
+				var search = parameters.SearchTerm.ToLower().Trim();
+				query = query.Where(i => i.Title.ToLower().Contains(search) || i.Description.ToLower().Contains(search));
+			}
 
 			if (parameters.SubmissionId.HasValue && parameters.SubmissionId.Value != Guid.Empty)
 			{
@@ -588,7 +598,6 @@ namespace IdeaCollectionSystem.Service.Services
 				query = query.Where(i => i.DepartmentId == parameters.DepartmentId.Value);
 			}
 
-			// Cho phép user xem bài của mình đang ở trạng thái nào (Pending/Approved/Rejected)
 			if (parameters.ReviewStatus.HasValue)
 			{
 				query = query.Where(i => i.ReviewStatus == parameters.ReviewStatus.Value);

@@ -4,7 +4,9 @@ namespace IdeaCollectionSystem.Service.Interfaces
 {
 	public interface ICategoryService
 	{
-		Task<IEnumerable<CategoryDto>> GetAllActiveAsync();
+
+		Task<PagedResult<CategoryDto>> GetCategoriesPagedAsync(PaginationFilter filter);
+		//Task<PagedResult<CategoryDto>> GetAllActiveAsync(PaginationFilter filter);
 
 		Task<bool> CreateAsync(string name);
 

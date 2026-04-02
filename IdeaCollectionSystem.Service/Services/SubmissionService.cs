@@ -15,6 +15,41 @@ namespace IdeaCollectionSystem.Service.Services
 			_context = context;
 		}
 
+		public async Task<PagedResult<SubmissionDto>> GetSubmissionsPagedAsync(PaginationFilter filter)
+		{
+			var query = _context.Submissions.AsNoTracking();
+
+			// 1. Áp dụng Search (Ví dụ: tìm theo Tên của đợt Submission nếu DB của bạn có cột Name)
+			// Nếu Submission của bạn không có cột Name, bạn có thể xóa khối if này đi.
+			if (!string.IsNullOrWhiteSpace(filter.SearchTerm))
+			{
+				var search = filter.SearchTerm.ToLower().Trim();
+				query = query.Where(s => s.Name.ToLower().Contains(search));
+			}
+
+			// 2. Count tổng số lượng record
+			var totalCount = await query.CountAsync();
+
+			// 3. Phân trang (Sắp xếp theo Ngày đóng đợt - Mới nhất xếp trên)
+			var submissions = await query
+				.OrderByDescending(s => s.ClosureDate)
+				.Skip((filter.PageNumber - 1) * filter.PageSize)
+				.Take(filter.PageSize)
+				.ToListAsync();
+
+			// 4. Map sang DTO
+			var result = submissions.Select(s => new SubmissionDto
+			{
+				Id = s.Id,
+				Name = s.Name,
+				ClosureDate = s.ClosureDate,
+				FinalClosureDate = s.FinalClosureDate
+			}).ToList();
+
+			// 5. Trả về PagedResult
+			return new PagedResult<SubmissionDto>(result, totalCount, filter.PageNumber, filter.PageSize);
+		}
+
 		// Get all submisssions
 		public async Task<IEnumerable<SubmissionDto>> GetAllSubmissionsAsync()
 		{
@@ -27,10 +62,10 @@ namespace IdeaCollectionSystem.Service.Services
 					Name = s.Name,
 					Description = s.Description,
 					AcademicYear = s.AcademicYear, 
-					ClosureDate = s.ClousureDate,
-					FinalClosureDate = s.FinalClousureDate,
+					ClosureDate = s.ClosureDate,
+					FinalClosureDate = s.FinalClosureDate,
 					IdeaCount = s.Ideas.Count(),
-					IsActive = DateTime.UtcNow.Date <= s.ClousureDate.Date
+					IsActive = DateTime.UtcNow.Date <= s.ClosureDate.Date
 				})
 				.ToListAsync();
 		}
@@ -59,8 +94,8 @@ namespace IdeaCollectionSystem.Service.Services
 				Name = dto.Name,
 				Description = dto.Description,
 				AcademicYear = dto.AcademicYear,
-				ClousureDate = dto.ClosureDate,
-				FinalClousureDate = dto.FinalClosureDate,
+				ClosureDate = dto.ClosureDate,
+				FinalClosureDate = dto.FinalClosureDate,
 				CreatedAt = DateTime.UtcNow,
 				UpdatedAt = DateTime.UtcNow
 			};
@@ -78,8 +113,8 @@ namespace IdeaCollectionSystem.Service.Services
 			submission.Name = dto.Name;
 			submission.Description = dto.Description;
 			submission.AcademicYear = dto.AcademicYear;
-			submission.ClousureDate = dto.ClosureDate;
-			submission.FinalClousureDate = dto.FinalClosureDate;
+			submission.ClosureDate = dto.ClosureDate;
+			submission.FinalClosureDate = dto.FinalClosureDate;
 			submission.UpdatedAt = DateTime.UtcNow;
 
 			return await _context.SaveChangesAsync() > 0;

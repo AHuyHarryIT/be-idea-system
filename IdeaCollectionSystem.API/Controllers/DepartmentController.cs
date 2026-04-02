@@ -18,11 +18,36 @@ public class DepartmentController : ControllerBase
 		_departmentService = departmentService;
 	}
 
+	// GET: api/departments
 	[HttpGet]
-	public async Task<IActionResult> GetAllDepartments()
+	public async Task<IActionResult> GetAllDepartmentsAsync([FromQuery] PaginationFilter filter, [FromQuery] bool fetchAll = false)
 	{
-		var departments = await _departmentService.GetAllDepartmentsAsync();
-		return Ok(departments);
+		
+		if (fetchAll)
+		{
+			filter.PageNumber = 1;
+			filter.PageSize = int.MaxValue; // Lấy hết
+
+			var allData = await _departmentService.GetAllDepartmentsAsync(filter);
+
+			return Ok(allData.Items); // Trả về mảng phẳng [...] cho Frontend dễ map vào Dropdown
+		}
+
+		var pagedData = await _departmentService.GetAllDepartmentsAsync(filter);
+
+		return Ok(new
+		{
+			Departments = pagedData.Items,
+			Pagination = new
+			{
+				pagedData.TotalCount,
+				pagedData.PageNumber,
+				pagedData.PageSize,
+				pagedData.TotalPages,
+				pagedData.HasPreviousPage,
+				pagedData.HasNextPage
+			}
+		});
 	}
 
 	[HttpGet("{id}")]

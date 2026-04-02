@@ -264,7 +264,7 @@ namespace IdeaCollectionSystem.Datalayer.Migrations
                     b.Property<DateTime>("AcademicYear")
                         .HasColumnType("timestamp without time zone");
 
-                    b.Property<DateTime>("ClousureDate")
+                    b.Property<DateTime>("ClosureDate")
                         .HasColumnType("timestamp without time zone");
 
                     b.Property<DateTime>("CreatedAt")
@@ -276,7 +276,7 @@ namespace IdeaCollectionSystem.Datalayer.Migrations
                     b.Property<string>("Description")
                         .HasColumnType("text");
 
-                    b.Property<DateTime>("FinalClousureDate")
+                    b.Property<DateTime>("FinalClosureDate")
                         .HasColumnType("timestamp without time zone");
 
                     b.Property<string>("Name")

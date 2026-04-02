@@ -26,7 +26,6 @@ namespace IdeaCollectionSystem.API.Controllers
 		}
 
 		#region HELPER METHOD
-		// Hàm phiên dịch: Chuyển role rác từ Frontend thành Role chuẩn của Backend
 		private string MapRoleFromFrontend(string frontendRole)
 		{
 			if (string.IsNullOrWhiteSpace(frontendRole)) return "";
@@ -38,18 +37,28 @@ namespace IdeaCollectionSystem.API.Controllers
 			if (role == "ADMINISTRATOR" || role == "SYSTEM ADMINISTRATOR") return RoleConstants.Administrator;
 			if (role == "STAFF") return RoleConstants.Staff;
 
-			return frontendRole; // Trả về nguyên gốc nếu không khớp để validate bên dưới tự bắt lỗi
+			return frontendRole;
 		}
 		#endregion
 
-		// GET: api/users
+
 		[HttpGet]
-		public async Task<IActionResult> GetUsers()
+		public async Task<IActionResult> GetUsers([FromQuery] PaginationFilter filter)
 		{
-			var users = await userService.GetAllUsersAsync();
+			var pagedData = await userService.GetAllUsersAsync(filter);
+
 			return Ok(new
 			{
-				Users = users,
+				Users = pagedData.Items,
+				Pagination = new
+				{
+					pagedData.TotalCount,
+					pagedData.PageNumber,
+					pagedData.PageSize,
+					pagedData.TotalPages,
+					pagedData.HasPreviousPage,
+					pagedData.HasNextPage
+				},
 				AvailableRoles = RoleConstants.GetAllRoles()
 			});
 		}

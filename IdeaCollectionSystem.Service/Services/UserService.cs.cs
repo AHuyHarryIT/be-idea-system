@@ -20,22 +20,33 @@ namespace IdeaCollectionSystem.Service.Services
 			_context = context;
 		}
 
-		// Get all users
-		public async Task<IEnumerable<UserDto>> GetAllUsersAsync()
+		// GetAllUsersAsync 
+		public async Task<PagedResult<UserDto>> GetAllUsersAsync(PaginationFilter filter)
 		{
-
-			var users = await _userManager.Users
+			var query = _userManager.Users
 				.Include(u => u.Department)
-				.AsNoTracking() 
+				.AsNoTracking();
+
+
+			if (!string.IsNullOrWhiteSpace(filter.SearchTerm))
+			{
+				var search = filter.SearchTerm.ToLower().Trim();
+				query = query.Where(u => u.Name.ToLower().Contains(search) || u.Email.ToLower().Contains(search));
+			}
+
+			var totalCount = await query.CountAsync();
+
+			//  Skip và Take
+			var users = await query
+				.OrderByDescending(u => u.Id) 
+				.Skip((filter.PageNumber - 1) * filter.PageSize)
+				.Take(filter.PageSize)
 				.ToListAsync();
 
 			var result = new List<UserDto>();
-
 			foreach (var user in users)
 			{
-	
 				var roles = await _userManager.GetRolesAsync(user);
-
 				result.Add(new UserDto
 				{
 					Id = user.Id,
@@ -46,8 +57,7 @@ namespace IdeaCollectionSystem.Service.Services
 					Role = roles.FirstOrDefault() ?? "Staff"
 				});
 			}
-
-			return result;
+			return new PagedResult<UserDto>(result, totalCount, filter.PageNumber, filter.PageSize);
 		}
 
 

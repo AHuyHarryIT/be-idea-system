@@ -15,17 +15,39 @@ namespace IdeaCollectionSystem.Service.Services
 			_context = context;
 		}
 
-		public async Task<IEnumerable<CategoryDto>> GetAllActiveAsync()
+		// Get Categories with pagination and optional search
+		public async Task<PagedResult<CategoryDto>> GetCategoriesPagedAsync(PaginationFilter filter)
 		{
-			return await _context.Categories
-				.Select(c => new CategoryDto
-				{
-					Id = c.Id,
-					Name = c.Name
-				})
+			var query = _context.Categories.AsNoTracking();
+			if (!string.IsNullOrWhiteSpace(filter.SearchTerm))
+			{
+				var search = filter.SearchTerm.ToLower().Trim();
+				query = query.Where(c => c.Name.ToLower().Contains(search));
+			}
+
+
+			var totalCount = await query.CountAsync();
+
+
+			var categories = await query
+				.OrderByDescending(c => c.CreatedAt) 
+				.OrderBy(c => c.Name)
+				.Skip((filter.PageNumber - 1) * filter.PageSize)
+				.Take(filter.PageSize)
 				.ToListAsync();
+
+
+			var result = categories.Select(c => new CategoryDto
+			{
+				Id = c.Id,
+				Name = c.Name			
+			}).ToList();
+
+			return new PagedResult<CategoryDto>(result, totalCount, filter.PageNumber, filter.PageSize);
 		}
 
+
+		// Create Category
 		public async Task<bool> CreateAsync (String name)
 		{
 			var category = new Category

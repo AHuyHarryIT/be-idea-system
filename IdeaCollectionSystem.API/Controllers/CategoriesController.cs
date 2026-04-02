@@ -16,13 +16,25 @@ public class CategoriesController : ControllerBase
 		_categoryService = categoryService;
 	}
 
-	// GET api/categories
+	// GET: api/categories
 	[HttpGet]
-	[Authorize]
-	public async Task<IActionResult> GetAll()
+	public async Task<IActionResult> GetCategories([FromQuery] PaginationFilter filter)
 	{
-		var categories = await _categoryService.GetAllActiveAsync();
-		return Ok(categories);
+	
+		var pagedData = await _categoryService.GetCategoriesPagedAsync(filter);
+		return Ok(new
+		{
+			Categories = pagedData.Items,
+			Pagination = new
+			{
+				pagedData.TotalCount,
+				pagedData.PageNumber,
+				pagedData.PageSize,
+				pagedData.TotalPages,
+				pagedData.HasPreviousPage,
+				pagedData.HasNextPage
+			}
+		});
 	}
 
 	// POST api/categories

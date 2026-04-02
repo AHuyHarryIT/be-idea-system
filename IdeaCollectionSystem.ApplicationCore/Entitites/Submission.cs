@@ -16,8 +16,8 @@ namespace IdeaCollectionSystem.ApplicationCore.Entitites
 		public string? Description { get; set; }
 
 
-		public DateTime ClousureDate { get; set; } = DateTime.UtcNow;
-		public DateTime FinalClousureDate { get; set; } = DateTime.UtcNow;
+		public DateTime ClosureDate { get; set; } = DateTime.UtcNow;
+		public DateTime FinalClosureDate { get; set; } = DateTime.UtcNow;
 
 		public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 		public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;

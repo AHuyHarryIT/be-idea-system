@@ -75,9 +75,21 @@ namespace IdeaCollectionSystem.API.Controllers
 			}
 
 			bool isManager = User.IsInRole(RoleConstants.Administrator) || User.IsInRole(RoleConstants.QAManager);
-			var pagedResult = await _ideaService.GetIdeasPagedAsync(parameters, userId, isManager);
+			var pagedData = await _ideaService.GetIdeasPagedAsync(parameters, userId, isManager);
 
-			return Ok(pagedResult);
+			return Ok(new
+			{
+				Ideas = pagedData.Items,
+				Pagination = new
+				{
+					pagedData.TotalCount,
+					pagedData.PageNumber,
+					pagedData.PageSize,
+					pagedData.TotalPages,
+					pagedData.HasPreviousPage,
+					pagedData.HasNextPage
+				}
+			});
 		}
 
 		[HttpGet("my-ideas")]
@@ -90,8 +102,21 @@ namespace IdeaCollectionSystem.API.Controllers
 				return Unauthorized(new { message = "You must be logged in to view your ideas." });
 			}
 
-			var pagedResult = await _ideaService.GetMyIdeasPagedAsync(parameters, userId);
-			return Ok(pagedResult);
+			var pagedData = await _ideaService.GetMyIdeasPagedAsync(parameters, userId);
+
+			return Ok(new
+			{
+				Ideas = pagedData.Items,
+				Pagination = new
+				{
+					pagedData.TotalCount,
+					pagedData.PageNumber,
+					pagedData.PageSize,
+					pagedData.TotalPages,
+					pagedData.HasPreviousPage,
+					pagedData.HasNextPage
+				}
+			});
 		}
 
 		[HttpGet("{id}")]

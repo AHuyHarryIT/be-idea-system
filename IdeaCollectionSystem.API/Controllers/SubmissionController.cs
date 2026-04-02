@@ -18,22 +18,39 @@ namespace IdeaCollectionSystem.API.Controllers
 			_submissionService = submissionService;
 		}
 
+		// GET: api/submissions
 		[HttpGet]
-		public async Task<IActionResult> GetClosureDates()
+		public async Task<IActionResult> GetSubmissions([FromQuery] PaginationFilter filter, [FromQuery] bool fetchAll = false)
 		{
 			try
 			{
-				var submissions = await _submissionService.GetAllSubmissionsAsync();
-				return Ok(submissions);
+				if (fetchAll)
+				{
+					var allData = await _submissionService.GetSubmissionsPagedAsync(
+						new PaginationFilter { PageNumber = 1, PageSize = int.MaxValue }
+					);
+					return Ok(allData.Items);
+				}
+				var pagedData = await _submissionService.GetSubmissionsPagedAsync(filter);
+
+				return Ok(new
+				{
+					Submissions = pagedData.Items,
+					Pagination = new
+					{
+						pagedData.TotalCount,
+						pagedData.PageNumber,
+						pagedData.PageSize,
+						pagedData.TotalPages,
+						pagedData.HasPreviousPage,
+						pagedData.HasNextPage
+					}
+				});
 			}
 			catch (Exception ex)
 			{
 				var realError = ex.InnerException?.Message ?? ex.Message;
-				return StatusCode(500, new
-				{
-					message = "Database error on the server:",
-					details = realError
-				});
+				return StatusCode(500, new { message = "Database error:", details = realError });
 			}
 		}
 
