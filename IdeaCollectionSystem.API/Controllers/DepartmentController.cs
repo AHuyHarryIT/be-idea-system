@@ -25,16 +25,24 @@ public class DepartmentController : ControllerBase
 		return Ok(departments);
 	}
 
-	// Ràng buộc id bắt buộc phải là chuẩn Guid
-	[HttpGet("{id:guid}")]
+
+
+	[HttpGet("{id}")]
 	public async Task<IActionResult> GetDepartmentById(Guid id)
 	{
+		
 		var department = await _departmentService.GetDepartmentByIdAsync(id);
+
 		if (department == null)
-			return NotFound(new { message = "Department not found" });
+		{
+
+			return NotFound(new { message = "Department not found." });
+		}
 
 		return Ok(department);
 	}
+
+
 
 	[HttpPost]
 	public async Task<IActionResult> CreateDepartment([FromBody] DepartmentCreateDto dto)
@@ -50,7 +58,7 @@ public class DepartmentController : ControllerBase
 	}
 
 	// Ràng buộc id bắt buộc phải là chuẩn Guid
-	[HttpPut("{id:guid}")]
+	[HttpPut("{id}")]
 	public async Task<IActionResult> UpdateDepartment(Guid id, [FromBody] DepartmentUpdateDto dto)
 	{
 		if (!ModelState.IsValid)
@@ -64,7 +72,7 @@ public class DepartmentController : ControllerBase
 	}
 
 	// Ràng buộc id bắt buộc phải là chuẩn Guid
-	[HttpDelete("{id:guid}")]
+	[HttpDelete("{id}")]
 	public async Task<IActionResult> DeleteDepartment(Guid id)
 	{
 		var result = await _departmentService.DeleteDepartmentAsync(id);

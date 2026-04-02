@@ -19,35 +19,37 @@ namespace IdeaCollectionSystem.API.Controllers
 			_ideaService = ideaService;
 		}
 
+		// TRONG IdeaController.cs
 		[HttpPost]
-		[Authorize]
-		public async Task<IActionResult> CreateIdea([FromForm] IdeaCreateDto dto)
+		[Authorize(Roles = RoleConstants.Staff)]
+		public async Task<IActionResult> CreateIdea([FromForm] IdeaCreateDto request)
 		{
-			if (!dto.HasAcceptedTerms)
-			{
-				return BadRequest(new { message = "You must agree to the Terms and Conditions before submitting an idea!" });
-			}
-
 			var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-			if (string.IsNullOrEmpty(userId))
-			{
-				return Unauthorized(new { message = "You must be logged in to perform this action." });
-			}
+			if (string.IsNullOrEmpty(userId)) return Unauthorized();
 
 			try
 			{
-				var success = await _ideaService.CreateIdeaAsync(dto, userId);
+				var newIdeaId = await _ideaService.CreateIdeaAsync(request, userId);
 
-				if (success)
+				if (newIdeaId != null) 
 				{
-					return Ok(new { message = "The idea has been submitted successfully." });
+					
+					return Ok(new
+					{
+						message = "Idea created successfully.",
+						id = newIdeaId
+					});
 				}
 
-				return BadRequest(new { message = "Failed to submit idea. The submission period might be closed or the provided data is invalid." });
+				return BadRequest(new { message = "Unable to submit idea. Please check submission date or your department." });
+			}
+			catch (ArgumentException ex)
+			{
+				return BadRequest(new { message = ex.Message });
 			}
 			catch (Exception ex)
 			{
-				return BadRequest(new { message = ex.Message });
+				return StatusCode(StatusCodes.Status500InternalServerError, new { message = ex.Message });
 			}
 		}
 

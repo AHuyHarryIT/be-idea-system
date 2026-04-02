@@ -34,20 +34,24 @@ namespace IdeaCollectionSystem.API.Controllers
 		[HttpPost("login")]
 		public async Task<IActionResult> Login([FromBody] LoginRequestDto request)
 		{
+			if (string.IsNullOrWhiteSpace(request.Email) || string.IsNullOrWhiteSpace(request.Password))
+			{
+				return BadRequest(new { message = "Email and Password are required." });
+			}
+
 			var user = await _userManager.FindByEmailAsync(request.Email);
-			if (user == null)
-				return Unauthorized(new { message = "Email or password not match." });
 
+			if (user == null || !await _userManager.CheckPasswordAsync(user, request.Password))
+			{
+				return Unauthorized(new { message = "Invalid email or password." });
+			}
 
-			var isPasswordValid = await _userManager.CheckPasswordAsync(user, request.Password);
-			if (!isPasswordValid)
-				return Unauthorized(new { message = "Email or password not match." });
 			var roles = await _userManager.GetRolesAsync(user);
-
 			var singleRole = roles.FirstOrDefault() ?? "";
 
 			var accessToken = GenerateJwtToken(user, roles);
 
+		
 			return Ok(new
 			{
 				access_token = accessToken,
@@ -55,37 +59,12 @@ namespace IdeaCollectionSystem.API.Controllers
 				{
 					id = user.Id,
 					email = user.Email,
-					name = user.Name,
+					name = user.Name, // Chú ý: Đảm bảo biến user.Name không bị null
 					departmentId = user.DepartmentId,
-					role = singleRole 
+					role = singleRole
 				}
 			});
 		}
-
-		//// POST: api/auth/register
-		//[AllowAnonymous]
-		//[HttpPost("register")]
-		//public async Task<IActionResult> Register([FromBody] RegisterRequestDto request)
-		//{
-		//	var user = new IdeaUser
-		//	{
-		//		UserName = request.Email,
-		//		Email = request.Email,
-		//		Name = request.Name
-		//	};
-
-		//	var result = await _userManager.CreateAsync(user, request.Password);
-		//	if (!result.Succeeded)
-		//	{
-		//		var errors = result.Errors.Select(e => e.Description);
-		//		return BadRequest(new { message = "Đăng ký thất bại", errors });
-		//	}
-
-
-		//	await _userManager.AddToRoleAsync(user, RoleConstants.Staff);
-
-		//	return Ok(new { message = "Đăng ký thành công. Vui lòng đăng nhập." });
-		//}
 
 
 		//  GenerateJwtToken
@@ -93,8 +72,8 @@ namespace IdeaCollectionSystem.API.Controllers
 		{
 			var claims = new List<Claim>
 			{
-				new Claim(JwtRegisteredClaimNames.Sub, user.Id), // ID chuẩn của JWT
-                new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()), // Mã chống lặp token
+				new Claim(JwtRegisteredClaimNames.Sub, user.Id), 
+                new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()), 
                 new Claim(ClaimTypes.NameIdentifier, user.Id),
 				new Claim(ClaimTypes.Email, user.Email!),
 				new Claim(ClaimTypes.Name, user.Name ?? "")

@@ -1,9 +1,11 @@
 ﻿using Microsoft.AspNetCore.Http;
+using System.ComponentModel.DataAnnotations;
 
 namespace IdeaCollectionSystem.Service.Models.DTOs
 {
 	public class IdeaCreateDto
 	{
+		[Required(ErrorMessage = "The idea title cannot be blank.")]
 		public string Title { get; set; } = string.Empty;
 		public string Description { get; set; } = string.Empty;
 

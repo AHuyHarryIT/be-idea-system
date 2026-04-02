@@ -98,10 +98,10 @@ namespace IdeaCollectionSystem.Service.Services
 		}
 
 		// CREATE IDEA
-		public async Task<bool> CreateIdeaAsync(IdeaCreateDto dto, string userId)
+		public async Task<Guid?> CreateIdeaAsync(IdeaCreateDto dto, string userId)
 		{
 			var ideaUser = await _userManager.FindByIdAsync(userId);
-			if (ideaUser == null) return false;
+			if (ideaUser == null) return null;
 
 			if (!dto.HasAcceptedTerms)
 				throw new ArgumentException("You must agree to the Terms and Conditions before submitting an idea!");
@@ -112,12 +112,12 @@ namespace IdeaCollectionSystem.Service.Services
 			else
 			{
 				var firstDept = await _context.Departments.FirstOrDefaultAsync();
-				if (firstDept == null) return false;
+				if (firstDept == null) return null;
 				departmentId = firstDept.Id;
 			}
 
-			if (!await _context.Departments.AnyAsync(d => d.Id == departmentId)) return false;
-			if (dto.CategoryId == Guid.Empty) return false;
+			if (!await _context.Departments.AnyAsync(d => d.Id == departmentId)) return null;
+			if (dto.CategoryId == Guid.Empty) return null;
 
 			Submission? submission;
 			if (dto.SubmissionId != Guid.Empty)
@@ -125,7 +125,7 @@ namespace IdeaCollectionSystem.Service.Services
 			else
 				submission = await _context.Submissions.OrderByDescending(s => s.ClousureDate).FirstOrDefaultAsync();
 
-			if (submission == null || DateTime.UtcNow > submission.ClousureDate) return false;
+			if (submission == null || DateTime.UtcNow.Date > submission.ClousureDate.Date) return null;
 
 			var idea = new Idea
 			{
@@ -137,7 +137,7 @@ namespace IdeaCollectionSystem.Service.Services
 				UserId = userId,
 				SubmissionId = submission.Id,
 				IsAnonymous = dto.IsAnonymous,
-				ReviewStatus = ReviewStatus.PENDING, // Mặc định là Pending
+				ReviewStatus = ReviewStatus.PENDING, 
 				CreatedAt = DateTime.UtcNow,
 				UpdatedAt = DateTime.UtcNow
 			};
@@ -216,7 +216,7 @@ namespace IdeaCollectionSystem.Service.Services
 				catch (Exception ex) { Console.WriteLine($"[EMAIL ERROR]: {ex.Message}"); }
 			});
 
-			return true;
+			return idea.Id;
 		}
 
 		// GET ALL IDEAS (PAGINATION, SORTING, FILTERING)

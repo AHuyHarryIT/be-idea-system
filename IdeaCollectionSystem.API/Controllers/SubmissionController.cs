@@ -43,6 +43,10 @@ namespace IdeaCollectionSystem.API.Controllers
 		[Authorize(Roles = RoleConstants.Administrator + "," + RoleConstants.QAManager)]
 		public async Task<IActionResult> CreateSubmission([FromBody] SubmissionCreateDto dto)
 		{
+			if (dto.FinalClosureDate < dto.ClosureDate)
+			{
+				return BadRequest(new { message = "Final Closure Date must be exactly on or after the Closure Date." });
+			}
 			await _submissionService.CreateSubmissionAsync(dto);
 			return Ok(new { message = "Create a successful submission period." });
 		}
@@ -52,6 +56,10 @@ namespace IdeaCollectionSystem.API.Controllers
 		[Authorize(Roles = RoleConstants.Administrator + "," + RoleConstants.QAManager)]
 		public async Task<IActionResult> UpdateSubmission([FromRoute] Guid id, [FromBody] SubmissionCreateDto dto)
 		{
+			if (dto.FinalClosureDate < dto.ClosureDate)
+			{
+				return BadRequest(new { message = "Final Closure Date must be exactly on or after the Closure Date." });
+			}
 			await _submissionService.UpdateSubmissionAsync(id, dto);
 			return Ok(new { message = "The submission period has been updated as successful." });
 		}

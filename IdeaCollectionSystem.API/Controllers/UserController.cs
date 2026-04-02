@@ -40,7 +40,18 @@ namespace IdeaCollectionSystem.API.Controllers
 		[HttpPost]
 		public async Task<IActionResult> CreateUser([FromBody] CreateUserRequest request)
 		{
-			
+			var validRoles = new List<string>
+			{
+				RoleConstants.Administrator,
+				RoleConstants.QAManager,
+				RoleConstants.QACoordinator,
+				RoleConstants.Staff
+			};
+
+			if (!validRoles.Contains(request.Role))
+			{
+				return BadRequest(new { message = $"Invalid role. Accepted roles are: {string.Join(", ", validRoles)}" });
+			}
 			var existingUser = await _userManager.FindByEmailAsync(request.Email);
 			if (existingUser != null)
 				return BadRequest(new { message = "This email address has already been used." });
@@ -73,15 +84,9 @@ namespace IdeaCollectionSystem.API.Controllers
 		[Authorize(Roles = RoleConstants.Administrator)]
 		public async Task<IActionResult> UpdateUser([FromRoute] string id, [FromBody] UpdateUserRequest request)
 		{
-			if (string.IsNullOrWhiteSpace(request.Role))
-				return BadRequest(new { message = "The role cannot be left blank." });
-
-			if (string.IsNullOrWhiteSpace(request.Name))
-				return BadRequest(new { message = "The name cannot be left blank." });
 
 			try
 			{
-				// Gọi service mới
 				var result = await userService.UpdateUserAsync(id, request);
 
 				if (result)

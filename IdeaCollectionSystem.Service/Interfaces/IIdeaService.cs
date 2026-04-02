@@ -5,8 +5,8 @@ namespace IdeaCollectionSystem.Service.Interfaces
 	public interface IIdeaService
 	{
 		Task<bool> IsFinalClosureDatePassedAsync(Guid ideaId);
-	
-		Task<bool> CreateIdeaAsync(IdeaCreateDto dto, string userId);
+
+		Task<Guid?> CreateIdeaAsync(IdeaCreateDto dto, string userId);
 		Task<IEnumerable<IdeaInfoDto>> GetIdeasByStaffAsync(string userId);
 		
 		Task<IEnumerable<IdeaInfoDto>> GetIdeasByDepartmentAsync(string userId);

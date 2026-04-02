@@ -19,8 +19,8 @@ namespace IdeaCollectionSystem.API.Controllers
 		}
 
 		// GET api/stats/dashboard
-		[HttpGet("dashboard")]
 		[Authorize(Roles = RoleConstants.Administrator + "," + RoleConstants.QAManager)]
+		[HttpGet("dashboard")]
 		public async Task<IActionResult> GetDashboard()
 		{
 			var stats = await _statsService.GetDashboardStatsAsync();
@@ -28,17 +28,17 @@ namespace IdeaCollectionSystem.API.Controllers
 		}
 
 		// GET api/stats/departments
-		[HttpGet("departments")]
 		[Authorize(Roles = RoleConstants.Administrator + "," + RoleConstants.QAManager + "," + RoleConstants.QACoordinator)]
+		[HttpGet("departments")]
 		public async Task<IActionResult> GetDepartmentStats([FromQuery] Guid? submissionId)
 		{
 			var stats = await _statsService.GetDepartmentStatsAsync(submissionId);
 			return Ok(stats);
 		}
 
-		// GET api/stats/ideas-without-comments
-		[HttpGet("ideas-without-comments")]
+		// GET api/stats/ideas-without-comments		
 		[Authorize(Roles = RoleConstants.Administrator + "," + RoleConstants.QAManager)]
+		[HttpGet("ideas-without-comments")]
 		public async Task<IActionResult> GetIdeasWithoutComments()
 		{
 			var ideas = await _statsService.GetIdeasWithoutCommentsAsync();
