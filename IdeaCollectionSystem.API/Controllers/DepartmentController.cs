@@ -25,28 +25,22 @@ public class DepartmentController : ControllerBase
 		return Ok(departments);
 	}
 
-
-
 	[HttpGet("{id}")]
 	public async Task<IActionResult> GetDepartmentById(Guid id)
 	{
-		
 		var department = await _departmentService.GetDepartmentByIdAsync(id);
-
 		if (department == null)
-		{
-
-			return NotFound(new { message = "Department not found." });
-		}
+			return NotFound(new { message = "Department not found" });
 
 		return Ok(department);
 	}
 
-
-
 	[HttpPost]
 	public async Task<IActionResult> CreateDepartment([FromBody] DepartmentCreateDto dto)
 	{
+		if (string.IsNullOrWhiteSpace(dto.Name))
+			return BadRequest(new { message = "The department Name is required." });
+
 		if (!ModelState.IsValid)
 			return BadRequest(ModelState);
 
@@ -54,13 +48,15 @@ public class DepartmentController : ControllerBase
 		if (!result)
 			return BadRequest(new { message = "Can't create Department " });
 
-		return Ok(new { message = "Create Department successfull." });
+		return Ok(new { message = "Create Department successfull.", data = dto });
 	}
 
-	// Ràng buộc id bắt buộc phải là chuẩn Guid
 	[HttpPut("{id}")]
 	public async Task<IActionResult> UpdateDepartment(Guid id, [FromBody] DepartmentUpdateDto dto)
 	{
+		if (string.IsNullOrWhiteSpace(dto.Name))
+			return BadRequest(new { message = "The department Name is required." });
+
 		if (!ModelState.IsValid)
 			return BadRequest(ModelState);
 
@@ -71,7 +67,6 @@ public class DepartmentController : ControllerBase
 		return Ok(new { message = "Room assignment update successful.." });
 	}
 
-	// Ràng buộc id bắt buộc phải là chuẩn Guid
 	[HttpDelete("{id}")]
 	public async Task<IActionResult> DeleteDepartment(Guid id)
 	{

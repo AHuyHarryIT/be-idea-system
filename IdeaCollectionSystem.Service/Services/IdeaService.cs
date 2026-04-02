@@ -545,11 +545,8 @@ namespace IdeaCollectionSystem.Service.Services
 			var hasViewed = await _context.IdeaViews
 								  .AnyAsync(v => v.IdeaId == id && v.UserId == userId);
 
-			var userExists = await _context.Set<IdeaUser>().AnyAsync(u => u.Id == userId);
-
-			if (!hasViewed && userExists)
+			if (!hasViewed)
 			{
-		
 				var newViewRecord = new IdeaCollectionSystem.ApplicationCore.Entitites.IdeaView
 				{
 					IdeaId = id,

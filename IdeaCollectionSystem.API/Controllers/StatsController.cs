@@ -7,7 +7,7 @@ namespace IdeaCollectionSystem.API.Controllers
 {
 	[Route("api/stats")]
 	[ApiController]
-	[Authorize(Roles = RoleConstants.QAManager)] 
+	[Authorize] 
 	public class StatsController : ControllerBase
 	{
 		private readonly IStatsService _statsService;

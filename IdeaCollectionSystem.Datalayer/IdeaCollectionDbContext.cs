@@ -145,8 +145,15 @@ namespace IdeaCollectionSystem.Datalayer
 			#endregion
 
 			#region IdeaView
-			modelBuilder.Entity<IdeaView>()
-		.HasKey(v => new { v.IdeaId, v.UserId });
+			modelBuilder.Entity<IdeaView>(entity =>
+			{
+				entity.ToTable("IdeaViews");
+				entity.HasKey(v => new { v.IdeaId, v.UserId });
+				entity.HasOne(v => v.User)
+					  .WithMany()
+					  .HasForeignKey(v => v.UserId)
+					  .OnDelete(DeleteBehavior.Cascade);
+			});
 
 			modelBuilder.Entity<TermVersion>(entity =>
 			{

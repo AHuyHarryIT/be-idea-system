@@ -60,7 +60,8 @@ namespace IdeaCollectionSystem.MVC.Controllers
 		{
 			try
 			{
-				await _userService.UpdateUserRoleAsync(userId, role);
+				var request = new UpdateUserRequest { Role = role };
+				await _userService.UpdateUserAsync(userId, request);
 				TempData["Success"] = "User role updated successfully.";
 			}
 			catch (Exception ex)
@@ -70,12 +71,6 @@ namespace IdeaCollectionSystem.MVC.Controllers
 			return RedirectToAction(nameof(Users));
 		}
 
-		//  IDEAS VIEW 
-		//public async Task<IActionResult> AllIdeas()
-		//{
-		//	var ideas = await _ideaService.GetAllIdeasAsync();
-		//	return View(ideas);
-		//}
 
 		//  CATEGORIES MANAGEMENT 
 		public async Task<IActionResult> Categories()

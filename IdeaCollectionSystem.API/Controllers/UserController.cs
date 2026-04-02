@@ -4,7 +4,7 @@ using IdeaCollectionSystem.Service.Models.DTOs;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using System.Security.Claims; 
+using System.Security.Claims;
 
 namespace IdeaCollectionSystem.API.Controllers
 {
@@ -23,6 +23,7 @@ namespace IdeaCollectionSystem.API.Controllers
 			userService = qaService;
 			_userManager = userManager;
 		}
+
 		// GET: api/user
 		[HttpGet]
 		public async Task<IActionResult> GetUsers()
@@ -31,40 +32,34 @@ namespace IdeaCollectionSystem.API.Controllers
 			return Ok(new
 			{
 				Users = users,
-				AvailableRoles = RoleConstants.GetAllRoles() 
+				AvailableRoles = RoleConstants.GetAllRoles()
 			});
 		}
-
 
 		// POST: api/user
 		[HttpPost]
 		public async Task<IActionResult> CreateUser([FromBody] CreateUserRequest request)
 		{
-			var validRoles = new List<string>
-			{
-				RoleConstants.Administrator,
-				RoleConstants.QAManager,
-				RoleConstants.QACoordinator,
-				RoleConstants.Staff
-			};
-
-			if (!validRoles.Contains(request.Role))
-			{
-				return BadRequest(new { message = $"Invalid role. Accepted roles are: {string.Join(", ", validRoles)}" });
-			}
 			var existingUser = await _userManager.FindByEmailAsync(request.Email);
 			if (existingUser != null)
 				return BadRequest(new { message = "This email address has already been used." });
+
+			var roleToAssign = string.IsNullOrWhiteSpace(request.Role) ? RoleConstants.Staff : request.Role;
+
+			// Validate Role before proceeding
+			if (!RoleConstants.GetAllRoles().Contains(roleToAssign))
+			{
+				return BadRequest(new { message = $"Invalid role provided: '{roleToAssign}'." });
+			}
 
 			var user = new IdeaUser
 			{
 				UserName = request.Email,
 				Email = request.Email,
 				Name = request.Name,
-				DepartmentId = request.DepartmentId 
+				DepartmentId = request.DepartmentId
 			};
 
-			// Tạo user với mật khẩu mặc định
 			var result = await _userManager.CreateAsync(user, request.Password);
 			if (!result.Succeeded)
 			{
@@ -72,44 +67,56 @@ namespace IdeaCollectionSystem.API.Controllers
 				return BadRequest(new { message = "Account creation failed.", errors });
 			}
 
-
-			var roleToAssign = string.IsNullOrWhiteSpace(request.Role) ? RoleConstants.Staff : request.Role;
 			await _userManager.AddToRoleAsync(user, roleToAssign);
 
-			return Ok(new { message = "Account created successfully." });
+			return Ok(new { message = "Account created successfully.", id = user.Id });
 		}
 
 		// PUT: api/users/{id}
-		[HttpPut("{id}")]
-		[Authorize(Roles = RoleConstants.Administrator)]
-		public async Task<IActionResult> UpdateUser([FromRoute] string id, [FromBody] UpdateUserRequest request)
+		//[HttpPut("{id}")]
+		//public async Task<IActionResult> UpdateUser([FromRoute] string id, [FromBody] UpdateUserRequest request)
+		//{
+		//	// Xóa validation bắt buộc, cho phép Partial Update thực sự
+		//	try
+		//	{
+		//		var result = await userService.UpdateUserAsync(id, request);
+
+		//		if (result)
+		//		{
+		//			return Ok(new { message = "User information updated successfully." });
+		//		}
+
+		//		return BadRequest(new { message = "Failed to update user." });
+		//	}
+		//	catch (Exception ex)
+		//	{
+		//		return BadRequest(new { message = ex.Message });
+		//	}
+		//}
+
+		// PUT: api/users/{id}/role - Dedicated role update route expected by frontend
+		[HttpPut("{id}/role")]
+		public async Task<IActionResult> UpdateUserRole([FromRoute] string id, [FromBody] UpdateUserRequest request)
 		{
+			if (string.IsNullOrWhiteSpace(request.Role))
+				return BadRequest(new { message = "The role cannot be left blank." });
 
 			try
 			{
-				var result = await userService.UpdateUserAsync(id, request);
-
-				if (result)
-				{
-					return Ok(new { message = "User information updated successfully." });
-				}
-
-				return BadRequest(new { message = "Failed to update user (Unknown error)." });
+				var result = await userService.UpdateUserAsync(id, new UpdateUserRequest { Role = request.Role });
+				if (result) return Ok(new { message = "Permissions successfully updated." });
+				return BadRequest(new { message = "Failed to update role." });
 			}
 			catch (Exception ex)
 			{
-			
 				return BadRequest(new { message = ex.Message });
 			}
 		}
 
-
-		// DELETE: api/user/delete/{id}
-		[HttpDelete("{id}")] 
-		[Authorize(Roles = RoleConstants.Administrator)]
+		// DELETE: api/users/{id}
+		[HttpDelete("{id}")]
 		public async Task<IActionResult> DeleteUser(string id)
 		{
-
 			var currentLoggedInUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
 			if (currentLoggedInUserId == id)
 			{
@@ -143,5 +150,4 @@ namespace IdeaCollectionSystem.API.Controllers
 			return BadRequest(new { message = "An error occurred while deleting this user's data. They might have related records in the system." });
 		}
 	}
-
 }

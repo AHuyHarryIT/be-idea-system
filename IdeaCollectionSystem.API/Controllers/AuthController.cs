@@ -34,24 +34,26 @@ namespace IdeaCollectionSystem.API.Controllers
 		[HttpPost("login")]
 		public async Task<IActionResult> Login([FromBody] LoginRequestDto request)
 		{
+	
 			if (string.IsNullOrWhiteSpace(request.Email) || string.IsNullOrWhiteSpace(request.Password))
 			{
-				return BadRequest(new { message = "Email and Password are required." });
+				return BadRequest(new { message = "Email and password are required fields." });
 			}
 
 			var user = await _userManager.FindByEmailAsync(request.Email);
+			if (user == null)
+				return Unauthorized(new { message = "Email or password not match." });
 
-			if (user == null || !await _userManager.CheckPasswordAsync(user, request.Password))
-			{
-				return Unauthorized(new { message = "Invalid email or password." });
-			}
+
+			var isPasswordValid = await _userManager.CheckPasswordAsync(user, request.Password);
+			if (!isPasswordValid)
+				return Unauthorized(new { message = "Email or password not match." });
 
 			var roles = await _userManager.GetRolesAsync(user);
 			var singleRole = roles.FirstOrDefault() ?? "";
 
 			var accessToken = GenerateJwtToken(user, roles);
 
-		
 			return Ok(new
 			{
 				access_token = accessToken,
@@ -59,22 +61,20 @@ namespace IdeaCollectionSystem.API.Controllers
 				{
 					id = user.Id,
 					email = user.Email,
-					name = user.Name, // Chú ý: Đảm bảo biến user.Name không bị null
+					name = user.Name,
 					departmentId = user.DepartmentId,
 					role = singleRole
 				}
 			});
 		}
 
-
-		//  GenerateJwtToken
 		private string GenerateJwtToken(IdeaUser user, IList<string> roles)
 		{
 			var claims = new List<Claim>
 			{
-				new Claim(JwtRegisteredClaimNames.Sub, user.Id), 
-                new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()), 
-                new Claim(ClaimTypes.NameIdentifier, user.Id),
+				new Claim(JwtRegisteredClaimNames.Sub, user.Id),
+				new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
+				new Claim(ClaimTypes.NameIdentifier, user.Id),
 				new Claim(ClaimTypes.Email, user.Email!),
 				new Claim(ClaimTypes.Name, user.Name ?? "")
 			};

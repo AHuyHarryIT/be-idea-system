@@ -8,7 +8,7 @@ namespace IdeaCollectionSystem.API.Controllers
 {
 	[Route("api/submissions")]
 	[ApiController]
-	[Authorize] 
+	[Authorize]
 	public class SubmissionController : ControllerBase
 	{
 		private readonly ISubmissionService _submissionService;
@@ -18,7 +18,6 @@ namespace IdeaCollectionSystem.API.Controllers
 			_submissionService = submissionService;
 		}
 
-		//  GET: ClosureDates
 		[HttpGet]
 		public async Task<IActionResult> GetClosureDates()
 		{
@@ -38,33 +37,32 @@ namespace IdeaCollectionSystem.API.Controllers
 			}
 		}
 
-		//  POST: CreateSubmission
 		[HttpPost]
 		[Authorize(Roles = RoleConstants.Administrator + "," + RoleConstants.QAManager)]
 		public async Task<IActionResult> CreateSubmission([FromBody] SubmissionCreateDto dto)
 		{
 			if (dto.FinalClosureDate < dto.ClosureDate)
 			{
-				return BadRequest(new { message = "Final Closure Date must be exactly on or after the Closure Date." });
+				return BadRequest(new { message = "Final Closure Date must be greater than or equal to Closure Date." });
 			}
+
 			await _submissionService.CreateSubmissionAsync(dto);
 			return Ok(new { message = "Create a successful submission period." });
 		}
 
-		//  PUT: UpdateSubmission
 		[HttpPut("{id}")]
 		[Authorize(Roles = RoleConstants.Administrator + "," + RoleConstants.QAManager)]
 		public async Task<IActionResult> UpdateSubmission([FromRoute] Guid id, [FromBody] SubmissionCreateDto dto)
 		{
 			if (dto.FinalClosureDate < dto.ClosureDate)
 			{
-				return BadRequest(new { message = "Final Closure Date must be exactly on or after the Closure Date." });
+				return BadRequest(new { message = "Final Closure Date must be greater than or equal to Closure Date." });
 			}
+
 			await _submissionService.UpdateSubmissionAsync(id, dto);
 			return Ok(new { message = "The submission period has been updated as successful." });
 		}
 
-		//  DELETE: DeleteSubmission
 		[HttpDelete("{id}")]
 		[Authorize(Roles = RoleConstants.Administrator + "," + RoleConstants.QAManager)]
 		public async Task<IActionResult> DeleteSubmission(Guid id)
