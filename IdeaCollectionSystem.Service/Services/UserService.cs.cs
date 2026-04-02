@@ -50,21 +50,52 @@ namespace IdeaCollectionSystem.Service.Services
 			return result;
 		}
 
-		// Update user information 
+
+		// Create user
+		public async Task<string> CreateUserAsync(CreateUserRequest request, string roleToAssign)
+		{
+			var existingUser = await _userManager.FindByEmailAsync(request.Email);
+			if (existingUser != null)
+				throw new Exception("This email address has already been used.");
+
+			var user = new IdeaUser
+			{
+				UserName = request.Email,
+				Email = request.Email,
+				Name = request.Name,
+				DepartmentId = request.DepartmentId
+			};
+
+
+			var result = await _userManager.CreateAsync(user, request.Password);
+			if (!result.Succeeded)
+			{
+				var errors = string.Join(", ", result.Errors.Select(e => e.Description));
+				throw new Exception($"Account creation failed. Errors: {errors}");
+			}
+
+			await _userManager.AddToRoleAsync(user, roleToAssign);
+
+			return user.Id;
+		}
+
+		// Update user 
 		public async Task<bool> UpdateUserAsync(string userId, UpdateUserRequest request)
 		{
 			var user = await _userManager.FindByIdAsync(userId);
 			if (user == null)
 				throw new Exception("User not found in the system.");
 
-			
+
 			if (!string.IsNullOrWhiteSpace(request.Name))
 			{
 				user.Name = request.Name;
 			}
 
-			// Đảm bảo xử lý Department (nếu Frontend gửi rỗng hoặc null thì set null)
-			user.DepartmentId = request.DepartmentId;
+			if (request.DepartmentId.HasValue && request.DepartmentId.Value != Guid.Empty)
+			{
+				user.DepartmentId = request.DepartmentId.Value;
+			}
 
 			var updateResult = await _userManager.UpdateAsync(user);
 			if (!updateResult.Succeeded)
@@ -73,11 +104,10 @@ namespace IdeaCollectionSystem.Service.Services
 				throw new Exception($"Failed to update user data: {errors}");
 			}
 
-
+			
 			if (!string.IsNullOrWhiteSpace(request.Role))
 			{
 				var currentRoles = await _userManager.GetRolesAsync(user);
-
 
 				if (currentRoles.Any())
 				{
@@ -88,7 +118,7 @@ namespace IdeaCollectionSystem.Service.Services
 				if (!roleResult.Succeeded)
 				{
 					var errors = string.Join(", ", roleResult.Errors.Select(e => e.Description));
-					throw new Exception($"Failed to update user role. Make sure the role '{request.Role}' exists. Errors: {errors}");
+					throw new Exception($"Failed to update user role. Errors: {errors}");
 				}
 			}
 

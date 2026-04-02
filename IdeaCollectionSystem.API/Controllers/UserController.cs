@@ -1,6 +1,7 @@
 ﻿using IdeaCollectionIdea.Common.Constants;
 using IdeaCollectionSystem.Service.Interfaces;
 using IdeaCollectionSystem.Service.Models.DTOs;
+using IdeaCollectionSystem.ApplicationCore.Entitites; // Cần đảm bảo có using entity chứa IdeaUser
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -24,7 +25,24 @@ namespace IdeaCollectionSystem.API.Controllers
 			_userManager = userManager;
 		}
 
-		// GET: api/user
+		#region HELPER METHOD
+		// Hàm phiên dịch: Chuyển role rác từ Frontend thành Role chuẩn của Backend
+		private string MapRoleFromFrontend(string frontendRole)
+		{
+			if (string.IsNullOrWhiteSpace(frontendRole)) return "";
+
+			var role = frontendRole.Trim().ToUpper();
+
+			if (role == "QA COORDINATOR") return RoleConstants.QACoordinator;
+			if (role == "QA MANAGER") return RoleConstants.QAManager;
+			if (role == "ADMINISTRATOR" || role == "SYSTEM ADMINISTRATOR") return RoleConstants.Administrator;
+			if (role == "STAFF") return RoleConstants.Staff;
+
+			return frontendRole; // Trả về nguyên gốc nếu không khớp để validate bên dưới tự bắt lỗi
+		}
+		#endregion
+
+		// GET: api/users
 		[HttpGet]
 		public async Task<IActionResult> GetUsers()
 		{
@@ -36,76 +54,53 @@ namespace IdeaCollectionSystem.API.Controllers
 			});
 		}
 
-		// POST: api/user
+		// POST: api/users
 		[HttpPost]
 		public async Task<IActionResult> CreateUser([FromBody] CreateUserRequest request)
 		{
-			var existingUser = await _userManager.FindByEmailAsync(request.Email);
-			if (existingUser != null)
-				return BadRequest(new { message = "This email address has already been used." });
+			var rawRole = string.IsNullOrWhiteSpace(request.Role) ? RoleConstants.Staff : request.Role;
+			var roleToAssign = MapRoleFromFrontend(rawRole);
 
-			var roleToAssign = string.IsNullOrWhiteSpace(request.Role) ? RoleConstants.Staff : request.Role;
-
-			// Validate Role before proceeding
 			if (!RoleConstants.GetAllRoles().Contains(roleToAssign))
 			{
-				return BadRequest(new { message = $"Invalid role provided: '{roleToAssign}'." });
+				return BadRequest(new { message = $"Invalid role provided: '{request.Role}'." });
 			}
-
-			var user = new IdeaUser
-			{
-				UserName = request.Email,
-				Email = request.Email,
-				Name = request.Name,
-				DepartmentId = request.DepartmentId
-			};
-
-			var result = await _userManager.CreateAsync(user, request.Password);
-			if (!result.Succeeded)
-			{
-				var errors = result.Errors.Select(e => e.Description);
-				return BadRequest(new { message = "Account creation failed.", errors });
-			}
-
-			await _userManager.AddToRoleAsync(user, roleToAssign);
-
-			return Ok(new { message = "Account created successfully.", id = user.Id });
-		}
-
-		// PUT: api/users/{id}
-		//[HttpPut("{id}")]
-		//public async Task<IActionResult> UpdateUser([FromRoute] string id, [FromBody] UpdateUserRequest request)
-		//{
-		//	// Xóa validation bắt buộc, cho phép Partial Update thực sự
-		//	try
-		//	{
-		//		var result = await userService.UpdateUserAsync(id, request);
-
-		//		if (result)
-		//		{
-		//			return Ok(new { message = "User information updated successfully." });
-		//		}
-
-		//		return BadRequest(new { message = "Failed to update user." });
-		//	}
-		//	catch (Exception ex)
-		//	{
-		//		return BadRequest(new { message = ex.Message });
-		//	}
-		//}
-
-		// PUT: api/users/{id}/role - Dedicated role update route expected by frontend
-		[HttpPut("{id}/role")]
-		public async Task<IActionResult> UpdateUserRole([FromRoute] string id, [FromBody] UpdateUserRequest request)
-		{
-			if (string.IsNullOrWhiteSpace(request.Role))
-				return BadRequest(new { message = "The role cannot be left blank." });
 
 			try
 			{
-				var result = await userService.UpdateUserAsync(id, new UpdateUserRequest { Role = request.Role });
-				if (result) return Ok(new { message = "Permissions successfully updated." });
-				return BadRequest(new { message = "Failed to update role." });
+				var newUserId = await userService.CreateUserAsync(request, roleToAssign);
+				return Ok(new { message = "Account created successfully.", id = newUserId });
+			}
+			catch (Exception ex)
+			{
+				
+				return BadRequest(new { message = ex.Message });
+			}
+		}
+		// PUT: api/users/{id}
+		[HttpPut("{id}")]
+		public async Task<IActionResult> UpdateUser([FromRoute] string id, [FromBody] UpdateUserRequest request)
+		{
+			if (!string.IsNullOrWhiteSpace(request.Role))
+			{
+				request.Role = MapRoleFromFrontend(request.Role);
+
+				if (!RoleConstants.GetAllRoles().Contains(request.Role))
+				{
+					return BadRequest(new { message = $"Role '{request.Role}' does not exist." });
+				}
+			}
+
+			try
+			{
+				var result = await userService.UpdateUserAsync(id, request);
+
+				if (result)
+				{
+					return Ok(new { message = "User information updated successfully." });
+				}
+
+				return BadRequest(new { message = "Failed to update user." });
 			}
 			catch (Exception ex)
 			{
