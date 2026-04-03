@@ -243,6 +243,36 @@ namespace IdeaCollectionSystem.Service.Services
 				query = query.Where(i => i.Title.ToLower().Contains(search) || i.Description.ToLower().Contains(search));
 			}
 
+			if (!string.IsNullOrWhiteSpace(parameters.IdeaKeyword))
+			{
+				var ideaKeyword = parameters.IdeaKeyword.ToLower().Trim();
+				query = query.Where(i => i.Title.ToLower().Contains(ideaKeyword) || i.Description.ToLower().Contains(ideaKeyword));
+			}
+
+			if (!string.IsNullOrWhiteSpace(parameters.CategoryKeyword))
+			{
+				var categoryKeyword = parameters.CategoryKeyword.ToLower().Trim();
+				query = query.Where(i => i.Category != null && i.Category.Name.ToLower().Contains(categoryKeyword));
+			}
+
+			if (!string.IsNullOrWhiteSpace(parameters.DepartmentKeyword))
+			{
+				var departmentKeyword = parameters.DepartmentKeyword.ToLower().Trim();
+				query = query.Where(i => i.Department != null && i.Department.Name.ToLower().Contains(departmentKeyword));
+			}
+
+			if (!string.IsNullOrWhiteSpace(parameters.SubmissionKeyword))
+			{
+				var submissionKeyword = parameters.SubmissionKeyword.ToLower().Trim();
+				query = query.Where(i => i.Submission != null && i.Submission.Name.ToLower().Contains(submissionKeyword));
+			}
+
+			if (parameters.IdeaId.HasValue && parameters.IdeaId.Value != Guid.Empty)
+				query = query.Where(i => i.Id == parameters.IdeaId.Value);
+
+			if (parameters.CategoryId.HasValue && parameters.CategoryId.Value != Guid.Empty)
+				query = query.Where(i => i.CategoryId == parameters.CategoryId.Value);
+
 			// Lọc theo Submission (nếu có)
 			if (parameters.SubmissionId.HasValue && parameters.SubmissionId.Value != Guid.Empty)
 				query = query.Where(i => i.SubmissionId == parameters.SubmissionId.Value);
@@ -383,7 +413,52 @@ namespace IdeaCollectionSystem.Service.Services
 			idea.UpdatedAt = DateTime.UtcNow;
 
 			_context.Ideas.Update(idea);
-			return await _context.SaveChangesAsync() > 0;
+			var isUpdated = await _context.SaveChangesAsync() > 0;
+
+			if (isUpdated && (reviewDto.Status == ReviewStatus.APPROVED || reviewDto.Status == ReviewStatus.REJECTED))
+			{
+				await SendReviewNotificationEmailAsync(idea, reviewDto.Status, reviewDto.Note);
+			}
+
+			return isUpdated;
+		}
+
+		private async Task SendReviewNotificationEmailAsync(Idea idea, ReviewStatus reviewStatus, string? note)
+		{
+			var submitter = await _userManager.FindByIdAsync(idea.UserId);
+			if (submitter == null || string.IsNullOrWhiteSpace(submitter.Email))
+			{
+				return;
+			}
+
+			string subject = string.Empty;
+			string body = string.Empty;
+
+			if (reviewStatus == ReviewStatus.APPROVED)
+			{
+				subject = $"[Thông báo] Ý tưởng '{idea.Title}' đã được PHÊ DUYỆT";
+				body = $@"
+					<h3>Chúc mừng bạn!</h3>
+					<p>Ý tưởng <b>{idea.Title}</b> của bạn đã được ban quản trị phê duyệt.</p>
+					<p>Cảm ơn bạn đã đóng góp cho hệ thống!</p>";
+			}
+			else if (reviewStatus == ReviewStatus.REJECTED)
+			{
+				subject = $"[Thông báo] Ý tưởng '{idea.Title}' đã bị TỪ CHỐI";
+				body = $@"
+					<h3>Rất tiếc!</h3>
+					<p>Ý tưởng <b>{idea.Title}</b> của bạn không được phê duyệt vào lúc này.</p>
+					{(string.IsNullOrWhiteSpace(note) ? "" : $"<p><b>Lý do:</b> {note}</p>")}
+					<p>Đừng nản lòng, hãy tiếp tục đóng góp những ý tưởng khác nhé.</p>";
+			}
+
+			try
+			{
+				await _emailService.SendEmailAsync(submitter.Email, subject, body);
+			}
+			catch
+			{
+			}
 		}
 
 		// GET IDEAS WITHOUT COMMENT
@@ -586,6 +661,40 @@ namespace IdeaCollectionSystem.Service.Services
 			{
 				var search = parameters.SearchTerm.ToLower().Trim();
 				query = query.Where(i => i.Title.ToLower().Contains(search) || i.Description.ToLower().Contains(search));
+			}
+
+			if (!string.IsNullOrWhiteSpace(parameters.IdeaKeyword))
+			{
+				var ideaKeyword = parameters.IdeaKeyword.ToLower().Trim();
+				query = query.Where(i => i.Title.ToLower().Contains(ideaKeyword) || i.Description.ToLower().Contains(ideaKeyword));
+			}
+
+			if (!string.IsNullOrWhiteSpace(parameters.CategoryKeyword))
+			{
+				var categoryKeyword = parameters.CategoryKeyword.ToLower().Trim();
+				query = query.Where(i => i.Category != null && i.Category.Name.ToLower().Contains(categoryKeyword));
+			}
+
+			if (!string.IsNullOrWhiteSpace(parameters.DepartmentKeyword))
+			{
+				var departmentKeyword = parameters.DepartmentKeyword.ToLower().Trim();
+				query = query.Where(i => i.Department != null && i.Department.Name.ToLower().Contains(departmentKeyword));
+			}
+
+			if (!string.IsNullOrWhiteSpace(parameters.SubmissionKeyword))
+			{
+				var submissionKeyword = parameters.SubmissionKeyword.ToLower().Trim();
+				query = query.Where(i => i.Submission != null && i.Submission.Name.ToLower().Contains(submissionKeyword));
+			}
+
+			if (parameters.IdeaId.HasValue && parameters.IdeaId.Value != Guid.Empty)
+			{
+				query = query.Where(i => i.Id == parameters.IdeaId.Value);
+			}
+
+			if (parameters.CategoryId.HasValue && parameters.CategoryId.Value != Guid.Empty)
+			{
+				query = query.Where(i => i.CategoryId == parameters.CategoryId.Value);
 			}
 
 			if (parameters.SubmissionId.HasValue && parameters.SubmissionId.Value != Guid.Empty)
