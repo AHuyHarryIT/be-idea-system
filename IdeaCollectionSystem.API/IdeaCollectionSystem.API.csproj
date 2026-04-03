@@ -21,4 +21,8 @@
 		<ProjectReference Include="..\IdeaCollectionSystem.Service\IdeaCollectionSystem.Service.csproj" />
 	</ItemGroup>
 
+	<ItemGroup>
+	  <Folder Include="wwwroot\uploads\" />
+	</ItemGroup>
+
 </Project>

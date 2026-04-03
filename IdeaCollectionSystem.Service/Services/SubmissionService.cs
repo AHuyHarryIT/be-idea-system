@@ -19,15 +19,12 @@ namespace IdeaCollectionSystem.Service.Services
 		{
 			var query = _context.Submissions.AsNoTracking();
 
-			// 1. Áp dụng Search (Ví dụ: tìm theo Tên của đợt Submission nếu DB của bạn có cột Name)
-			// Nếu Submission của bạn không có cột Name, bạn có thể xóa khối if này đi.
 			if (!string.IsNullOrWhiteSpace(filter.SearchTerm))
 			{
 				var search = filter.SearchTerm.ToLower().Trim();
 				query = query.Where(s => s.Name.ToLower().Contains(search));
 			}
 
-			// 2. Count tổng số lượng record
 			var totalCount = await query.CountAsync();
 
 			// 3. Phân trang (Sắp xếp theo Ngày đóng đợt - Mới nhất xếp trên)
@@ -42,6 +39,7 @@ namespace IdeaCollectionSystem.Service.Services
 			{
 				Id = s.Id,
 				Name = s.Name,
+				Description = s.Description,
 				ClosureDate = s.ClosureDate,
 				FinalClosureDate = s.FinalClosureDate
 			}).ToList();

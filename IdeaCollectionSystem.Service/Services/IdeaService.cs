@@ -37,11 +37,13 @@ namespace IdeaCollectionSystem.Service.Services
 
 			bool canComment = idea.Submission != null && DateTime.UtcNow <= idea.Submission.FinalClosureDate;
 
+			var baseUrl = "https://ideacollectionsystemapi20260313215839-brd4bqdwfbgeg7fj.southeastasia-01.azurewebsites.net";
+
 			var dto = new IdeaInfoDto
 			{
 				Id = idea.Id,
 				Title = idea.Title,
-				Description = idea.Description, 
+				Description = idea.Description,
 				CategoryName = idea.Category?.Name ?? "No Category",
 				DepartmentName = idea.Department?.Name ?? "",
 				AuthorName = author,
@@ -54,7 +56,14 @@ namespace IdeaCollectionSystem.Service.Services
 				CommentCount = idea.Comments?.Count ?? 0,
 				CanComment = canComment,
 
-			
+				Documents = idea.IdeaDocuments?.Select(d => new DocumentDto
+				{
+					Id = d.Id,
+					FileName = d.OriginalFileName,
+					FileUrl = baseUrl + d.StoredPath
+
+				}).ToList() ?? new List<DocumentDto>(),
+
 				Comments = idea.Comments?.Select(c => new CommentDto
 				{
 					Id = c.Id,
@@ -69,9 +78,6 @@ namespace IdeaCollectionSystem.Service.Services
 		}
 		
 		#endregion
-
-
-
 		// Check  Closure date
 		public async Task<bool> IsClosureDatePassedAsync()
 		{
@@ -147,31 +153,49 @@ namespace IdeaCollectionSystem.Service.Services
 			if (dto.UploadedFiles != null && dto.UploadedFiles.Any())
 			{
 				var allowedExtensions = new[] { ".pdf" };
-				var maxFileSize = 5 * 1024 * 1024;
+				var maxFileSize = 5 * 1024 * 1024; // 5MB
+
 				var uploadFolder = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads");
 
-				if (!Directory.Exists(uploadFolder)) Directory.CreateDirectory(uploadFolder);
+				if (!Directory.Exists(uploadFolder))
+				{
+					Directory.CreateDirectory(uploadFolder);
+				}
 
 				foreach (var file in dto.UploadedFiles)
 				{
-					if (file.Length > maxFileSize) throw new Exception($"File '{file.FileName}' exceeds the 5MB size limit.");
+					if (file.Length > maxFileSize)
+						throw new Exception($"File '{file.FileName}' exceeds the 5MB size limit.");
 
 					var extension = Path.GetExtension(file.FileName).ToLowerInvariant();
-					if (string.IsNullOrEmpty(extension) || !allowedExtensions.Contains(extension))
+					if (string.IsNullOrEmpty(extension) ||
+						!allowedExtensions.Contains(extension) ||
+						file.ContentType.ToLower() != "application/pdf")
+					{
 						throw new Exception($"File '{file.FileName}' is invalid. Only PDF files are allowed.");
+					}
 
-					if (file.ContentType.ToLower() != "application/pdf")
-						throw new Exception($"The content of file '{file.FileName}' is not a valid PDF.");
+					var uniqueFileName = $"{Guid.NewGuid()}_{file.FileName}";
 
-					var uniqueFileName = Guid.NewGuid().ToString() + "_" + file.FileName;
-					var filePathString = Path.Combine(uploadFolder, uniqueFileName);
+			
+					var physicalPath = Path.Combine(uploadFolder, uniqueFileName);
 
-					using (var fileStream = new FileStream(filePathString, FileMode.Create))
+	
+					var relativeHttpPath = $"/uploads/{uniqueFileName}";
+
+					using (var fileStream = new FileStream(physicalPath, FileMode.Create))
 					{
 						await file.CopyToAsync(fileStream);
 					}
 
-					var ideaDocument = new IdeaDocument { Id = Guid.NewGuid(), IdeaId = idea.Id, OriginalFileName = file.FileName, StoredPath = filePathString };
+					var ideaDocument = new IdeaDocument
+					{
+						Id = Guid.NewGuid(),
+						IdeaId = idea.Id,
+						OriginalFileName = file.FileName,
+						StoredPath = relativeHttpPath
+					};
+
 					await _context.IdeaDocuments.AddAsync(ideaDocument);
 				}
 			}
@@ -235,6 +259,7 @@ namespace IdeaCollectionSystem.Service.Services
 				.Include(i => i.Comments)
 					.ThenInclude(c => c.User)
 				.Include(i => i.IdeaReactions)
+				.Include(i => i.IdeaDocuments)
 				.AsQueryable();
 
 			if (!string.IsNullOrWhiteSpace(parameters.SearchTerm))
@@ -243,11 +268,11 @@ namespace IdeaCollectionSystem.Service.Services
 				query = query.Where(i => i.Title.ToLower().Contains(search) || i.Description.ToLower().Contains(search));
 			}
 
-			// Lọc theo Submission (nếu có)
+			// Lọc theo Submission 
 			if (parameters.SubmissionId.HasValue && parameters.SubmissionId.Value != Guid.Empty)
 				query = query.Where(i => i.SubmissionId == parameters.SubmissionId.Value);
 
-			// 2. XỬ LÝ QUYỀN VÀ LỌC TRẠNG THÁI / PHÒNG BAN CHUẨN XÁC
+			// 2. XỬ LÝ QUYỀN VÀ LỌC TRẠNG THÁI 
 			if (isAdminOrQAManager)
 			{
 				// Admin & QA Manager: Thấy TẤT CẢ phòng ban, TẤT CẢ trạng thái (tuỳ chọn filter)
@@ -259,7 +284,6 @@ namespace IdeaCollectionSystem.Service.Services
 			}
 			else if (isQACoordinator)
 			{
-				// QA Coordinator: CHỈ THẤY phòng ban của mình (dept only), nhưng thấy TẤT CẢ trạng thái để duyệt
 				query = query.Where(i => i.DepartmentId == user.DepartmentId);
 
 				if (parameters.ReviewStatus.HasValue)
@@ -345,7 +369,7 @@ namespace IdeaCollectionSystem.Service.Services
 				.Include(i => i.Department)
 				.Include(i => i.Submission)
 				.Include(i => i.Comments)
-				.Include(i => i.IdeaReactions) // Đã thêm Include
+				.Include(i => i.IdeaReactions)
 				.Where(i => i.UserId == userId)
 				.OrderByDescending(i => i.CreatedAt)
 				.ToListAsync();
@@ -605,7 +629,7 @@ namespace IdeaCollectionSystem.Service.Services
 			}
 
 			var hasViewed = await _context.IdeaViews
-								  .AnyAsync(v => v.IdeaId == id && v.UserId == userId);
+					 .AnyAsync(v => v.IdeaId == id && v.UserId == userId);
 
 			if (!hasViewed)
 			{
@@ -637,6 +661,7 @@ namespace IdeaCollectionSystem.Service.Services
 				.Include(i => i.Comments)
 					.ThenInclude(c => c.User)
 				.Include(i => i.IdeaReactions)
+				.Include(i => i.IdeaDocuments)
 				.AsQueryable();
 			query = query.Where(i => i.UserId == userId);
 

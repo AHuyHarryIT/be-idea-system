@@ -25,6 +25,13 @@ public class IdeaInfoDto
 
 	public List<CommentDto> Comments { get; set; } = new List<CommentDto>();
 
+	public List<DocumentDto> Documents { get; set; } = new List<DocumentDto>();
 
 }
 
+public class DocumentDto
+{
+	public Guid Id { get; set; }
+	public string FileName { get; set; }
+	public string FileUrl { get; set; } 
+}

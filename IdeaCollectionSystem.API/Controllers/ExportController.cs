@@ -17,7 +17,7 @@ namespace IdeaCollectionSystem.API.Controllers
 			_exportService = exportService;
 		}
 
-		// 1. Tải CSV (TẤT CẢ)
+		// 1. Tải CSV 
 		[HttpGet("csv")]
 		public async Task<IActionResult> ExportCsv()
 		{
@@ -28,7 +28,7 @@ namespace IdeaCollectionSystem.API.Controllers
 			return File(data, "text/csv", $"Ideas_{DateTime.UtcNow:yyyyMMdd_HHmm}.csv");
 		}
 
-		// 2. Tải ZIP (TẤT CẢ)
+		// 2. Tải ZIP 
 		[HttpGet("zip")]
 		public async Task<IActionResult> ExportZip()
 		{
@@ -56,10 +56,9 @@ namespace IdeaCollectionSystem.API.Controllers
 		[HttpGet("zip/{submissionId}")]
 		public async Task<IActionResult> DownloadDocumentsAsZipBySubmission(Guid submissionId)
 		{
-			// Đẩy việc tìm Database và nén ZIP xuống cho Service làm
+			
 			var fileBytes = await _exportService.ExportDocumentsBySubmissionToZipAsync(submissionId);
 
-			//  Nếu mảng byte rỗng -> đá văng, không cho tải file lỗi
 			if (fileBytes == null || fileBytes.Length == 0)
 			{
 				return BadRequest(new { message = "There are no attached documents in this submission to download!" });

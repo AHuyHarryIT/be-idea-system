@@ -1,5 +1,4 @@
-﻿using IdeaCollectionIdea.Common.Constants;
-using IdeaCollectionSystem.ApplicationCore.Entitites.Identity;
+﻿using IdeaCollectionSystem.ApplicationCore.Entitites.Identity;
 using IdeaCollectionSystem.Datalayer;
 using IdeaCollectionSystem.Service.Interfaces;
 using IdeaCollectionSystem.Service.Services;
@@ -9,9 +8,8 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using System.IdentityModel.Tokens.Jwt;
-using System.Reflection; 
+using System.Reflection;
 using System.Text;
-using static System.Net.WebRequestMethods;
 
 AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
 
@@ -169,6 +167,8 @@ app.UseRouting();
 app.UseCors("AllowFrontend");
 
 app.UseHttpsRedirection();
+
+app.UseStaticFiles();
 
 app.UseAuthentication();
 app.UseAuthorization();
