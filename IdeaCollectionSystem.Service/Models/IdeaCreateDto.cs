@@ -27,4 +27,13 @@ namespace IdeaCollectionSystem.Service.Models.DTOs
 		public string UserId { get; set; }
 		public DateTime ViewedAt { get; set; } = DateTime.UtcNow;
 	}
+
+	public class IdeaUpdateDto
+	{
+		public string Title { get; set; }
+		public string Description { get; set; }
+		public Guid CategoryId { get; set; }
+		public bool IsAnonymous { get; set; }
+		public List<IFormFile>? UploadedFiles { get; set; } // Hỗ trợ up thêm file lúc edit
+	}
 }

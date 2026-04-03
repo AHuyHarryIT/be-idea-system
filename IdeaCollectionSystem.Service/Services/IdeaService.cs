@@ -1,11 +1,12 @@
 ﻿using IdeaCollectionIdea.Common.Constants;
-using Microsoft.Extensions.DependencyInjection;
 using IdeaCollectionSystem.ApplicationCore.Entitites;
 using IdeaCollectionSystem.Datalayer;
 using IdeaCollectionSystem.Service.Interfaces;
 using IdeaCollectionSystem.Service.Models.DTOs;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace IdeaCollectionSystem.Service.Services
 {
@@ -242,6 +243,156 @@ namespace IdeaCollectionSystem.Service.Services
 			return idea.Id;
 		}
 
+	
+
+		// UPDATE IDEA
+		public async Task<bool> UpdateIdeaAsync(Guid ideaId, IdeaUpdateDto dto, string userId)
+		{
+			var idea = await _context.Ideas
+				.Include(i => i.Submission)
+				.FirstOrDefaultAsync(i => i.Id == ideaId);
+
+			if (idea == null)
+				throw new Exception("Idea not found.");
+
+			if (idea.UserId != userId)
+				throw new UnauthorizedAccessException("You can only edit your own idea.");
+
+			if (idea.Submission == null || DateTime.UtcNow.Date > idea.Submission.ClosureDate.Date)
+				throw new Exception("The submission closure date has passed. You cannot edit this idea anymore.");
+
+
+			idea.Title = dto.Title;
+			idea.Description = dto.Description;
+			idea.CategoryId = dto.CategoryId;
+			idea.IsAnonymous = dto.IsAnonymous;
+			idea.UpdatedAt = DateTime.UtcNow;
+
+			idea.ReviewStatus = ReviewStatus.PENDING;
+
+			_context.Ideas.Update(idea);
+
+			if (dto.UploadedFiles != null && dto.UploadedFiles.Any())
+			{
+				var allowedExtensions = new[] { ".pdf" };
+				var maxFileSize = 5 * 1024 * 1024; 
+
+				var uploadFolder = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads");
+
+				if (!Directory.Exists(uploadFolder))
+				{
+					Directory.CreateDirectory(uploadFolder);
+				}
+
+				foreach (var file in dto.UploadedFiles)
+				{
+					if (file.Length > maxFileSize)
+						throw new Exception($"File '{file.FileName}' exceeds the 5MB size limit.");
+
+					var extension = Path.GetExtension(file.FileName).ToLowerInvariant();
+					if (string.IsNullOrEmpty(extension) ||
+						!allowedExtensions.Contains(extension) ||
+						file.ContentType.ToLower() != "application/pdf")
+					{
+						throw new Exception($"File '{file.FileName}' is invalid. Only PDF files are allowed.");
+					}
+
+					var uniqueFileName = $"{Guid.NewGuid()}_{file.FileName}";
+					var physicalPath = Path.Combine(uploadFolder, uniqueFileName);
+					var relativeHttpPath = $"/uploads/{uniqueFileName}";
+
+					using (var fileStream = new FileStream(physicalPath, FileMode.Create))
+					{
+						await file.CopyToAsync(fileStream);
+					}
+
+					var ideaDocument = new IdeaDocument
+					{
+						Id = Guid.NewGuid(),
+						IdeaId = idea.Id,
+						OriginalFileName = file.FileName,
+						StoredPath = relativeHttpPath
+					};
+
+					await _context.IdeaDocuments.AddAsync(ideaDocument);
+				}
+			}
+
+			await _context.SaveChangesAsync();
+
+			// 6. Background Task
+			var ideaUser = await _userManager.FindByIdAsync(userId);
+			var authorName = dto.IsAnonymous ? "An anonymous employee" : (ideaUser?.Name ?? "An employee");
+			var ideaText = idea.Title;
+			var deptId = idea.DepartmentId;
+
+			_ = Task.Run(async () =>
+			{
+				try
+				{
+					using var scope = _scopeFactory.CreateScope();
+					var userManager = scope.ServiceProvider.GetRequiredService<UserManager<IdeaUser>>();
+					var emailService = scope.ServiceProvider.GetRequiredService<IEmailService>();
+
+					var coordinators = await userManager.GetUsersInRoleAsync(RoleConstants.QACoordinator);
+					var deptCoordinator = coordinators.FirstOrDefault(u => u.DepartmentId == deptId);
+
+					if (deptCoordinator != null && !string.IsNullOrEmpty(deptCoordinator.Email))
+					{
+						string subject = "💡 [Idea System] An idea has been updated and requires re-review!";
+						string body = $@"
+                <div style='font-family: Arial, sans-serif; padding: 20px; border: 1px solid #eaeaea; border-radius: 8px;'>
+                    <h3 style='color: #2c3e50;'>Hello {deptCoordinator.Name},</h3>
+                    <p><strong>{authorName}</strong> from your Department has just updated their idea.</p>
+                    <div style='background-color: #f9f9f9; padding: 15px; border-left: 4px solid #f39c12; margin: 15px 0;'>
+                        <i>""{ideaText}""</i>
+                    </div>
+                    <p>The status has been reset to <strong>PENDING</strong>. Please log in to the system to review the changes and newly attached files.</p>
+                    <br/>
+                    <p style='font-size: 12px; color: #888;'>This is an automated message, please do not reply to this email.</p>
+                </div>";
+
+						await emailService.SendEmailAsync(deptCoordinator.Email, subject, body);
+					}
+				}
+				catch (Exception ex) { Console.WriteLine($"[EMAIL ERROR]: {ex.Message}"); }
+			});
+
+			return true;
+		}
+
+		// DELETE IDEA (Dành cho Admin, QAM, QAC)
+		public async Task<bool> DeleteIdeaAsync(Guid ideaId)
+		{
+			var idea = await _context.Ideas
+				.Include(i => i.IdeaDocuments) 
+				.FirstOrDefaultAsync(i => i.Id == ideaId);
+
+			if (idea == null)
+				throw new Exception("Idea not found.");
+
+			if (idea.IdeaDocuments != null && idea.IdeaDocuments.Any())
+			{
+				var uploadFolder = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot");
+				foreach (var doc in idea.IdeaDocuments)
+				{
+	
+					var relativePath = doc.StoredPath.TrimStart('/');
+					var physicalPath = Path.Combine(uploadFolder, relativePath);
+
+					if (File.Exists(physicalPath))
+					{
+						File.Delete(physicalPath);
+					}
+				}
+			}
+
+			_context.Ideas.Remove(idea);
+			await _context.SaveChangesAsync();
+
+			return true;
+		}
+
 		// GET ALL IDEAS (PAGINATION, SORTING, FILTERING)
 
 		public async Task<PagedResult<IdeaInfoDto>> GetIdeasPagedAsync(IdeaQueryParameters parameters, string userId, bool isManager)
@@ -351,7 +502,7 @@ namespace IdeaCollectionSystem.Service.Services
 				.Include(i => i.Department)
 				.Include(i => i.Submission)
 				.Include(i => i.Comments)
-				.Include(i => i.IdeaReactions) 
+				.Include(i => i.IdeaReactions)
 				.Where(i => i.DepartmentId == ideaUser.DepartmentId.Value)
 				.OrderByDescending(i => i.CreatedAt)
 				.ToListAsync();
@@ -621,6 +772,7 @@ namespace IdeaCollectionSystem.Service.Services
 		.Include(i => i.Comments)
 		.ThenInclude(c => c.User) 
 		.Include(i => i.IdeaReactions)
+		.Include(i => i.IdeaDocuments)
 		.FirstOrDefaultAsync(i => i.Id == id);
 
 			if (idea == null)

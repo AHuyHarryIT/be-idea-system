@@ -25,5 +25,9 @@ namespace IdeaCollectionSystem.Service.Interfaces
 		Task<IdeaInfoDto?> GetIdeaDetailAsync(Guid id, string userId);
 
 		Task<CommentDto?> CreateCommentAsync(CommentCreateDto dto, string userId);
+
+		Task<bool> UpdateIdeaAsync(Guid ideaId, IdeaUpdateDto dto, string userId);
+
+		Task<bool> DeleteIdeaAsync(Guid ideaId);
 	}
 }

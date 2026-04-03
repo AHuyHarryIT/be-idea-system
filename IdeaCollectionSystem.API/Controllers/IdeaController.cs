@@ -62,6 +62,50 @@ namespace IdeaCollectionSystem.API.Controllers
 			}
 		}
 
+		// 1. EDIT IDEA 
+		[HttpPut("{id}")]
+		[Authorize] 
+		public async Task<IActionResult> UpdateIdea(Guid id, [FromForm] IdeaUpdateDto dto)
+		{
+			try
+			{
+				var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+				if (currentUserId == null)
+					return Unauthorized(new { message = "User not found in token." });
+
+				await _ideaService.UpdateIdeaAsync(id, dto, currentUserId);
+
+				return Ok(new { message = "Idea updated successfully. Status reset to PENDING." });
+			}
+			catch (UnauthorizedAccessException ex)
+			{
+				
+				return StatusCode(StatusCodes.Status403Forbidden, new { message = ex.Message });
+			}
+			catch (Exception ex)
+			{
+				return BadRequest(new { message = ex.Message });
+			}
+		}
+
+		// 2. DELETE IDEA 
+		[HttpDelete("{id}")]
+		[Authorize(Roles = RoleConstants.Administrator + "," + RoleConstants.Staff)]
+		public async Task<IActionResult> DeleteIdea(Guid id)
+		{
+			try
+			{
+			
+				await _ideaService.DeleteIdeaAsync(id);
+
+				return Ok(new { message = "Idea and its attached files have been permanently deleted." });
+			}
+			catch (Exception ex)
+			{
+				return BadRequest(new { message = ex.Message });
+			}
+		}
 
 		[HttpGet]
 		[Authorize]
