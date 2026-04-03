@@ -297,8 +297,10 @@ namespace IdeaCollectionSystem.Service.Services
 			}
 			else
 			{
-			
-				query = query.Where(i => i.ReviewStatus == ReviewStatus.APPROVED);
+				if (parameters.ReviewStatus.HasValue)
+					query = query.Where(i => i.ReviewStatus == parameters.ReviewStatus.Value);
+				else
+					query = query.Where(i => i.ReviewStatus == ReviewStatus.APPROVED);
 
 				if (parameters.DepartmentId.HasValue && parameters.DepartmentId.Value != Guid.Empty)
 					query = query.Where(i => i.DepartmentId == parameters.DepartmentId.Value);
@@ -399,13 +401,10 @@ namespace IdeaCollectionSystem.Service.Services
 			var roles = await _userManager.GetRolesAsync(reviewer);
 			bool isGlobalReviewer = roles.Contains(RoleConstants.Administrator) || roles.Contains(RoleConstants.QAManager);
 
-			// Nếu không phải quyền Global (tức là QA Coordinator), bắt buộc phải cùng phòng ban với Idea
+			// Chỉ Administrator hoặc QA Manager mới được duyệt
 			if (!isGlobalReviewer)
 			{
-				if (reviewer.DepartmentId == null || reviewer.DepartmentId != idea.DepartmentId)
-				{
-					throw new UnauthorizedAccessException("You can only review ideas submitted by staff within your own department.");
-				}
+				throw new UnauthorizedAccessException("Only Administrator or QA Manager can review ideas.");
 			}
 
 			idea.ReviewStatus = reviewDto.Status;
@@ -434,25 +433,25 @@ namespace IdeaCollectionSystem.Service.Services
 			string subject = string.Empty;
 			string body = string.Empty;
 
-			if (reviewStatus == ReviewStatus.APPROVED)
-			{
-				subject = $"[Thông báo] Ý tưởng '{idea.Title}' đã được PHÊ DUYỆT";
-				body = $@"
-					<h3>Chúc mừng bạn!</h3>
-					<p>Ý tưởng <b>{idea.Title}</b> của bạn đã được ban quản trị phê duyệt.</p>
-					<p>Cảm ơn bạn đã đóng góp cho hệ thống!</p>";
-			}
-			else if (reviewStatus == ReviewStatus.REJECTED)
-			{
-				subject = $"[Thông báo] Ý tưởng '{idea.Title}' đã bị TỪ CHỐI";
-				body = $@"
-					<h3>Rất tiếc!</h3>
-					<p>Ý tưởng <b>{idea.Title}</b> của bạn không được phê duyệt vào lúc này.</p>
-					{(string.IsNullOrWhiteSpace(note) ? "" : $"<p><b>Lý do:</b> {note}</p>")}
-					<p>Đừng nản lòng, hãy tiếp tục đóng góp những ý tưởng khác nhé.</p>";
-			}
+            if (reviewStatus == ReviewStatus.APPROVED)
+            {
+                subject = $"[Notification] Your idea '{idea.Title}' has been APPROVED";
+                body = $@"
+		<h3>Congratulations!</h3>
+		<p>Your idea <b>{idea.Title}</b> has been approved by the review committee.</p>
+		<p>Thank you for your contribution to the system!</p>";
+            }
+            else if (reviewStatus == ReviewStatus.REJECTED)
+            {
+                subject = $"[Notification] Your idea '{idea.Title}' has been REJECTED";
+                body = $@"
+		<h3>We're sorry!</h3>
+		<p>Unfortunately, your idea <b>{idea.Title}</b> has not been approved at this time.</p>
+		{(string.IsNullOrWhiteSpace(note) ? "" : $"<p><b>Reason:</b> {note}</p>")}
+		<p>Don't be discouraged, we look forward to your future contributions.</p>";
+            }
 
-			try
+            try
 			{
 				await _emailService.SendEmailAsync(submitter.Email, subject, body);
 			}
