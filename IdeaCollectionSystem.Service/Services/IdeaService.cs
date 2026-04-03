@@ -60,10 +60,10 @@ namespace IdeaCollectionSystem.Service.Services
 				{
 					Id = d.Id,
 					FileName = d.OriginalFileName,
-					FileUrl = baseUrl + d.StoredPath
+
+					FileUrl = baseUrl + "/uploads/" + System.IO.Path.GetFileName(d.StoredPath)
 
 				}).ToList() ?? new List<DocumentDto>(),
-
 				Comments = idea.Comments?.Select(c => new CommentDto
 				{
 					Id = c.Id,
