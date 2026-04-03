@@ -3,5 +3,6 @@
 	public class ReviewIdeaDto
 	{
 		public ReviewStatus Status { get; set; }
+		public string? Note { get; set; }
 	}
 }

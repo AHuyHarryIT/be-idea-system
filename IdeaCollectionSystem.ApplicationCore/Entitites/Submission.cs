@@ -11,7 +11,7 @@ namespace IdeaCollectionSystem.ApplicationCore.Entitites
 	{
 		[Key]
 		public Guid Id { get; set; }
-		public int AcademicYear { get; set; }
+		public int AcademicYear { get; set; } = DateTime.UtcNow.Year;
 		public string Name { get; set; } = string.Empty;
 		public string? Description { get; set; }
 

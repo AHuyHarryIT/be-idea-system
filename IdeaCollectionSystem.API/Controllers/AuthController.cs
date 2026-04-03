@@ -1,8 +1,10 @@
-﻿using IdeaCollectionSystem.Service.Interfaces;
+﻿using IdeaCollectionSystem.ApplicationCore.Entitites;
+using IdeaCollectionSystem.Service.Interfaces;
 using IdeaCollectionSystem.Service.Models.DTOs;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
@@ -17,16 +19,19 @@ namespace IdeaCollectionSystem.API.Controllers
 		private readonly UserManager<IdeaUser> _userManager;
 		private readonly IConfiguration _config;
 		private readonly IEmailService _emailService;
+		private readonly IdeaCollectionIdentityDbContext _context;
 
 
 		public AuthController(
 			UserManager<IdeaUser> userManager,
 			IConfiguration config,
-			IEmailService emailService)
+			IEmailService emailService,
+			IdeaCollectionIdentityDbContext context)
 		{
 			_userManager = userManager;
 			_config = config;
 			_emailService = emailService;
+			_context = context;
 		}
 
 		// POST: api/auth/login
@@ -53,6 +58,10 @@ namespace IdeaCollectionSystem.API.Controllers
 			var singleRole = roles.FirstOrDefault() ?? "";
 
 			var accessToken = GenerateJwtToken(user, roles);
+			var deptName = await _context.Departments
+					.Where(d => d.Id == user.DepartmentId)
+					.Select(d => d.Name)
+					.FirstOrDefaultAsync();
 
 			return Ok(new
 			{
@@ -63,6 +72,7 @@ namespace IdeaCollectionSystem.API.Controllers
 					email = user.Email,
 					name = user.Name,
 					departmentId = user.DepartmentId,
+					departmentName = deptName,
 					role = singleRole
 				}
 			});

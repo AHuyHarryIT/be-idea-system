@@ -355,7 +355,8 @@ namespace IdeaCollectionSystem.Service.Services
 			return result;
 		}
 
-		// REVIEW IDEA
+
+		// REVIEW IDEA (APPROVE/REJECT) + EMAIL NOTIFICATION
 		public async Task<bool> ReviewIdeaAsync(Guid ideaId, ReviewIdeaDto reviewDto, string reviewerId)
 		{
 			var idea = await _context.Ideas.FirstOrDefaultAsync(i => i.Id == ideaId);
@@ -365,12 +366,18 @@ namespace IdeaCollectionSystem.Service.Services
 			var reviewer = await _userManager.FindByIdAsync(reviewerId);
 			if (reviewer == null) return false;
 
-			// Kiểm tra xem người duyệt có phải là Admin hoặc QA Manager
+			// Kiểm tra role được phép duyệt
 			var roles = await _userManager.GetRolesAsync(reviewer);
+			bool isQACoordinator = roles.Contains(RoleConstants.QACoordinator);
 			bool isGlobalReviewer = roles.Contains(RoleConstants.Administrator) || roles.Contains(RoleConstants.QAManager);
 
+			if (!isGlobalReviewer && !isQACoordinator)
+			{
+				throw new UnauthorizedAccessException("Only Administrator, QA Manager, or QA Coordinator can review ideas.");
+			}
+
 			// Nếu không phải quyền Global (tức là QA Coordinator), bắt buộc phải cùng phòng ban với Idea
-			if (!isGlobalReviewer)
+			if (isQACoordinator && !isGlobalReviewer)
 			{
 				if (reviewer.DepartmentId == null || reviewer.DepartmentId != idea.DepartmentId)
 				{
@@ -383,7 +390,57 @@ namespace IdeaCollectionSystem.Service.Services
 			idea.UpdatedAt = DateTime.UtcNow;
 
 			_context.Ideas.Update(idea);
-			return await _context.SaveChangesAsync() > 0;
+			var isSaved = await _context.SaveChangesAsync() > 0;
+			if (!isSaved) return false;
+
+			if (reviewDto.Status == ReviewStatus.APPROVED || reviewDto.Status == ReviewStatus.REJECTED)
+			{
+				var author = await _userManager.FindByIdAsync(idea.UserId);
+				if (author != null && !string.IsNullOrWhiteSpace(author.Email))
+				{
+					var authorEmail = author.Email;
+					var reviewStatus = reviewDto.Status;
+					var note = reviewDto.Note;
+
+					string subject = string.Empty;
+					string body = string.Empty;
+
+					if (reviewStatus == ReviewStatus.APPROVED)
+					{
+						subject = $"[Notification] Your idea '{idea.Title}' has been APPROVED";
+						body = $@"
+					<h3>Congratulations!</h3>
+					<p>Your idea <b>{idea.Title}</b> has been approved by the review committee.</p>
+					<p>Thank you for your contribution to the system!</p>";
+					}
+					else if (reviewStatus == ReviewStatus.REJECTED)
+					{
+						subject = $"[Notification] Your idea '{idea.Title}' has been REJECTED";
+						body = $@"
+					<h3>We're sorry!</h3>
+					<p>Unfortunately, your idea <b>{idea.Title}</b> has not been approved at this time.</p>
+					{(string.IsNullOrWhiteSpace(note) ? "" : $"<p><b>Reason:</b> {note}</p>")}
+					<p>Don't be discouraged, we look forward to your future contributions.</p>";
+					}
+
+					_ = Task.Run(async () =>
+					{
+						try
+						{
+							using var scope = _scopeFactory.CreateScope();
+							var emailService = scope.ServiceProvider.GetRequiredService<IEmailService>();
+
+							await emailService.SendEmailAsync(authorEmail, subject, body);
+						}
+						catch (Exception ex)
+						{
+							Console.WriteLine($"[EMAIL ERROR]: {ex.Message}");
+						}
+					});
+				}
+			}
+
+			return true;
 		}
 
 		// GET IDEAS WITHOUT COMMENT
@@ -573,15 +630,17 @@ namespace IdeaCollectionSystem.Service.Services
 		// GET MY IDEAS (PAGINATION, SORTING, FILTERING)
 		public async Task<PagedResult<IdeaInfoDto>> GetMyIdeasPagedAsync(IdeaQueryParameters parameters, string userId)
 		{
-					var query = _context.Ideas
-			.Include(i => i.Category)
-			.Include(i => i.Department)
-			.Include(i => i.Submission)
-			.Include(i => i.Comments)
-			.ThenInclude(c => c.User) 
-			.Include(i => i.IdeaReactions)
-			.AsQueryable();
+			var query = _context.Ideas
+				.Include(i => i.Category)
+				.Include(i => i.Department)
+				.Include(i => i.Submission)
+				.Include(i => i.Comments)
+					.ThenInclude(c => c.User)
+				.Include(i => i.IdeaReactions)
+				.AsQueryable();
+			query = query.Where(i => i.UserId == userId);
 
+			// 1. FILTERING
 			if (!string.IsNullOrWhiteSpace(parameters.SearchTerm))
 			{
 				var search = parameters.SearchTerm.ToLower().Trim();
@@ -630,7 +689,7 @@ namespace IdeaCollectionSystem.Service.Services
 				.Take(parameters.PageSize)
 				.ToListAsync();
 
-			// 4. MAP TO DTO (Sử dụng hàm Helper MapToDtoAsync đã viết ở bước trước cho gọn)
+			// 4. MAP TO DTO
 			var resultItems = new List<IdeaInfoDto>();
 			foreach (var idea in ideas)
 			{

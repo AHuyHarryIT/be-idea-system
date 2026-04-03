@@ -193,6 +193,8 @@ namespace IdeaCollectionSystem.API.Controllers
 			return BadRequest(new { success = false, message = "The vote was a failure." });
 		}
 
+
+		// Review
 		[HttpPut("{id}/review")]
 		[Authorize(Roles = RoleConstants.Administrator + "," + RoleConstants.QAManager + "," + RoleConstants.QACoordinator)]
 		public async Task<IActionResult> ReviewIdea(Guid id, [FromBody] ReviewIdeaDto dto)

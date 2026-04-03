@@ -21,7 +21,7 @@ public class DepartmentService : IDepartmentService
 	{
 		var query = _context.Departments.AsNoTracking();
 
-		// 1. Áp dụng Search theo Tên Department (Nếu có nhập searchTerm)
+
 		if (!string.IsNullOrWhiteSpace(filter.SearchTerm))
 		{
 			var search = filter.SearchTerm.ToLower().Trim();
@@ -31,7 +31,7 @@ public class DepartmentService : IDepartmentService
 		// 2. Count tổng số lượng record
 		var totalCount = await query.CountAsync();
 
-		// 3. Phân trang (Sắp xếp theo tên phòng ban)
+		
 		var departments = await query
 			.OrderBy(d => d.Name)
 			.Skip((filter.PageNumber - 1) * filter.PageSize)
@@ -42,7 +42,8 @@ public class DepartmentService : IDepartmentService
 		var result = departments.Select(d => new DepartmentDto
 		{
 			Id = d.Id,
-			Name = d.Name
+			Name = d.Name,
+			Description = d.Description
 		}).ToList();
 
 		// 5. Trả về PagedResult
