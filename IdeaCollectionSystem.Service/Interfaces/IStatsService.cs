@@ -9,5 +9,7 @@ namespace IdeaCollectionSystem.Service.Interfaces
 		Task<IEnumerable<IdeaInfoDto>> GetIdeasWithoutCommentsAsync();
 
 		Task<List<DepartmentStatDto>> GetDepartmentStatsAsync(Guid? submissionId = null);
+
+		Task<List<ReviewIdeaDto>> GetIdeasWithoutReviewsAsync(Guid? submissionId = null);
 	}
 }

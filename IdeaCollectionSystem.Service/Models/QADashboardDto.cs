@@ -8,5 +8,7 @@
 		public int TotalUsers { get; set; }
 		public int IdeasWithoutComments { get; set; }
 		public int IdeasThisMonth { get; set; }
+
+		public int TotalPendingIdeas { get; set; }
 	}
 }
