@@ -158,7 +158,7 @@ using (var scope = app.Services.CreateScope())
 	}
 }
 
-// 10. Middleware Pipeline 
+
 app.UseSwagger();
 app.UseSwaggerUI();
 

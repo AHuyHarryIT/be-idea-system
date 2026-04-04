@@ -63,7 +63,7 @@ namespace IdeaCollectionSystem.Service.Services
 					ClosureDate = s.ClosureDate,
 					FinalClosureDate = s.FinalClosureDate,
 					IdeaCount = s.Ideas.Count(),
-					IsActive = DateTime.UtcNow.Date <= s.ClosureDate.Date
+					IsActive = DateTime.UtcNow <= s.ClosureDate
 				})
 				.ToListAsync();
 		}

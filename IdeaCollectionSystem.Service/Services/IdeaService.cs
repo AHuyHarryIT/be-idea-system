@@ -45,6 +45,8 @@ namespace IdeaCollectionSystem.Service.Services
 				Id = idea.Id,
 				Title = idea.Title,
 				Description = idea.Description,
+				SubmissionId = idea.SubmissionId,
+				SubmissionName = idea.Submission?.Name ?? "Unknown Submission",
 				CategoryName = idea.Category?.Name ?? "No Category",
 				DepartmentName = idea.Department?.Name ?? "",
 				AuthorName = author,
@@ -88,7 +90,7 @@ namespace IdeaCollectionSystem.Service.Services
 
 			if (latestSubmission == null) return true;
 
-			return DateTime.UtcNow.Date > latestSubmission.ClosureDate.Date;
+			return DateTime.UtcNow > latestSubmission.ClosureDate;
 		}
 
 		// Check Final Closure date
@@ -100,7 +102,7 @@ namespace IdeaCollectionSystem.Service.Services
 
 			if (idea?.Submission == null) return true;
 
-			return DateTime.UtcNow.Date > idea.Submission.FinalClosureDate.Date;
+			return DateTime.UtcNow > idea.Submission.FinalClosureDate;
 		}
 
 		// CREATE IDEA
@@ -131,7 +133,7 @@ namespace IdeaCollectionSystem.Service.Services
 			else
 				submission = await _context.Submissions.OrderByDescending(s => s.ClosureDate).FirstOrDefaultAsync();
 
-			if (submission == null || DateTime.UtcNow.Date > submission.ClosureDate.Date) return null;
+			if (submission == null || DateTime.UtcNow > submission.ClosureDate) return null;
 
 			var idea = new Idea
 			{
@@ -258,7 +260,7 @@ namespace IdeaCollectionSystem.Service.Services
 			if (idea.UserId != userId)
 				throw new UnauthorizedAccessException("You can only edit your own idea.");
 
-			if (idea.Submission == null || DateTime.UtcNow.Date > idea.Submission.ClosureDate.Date)
+			if (idea.Submission == null || DateTime.UtcNow > idea.Submission.ClosureDate)
 				throw new Exception("The submission closure date has passed. You cannot edit this idea anymore.");
 
 
@@ -692,13 +694,13 @@ namespace IdeaCollectionSystem.Service.Services
 		public async Task<CommentDto?> CreateCommentAsync(CommentCreateDto dto, string userId)
 		{
 			var commentUser = await _userManager.FindByIdAsync(userId);
-			if (commentUser == null) return null; // Sửa thành return null
+			if (commentUser == null) return null; 
 
 			var idea = await _context.Ideas.FirstOrDefaultAsync(i => i.Id == dto.IdeaId);
-			if (idea == null) return null; // Sửa thành return null
+			if (idea == null) return null; 
 
 			var submission = await _context.Submissions.FirstOrDefaultAsync(s => s.Id == idea.SubmissionId);
-			if (submission == null || DateTime.UtcNow.Date > submission.FinalClosureDate) return null; // Sửa thành return null
+			if (submission == null || DateTime.UtcNow > submission.FinalClosureDate) return null; 
 
 			var comment = new Comment
 			{

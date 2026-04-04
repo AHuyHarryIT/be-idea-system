@@ -23,6 +23,9 @@ public class IdeaInfoDto
 
 	public int ViewCount { get; set; }
 
+	public Guid? SubmissionId { get; set; }
+	public string SubmissionName { get; set; }
+
 	public List<CommentDto> Comments { get; set; } = new List<CommentDto>();
 
 	public List<DocumentDto> Documents { get; set; } = new List<DocumentDto>();
