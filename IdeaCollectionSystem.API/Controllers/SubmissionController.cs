@@ -54,6 +54,8 @@ namespace IdeaCollectionSystem.API.Controllers
 			}
 		}
 
+
+		// CREATE SUBMISSION
 		[HttpPost]
 		[Authorize(Roles = RoleConstants.Administrator + "," + RoleConstants.QAManager)]
 		public async Task<IActionResult> CreateSubmission([FromBody] SubmissionCreateDto dto)
@@ -67,6 +69,7 @@ namespace IdeaCollectionSystem.API.Controllers
 			return Ok(new { message = "Create a successful submission period." });
 		}
 
+		// UPDATE SUBMISSION
 		[HttpPut("{id}")]
 		[Authorize(Roles = RoleConstants.Administrator + "," + RoleConstants.QAManager)]
 		public async Task<IActionResult> UpdateSubmission([FromRoute] Guid id, [FromBody] SubmissionCreateDto dto)
@@ -76,8 +79,17 @@ namespace IdeaCollectionSystem.API.Controllers
 				return BadRequest(new { message = "Final Closure Date must be greater than or equal to Closure Date." });
 			}
 
-			await _submissionService.UpdateSubmissionAsync(id, dto);
-			return Ok(new { message = "The submission period has been updated as successful." });
+			try
+			{
+	
+				await _submissionService.UpdateSubmissionAsync(id, dto);
+				return Ok(new { message = "The submission period has been updated successfully." });
+			}
+			catch (Exception ex)
+			{
+				
+				return BadRequest(new { message = ex.Message });
+			}
 		}
 
 		[HttpDelete("{id}")]

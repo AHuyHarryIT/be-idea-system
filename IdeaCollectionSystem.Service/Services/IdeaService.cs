@@ -423,6 +423,11 @@ namespace IdeaCollectionSystem.Service.Services
 			if (parameters.SubmissionId.HasValue && parameters.SubmissionId.Value != Guid.Empty)
 				query = query.Where(i => i.SubmissionId == parameters.SubmissionId.Value);
 
+			if (parameters.CategoryId.HasValue && parameters.CategoryId.Value != Guid.Empty)
+			{
+				query = query.Where(i => i.CategoryId == parameters.CategoryId.Value);
+			}
+
 			// 2. XỬ LÝ QUYỀN VÀ LỌC TRẠNG THÁI 
 			if (isAdminOrQAManager)
 			{

@@ -20,6 +20,8 @@ namespace IdeaCollectionSystem.API.Controllers
 			_ideaService = ideaService;
 		}
 
+
+		// CREATE IDEA
 		[HttpPost]
 		[Authorize]
 		public async Task<IActionResult> CreateIdea([FromForm] IdeaCreateDto dto)

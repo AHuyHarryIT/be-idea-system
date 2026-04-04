@@ -106,7 +106,18 @@ namespace IdeaCollectionSystem.Service.Services
 		public async Task<bool> UpdateSubmissionAsync(Guid id, SubmissionCreateDto dto)
 		{
 			var submission = await _context.Submissions.FindAsync(id);
-			if (submission == null) return false;
+			if (submission == null)
+				throw new Exception("The submission does not exist."); 
+
+			if (submission.ClosureDate < DateTime.UtcNow)
+			{
+				throw new Exception("The closure date has already passed. You cannot edit this submission anymore.");
+			}
+
+			if (dto.ClosureDate >= dto.FinalClosureDate)
+			{
+				throw new Exception("The Closure Date must be earlier than the Final Closure Date.");
+			}
 
 			submission.Name = dto.Name;
 			submission.Description = dto.Description;
@@ -117,9 +128,11 @@ namespace IdeaCollectionSystem.Service.Services
 
 			return await _context.SaveChangesAsync() > 0;
 		}
+
+		// DELETE submission
 		public async Task<(bool Success, string Message)> DeleteSubmissionAsync(Guid id)
 		{
-			// 1. Tìm Submission trong DB
+	
 			var submission = await _context.Submissions.FirstOrDefaultAsync(s => s.Id == id);
 			if (submission == null)
 			{
@@ -129,7 +142,7 @@ namespace IdeaCollectionSystem.Service.Services
 			var hasIdeas = await _context.Ideas.AnyAsync(i => i.SubmissionId == id);
 			if (hasIdeas)
 			{
-				// Nếu có rồi -> Rút thẻ đỏ, cấm xóa!
+				// Nếu có rồi ->  cấm xóa!
 				return (false, "Cannot delete this submission because employees have already submitted ideas to it. Please close it instead.");
 			}
 
