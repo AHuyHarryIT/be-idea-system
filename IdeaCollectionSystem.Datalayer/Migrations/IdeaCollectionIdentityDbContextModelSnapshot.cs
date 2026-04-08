@@ -46,8 +46,8 @@ namespace IdeaCollectionSystem.Datalayer.Migrations
                     b.Property<bool>("IsAnonymous")
                         .HasColumnType("boolean");
 
-                    b.Property<bool>("IsApproved")
-                        .HasColumnType("boolean");
+                    b.Property<int>("ReviewStatus")
+                        .HasColumnType("integer");
 
                     b.Property<Guid>("SubmissionId")
                         .HasColumnType("uuid");
@@ -131,6 +131,8 @@ namespace IdeaCollectionSystem.Datalayer.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("IdeaId");
+
+                    b.HasIndex("UserId");
 
                     b.ToTable("Comment");
                 });
@@ -258,8 +260,8 @@ namespace IdeaCollectionSystem.Datalayer.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.Property<DateTime>("AcademicYear")
-                        .HasColumnType("timestamp without time zone");
+                    b.Property<int>("AcademicYear")
+                        .HasColumnType("integer");
 
                     b.Property<DateTime>("ClosureDate")
                         .HasColumnType("timestamp without time zone");
@@ -299,6 +301,9 @@ namespace IdeaCollectionSystem.Datalayer.Migrations
                     b.Property<string>("ConcurrencyStamp")
                         .IsConcurrencyToken()
                         .HasColumnType("text");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
 
                     b.Property<Guid?>("DepartmentId")
                         .HasColumnType("uuid");
@@ -503,7 +508,15 @@ namespace IdeaCollectionSystem.Datalayer.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("IdeaUser", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
                     b.Navigation("Idea");
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("IdeaCollectionSystem.ApplicationCore.Entitites.IdeaDocument", b =>

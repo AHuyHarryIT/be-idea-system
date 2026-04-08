@@ -65,7 +65,13 @@ namespace IdeaCollectionSystem.API.Controllers
 				return BadRequest(new { message = "Final Closure Date must be greater than or equal to Closure Date." });
 			}
 
-			await _submissionService.CreateSubmissionAsync(dto);
+			var isCreated = await _submissionService.CreateSubmissionAsync(dto);
+
+			if (!isCreated)
+			{
+				return BadRequest(new { message = "Failed to create submission. Please ensure the Name is not empty and Closure Date is not in the past." });
+			}
+
 			return Ok(new { message = "Create a successful submission period." });
 		}
 

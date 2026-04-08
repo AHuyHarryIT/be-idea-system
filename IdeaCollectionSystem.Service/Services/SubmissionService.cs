@@ -15,6 +15,7 @@ namespace IdeaCollectionSystem.Service.Services
 			_context = context;
 		}
 
+		// Get Submission
 		public async Task<PagedResult<SubmissionDto>> GetSubmissionsPagedAsync(PaginationFilter filter)
 		{
 			var query = _context.Submissions.AsNoTracking();
@@ -27,14 +28,13 @@ namespace IdeaCollectionSystem.Service.Services
 
 			var totalCount = await query.CountAsync();
 
-			// 3. Phân trang (Sắp xếp theo Ngày đóng đợt - Mới nhất xếp trên)
+	
 			var submissions = await query
-				.OrderByDescending(s => s.ClosureDate)
+				.OrderByDescending(s => s.CreatedAt)
 				.Skip((filter.PageNumber - 1) * filter.PageSize)
 				.Take(filter.PageSize)
 				.ToListAsync();
 
-			// 4. Map sang DTO
 			var result = submissions.Select(s => new SubmissionDto
 			{
 				Id = s.Id,
@@ -44,7 +44,6 @@ namespace IdeaCollectionSystem.Service.Services
 				FinalClosureDate = s.FinalClosureDate
 			}).ToList();
 
-			// 5. Trả về PagedResult
 			return new PagedResult<SubmissionDto>(result, totalCount, filter.PageNumber, filter.PageSize);
 		}
 
@@ -53,7 +52,7 @@ namespace IdeaCollectionSystem.Service.Services
 		{
 			return await _context.Submissions
 
-				.OrderByDescending(s => s.AcademicYear)
+				.OrderByDescending(s => s.CreatedAt)
 				.Select(s => new SubmissionDto
 				{
 					Id = s.Id,

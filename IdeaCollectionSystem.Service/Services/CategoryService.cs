@@ -31,7 +31,7 @@ namespace IdeaCollectionSystem.Service.Services
 
 			var categories = await query
 				.OrderByDescending(c => c.CreatedAt) 
-				.OrderBy(c => c.Name)
+				//.OrderBy(c => c.Name)
 				.Skip((filter.PageNumber - 1) * filter.PageSize)
 				.Take(filter.PageSize)
 				.ToListAsync();
@@ -54,6 +54,8 @@ namespace IdeaCollectionSystem.Service.Services
 			{
 				Id = Guid.NewGuid(),
 				Name = name,
+				CreatedAt = DateTime.UtcNow, 
+				UpdateAt = DateTime.UtcNow
 			};
 			_context.Categories.Add(category);	
 			return await _context.SaveChangesAsync() > 0;

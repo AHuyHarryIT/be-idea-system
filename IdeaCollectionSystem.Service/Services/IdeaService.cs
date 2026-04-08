@@ -366,21 +366,32 @@ namespace IdeaCollectionSystem.Service.Services
 		// DELETE IDEA (Dành cho Admin, QAM, QAC)
 		public async Task<bool> DeleteIdeaAsync(Guid ideaId)
 		{
+	
 			var idea = await _context.Ideas
-				.Include(i => i.IdeaDocuments) 
+				.Include(i => i.IdeaDocuments)
+				.Include(i => i.Submission) 
 				.FirstOrDefaultAsync(i => i.Id == ideaId);
 
 			if (idea == null)
 				throw new Exception("Idea not found.");
 
+			if (idea.Submission != null && DateTime.UtcNow > idea.Submission.FinalClosureDate)
+			{
+				throw new Exception("The final closure date has passed. This idea is permanently archived and cannot be deleted.");
+			}
+
+			// 3. Dọn rác vật lý ổ cứng
 			if (idea.IdeaDocuments != null && idea.IdeaDocuments.Any())
 			{
-				var uploadFolder = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot");
+
+				var uploadFolder = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads");
+
 				foreach (var doc in idea.IdeaDocuments)
 				{
-	
-					var relativePath = doc.StoredPath.TrimStart('/');
-					var physicalPath = Path.Combine(uploadFolder, relativePath);
+			
+					var fileName = System.IO.Path.GetFileName(doc.StoredPath);
+
+					var physicalPath = Path.Combine(uploadFolder, fileName);
 
 					if (File.Exists(physicalPath))
 					{
@@ -422,6 +433,24 @@ namespace IdeaCollectionSystem.Service.Services
 			}
 
 			// Lọc theo Submission 
+			if (!parameters.SubmissionId.HasValue || parameters.SubmissionId.Value == Guid.Empty)
+			{
+				var latestSubmission = await _context.Submissions
+					.OrderByDescending(s => s.ClosureDate)
+					.FirstOrDefaultAsync();
+
+				if (latestSubmission != null)
+				{
+					parameters.SubmissionId = latestSubmission.Id;
+				}
+			}
+
+			if (parameters.SubmissionId.HasValue && parameters.SubmissionId.Value != Guid.Empty)
+			{
+				query = query.Where(i => i.SubmissionId == parameters.SubmissionId.Value);
+			}
+
+
 			if (parameters.SubmissionId.HasValue && parameters.SubmissionId.Value != Guid.Empty)
 				query = query.Where(i => i.SubmissionId == parameters.SubmissionId.Value);
 
