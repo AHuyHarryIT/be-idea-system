@@ -1,10 +1,12 @@
-﻿using IdeaCollectionSystem.ApplicationCore.Entitites.Identity;
+﻿using IdeaCollectionSystem.ApplicationCore.Entitites;
+using IdeaCollectionSystem.ApplicationCore.Entitites.Identity;
 using IdeaCollectionSystem.Datalayer;
 using IdeaCollectionSystem.Service.Interfaces;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using System.IO.Compression;
 using System.Text;
+using System.Net.Http;
 
 namespace IdeaCollectionSystem.Service.Services
 {
@@ -59,33 +61,46 @@ namespace IdeaCollectionSystem.Service.Services
 			return Encoding.UTF8.GetBytes(csv.ToString());
 		}
 
-		// Export ZIP (TẤT CẢ)
+		// Export ZIP (TẤT CẢ) - Tải file qua URL
 		public async Task<byte[]> ExportDocumentsToZipAsync()
 		{
-			var uploadPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads");
+			var documents = await _context.IdeaDocuments.ToListAsync();
 
-			if (!Directory.Exists(uploadPath))
+			if (!documents.Any())
 			{
 				return Array.Empty<byte>();
 			}
 
-			// 2. LẤY FILE VÀ KIỂM TRA: Nếu thư mục tồn tại nhưng trống trơn (empty)
-			var files = Directory.GetFiles(uploadPath);
-			if (files.Length == 0)
-			{
-				return Array.Empty<byte>(); 
-			}
+			var baseUrl = "https://ideacollectionsystemapi20260313215839-brd4bqdwfbgeg7fj.southeastasia-01.azurewebsites.net";
 
-			// 3. Tiến hành nén ZIP khi chắc chắn đã có file
-			using var memoryStream = new MemoryStream();
-			using (var archive = new ZipArchive(memoryStream, ZipArchiveMode.Create, true))
+			using var httpClient = new HttpClient();
+			using var ms = new MemoryStream();
+			using (var archive = new ZipArchive(ms, ZipArchiveMode.Create, true))
 			{
-				foreach (var file in files)
+				foreach (var doc in documents)
 				{
-					archive.CreateEntryFromFile(file, Path.GetFileName(file));
+					try
+					{
+						// Link thực tế của file trên Azure
+						var fileUrl = baseUrl + doc.StoredPath;
+
+						// Tải file trực tiếp từ URL
+						var fileBytes = await httpClient.GetByteArrayAsync(fileUrl);
+
+						string entryNameInsideZip = $"{doc.IdeaId}/{doc.OriginalFileName}";
+						var zipEntry = archive.CreateEntry(entryNameInsideZip, CompressionLevel.Fastest);
+
+						using var zipStream = zipEntry.Open();
+						await zipStream.WriteAsync(fileBytes, 0, fileBytes.Length);
+					}
+					catch (Exception)
+					{
+						continue;
+					}
 				}
 			}
-			return memoryStream.ToArray();
+
+			return ms.ToArray();
 		}
 
 
@@ -125,41 +140,62 @@ namespace IdeaCollectionSystem.Service.Services
 
 			return Encoding.UTF8.GetBytes(builder.ToString());
 		}
-		
+
 		// Export ZIP -> Submission ID
 		public async Task<byte[]> ExportDocumentsBySubmissionToZipAsync(Guid submissionId)
 		{
-		
 			var documents = await _context.IdeaDocuments
 				.Include(d => d.Idea)
 				.Where(d => d.Idea.SubmissionId == submissionId)
 				.ToListAsync();
 
-			// 2. Bỏ qua những file bị lỗi/mất trên ổ cứng, chỉ lấy những file CÓ THẬT
-			var validFiles = documents.Where(doc => System.IO.File.Exists(doc.StoredPath)).ToList();
-
-			// 3. NẾU KHÔNG CÓ FILE NÀO TỒN TẠI THẬT 
-			if (!validFiles.Any())
+			if (!documents.Any())
 			{
 				return Array.Empty<byte>();
 			}
 
-			// 4. Tiến hành nén ZIP với các file đã qua vòng kiểm duyệt
-			using var ms = new MemoryStream();
-			using (var archive = new ZipArchive(ms, ZipArchiveMode.Create, true))
-			{
-				foreach (var doc in validFiles)
-				{
-					string entryNameInsideZip = $"{doc.IdeaId}/{doc.OriginalFileName}";
+	
+			var baseUrl = "https://ideacollectionsystemapi20260313215839-brd4bqdwfbgeg7fj.southeastasia-01.azurewebsites.net";
 
-					var zipEntry = archive.CreateEntry(entryNameInsideZip, CompressionLevel.Fastest);
-					using var zipStream = zipEntry.Open();
-					using var fileStream = new FileStream(doc.StoredPath, FileMode.Open, FileAccess.Read);
-					await fileStream.CopyToAsync(zipStream);
+			using var ms = new MemoryStream();
+			int entryCount = 0;
+			using (var archive = new ZipArchive(ms, ZipArchiveMode.Create, true))
+			using (var httpClient = new HttpClient()) 
+			{
+				foreach (var doc in documents)
+				{
+					try
+					{
+						var relativePath = doc.StoredPath.TrimStart('/');
+						var fileUrl = $"{baseUrl}/{relativePath}";
+
+						// Tải nội dung file từ URL Azure về
+						var fileBytes = await httpClient.GetByteArrayAsync(fileUrl);
+
+						// Tên file hiển thị bên trong file ZIP (Ví dụ: ID_Idea/TenFileGoc.pdf)
+						string entryNameInsideZip = $"{doc.IdeaId}/{doc.OriginalFileName}";
+
+						var zipEntry = archive.CreateEntry(entryNameInsideZip, CompressionLevel.Fastest);
+						using var zipStream = zipEntry.Open();
+
+						await zipStream.WriteAsync(fileBytes, 0, fileBytes.Length);
+						entryCount++;
+					}
+					catch (HttpRequestException)
+					{
+						Console.WriteLine($"[EXPORT ZIP] Bỏ qua file vì không tồn tại URL: {doc.StoredPath}");
+						continue;
+					}
 				}
 			}
 
-			return ms.ToArray();
+			var resultBytes = ms.ToArray();
+			if (resultBytes.Length == 0 || entryCount == 0)
+			{
+				return Array.Empty<byte>();
+			}
+
+			return resultBytes;
 		}
 	}
 }

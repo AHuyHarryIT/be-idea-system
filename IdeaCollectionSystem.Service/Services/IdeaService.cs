@@ -63,7 +63,6 @@ namespace IdeaCollectionSystem.Service.Services
 				{
 					Id = d.Id,
 					FileName = d.OriginalFileName,
-
 					FileUrl = baseUrl + "/uploads/" + System.IO.Path.GetFileName(d.StoredPath)
 
 				}).ToList() ?? new List<DocumentDto>(),
@@ -125,6 +124,7 @@ namespace IdeaCollectionSystem.Service.Services
 			}
 
 			if (!await _context.Departments.AnyAsync(d => d.Id == departmentId)) return null;
+
 			if (dto.CategoryId == Guid.Empty) return null;
 
 			Submission? submission;
@@ -156,7 +156,7 @@ namespace IdeaCollectionSystem.Service.Services
 			if (dto.UploadedFiles != null && dto.UploadedFiles.Any())
 			{
 				var allowedExtensions = new[] { ".pdf" };
-				var maxFileSize = 5 * 1024 * 1024; // 5MB
+				var maxFileSize = 5 * 1024 * 1024; 
 
 				var uploadFolder = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads");
 
@@ -426,43 +426,27 @@ namespace IdeaCollectionSystem.Service.Services
 				.Include(i => i.IdeaDocuments)
 				.AsQueryable();
 
+			// 1. Lọc theo Search Term
 			if (!string.IsNullOrWhiteSpace(parameters.SearchTerm))
 			{
 				var search = parameters.SearchTerm.ToLower().Trim();
 				query = query.Where(i => i.Title.ToLower().Contains(search) || i.Description.ToLower().Contains(search));
 			}
 
-			// Lọc theo Submission 
-			if (!parameters.SubmissionId.HasValue || parameters.SubmissionId.Value == Guid.Empty)
-			{
-				var latestSubmission = await _context.Submissions
-					.OrderByDescending(s => s.ClosureDate)
-					.FirstOrDefaultAsync();
-
-				if (latestSubmission != null)
-				{
-					parameters.SubmissionId = latestSubmission.Id;
-				}
-			}
-
 			if (parameters.SubmissionId.HasValue && parameters.SubmissionId.Value != Guid.Empty)
 			{
 				query = query.Where(i => i.SubmissionId == parameters.SubmissionId.Value);
 			}
 
-
-			if (parameters.SubmissionId.HasValue && parameters.SubmissionId.Value != Guid.Empty)
-				query = query.Where(i => i.SubmissionId == parameters.SubmissionId.Value);
-
+			// Lọc theo Category
 			if (parameters.CategoryId.HasValue && parameters.CategoryId.Value != Guid.Empty)
 			{
 				query = query.Where(i => i.CategoryId == parameters.CategoryId.Value);
 			}
 
-			// 2. XỬ LÝ QUYỀN VÀ LỌC TRẠNG THÁI 
+			// 3. XỬ LÝ QUYỀN
 			if (isAdminOrQAManager)
 			{
-				// Admin & QA Manager: Thấy TẤT CẢ phòng ban, TẤT CẢ trạng thái (tuỳ chọn filter)
 				if (parameters.DepartmentId.HasValue && parameters.DepartmentId.Value != Guid.Empty)
 					query = query.Where(i => i.DepartmentId == parameters.DepartmentId.Value);
 
@@ -471,7 +455,17 @@ namespace IdeaCollectionSystem.Service.Services
 			}
 			else if (isQACoordinator)
 			{
-				query = query.Where(i => i.DepartmentId == user.DepartmentId);
+				// QA Coordinator: CHỈ thấy phòng ban của mình
+				if (user != null && user.DepartmentId.HasValue && user.DepartmentId.Value != Guid.Empty)
+				{
+					var qaDeptId = user.DepartmentId.Value;
+					query = query.Where(i => i.DepartmentId == qaDeptId);
+				}
+				else
+				{
+					
+					query = query.Where(i => false);
+				}
 
 				if (parameters.ReviewStatus.HasValue)
 					query = query.Where(i => i.ReviewStatus == parameters.ReviewStatus.Value);
@@ -485,7 +479,7 @@ namespace IdeaCollectionSystem.Service.Services
 					query = query.Where(i => i.DepartmentId == parameters.DepartmentId.Value);
 			}
 
-			// 3. SORTING
+			// 4. SORTING
 			switch (parameters.SortBy?.ToLower())
 			{
 				case "popular":
@@ -505,7 +499,7 @@ namespace IdeaCollectionSystem.Service.Services
 					break;
 			}
 
-			// 4. PAGINATION
+			// 5. PAGINATION
 			int totalCount = await query.CountAsync();
 			var ideas = await query
 				.Skip((parameters.PageNumber - 1) * parameters.PageSize)

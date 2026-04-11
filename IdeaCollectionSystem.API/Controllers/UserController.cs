@@ -1,7 +1,7 @@
 ﻿using IdeaCollectionIdea.Common.Constants;
 using IdeaCollectionSystem.Service.Interfaces;
 using IdeaCollectionSystem.Service.Models.DTOs;
-using IdeaCollectionSystem.ApplicationCore.Entitites; // Cần đảm bảo có using entity chứa IdeaUser
+using IdeaCollectionSystem.ApplicationCore.Entitites; 
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
