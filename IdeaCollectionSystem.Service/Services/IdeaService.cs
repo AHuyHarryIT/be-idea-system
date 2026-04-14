@@ -45,6 +45,7 @@ namespace IdeaCollectionSystem.Service.Services
 				Id = idea.Id,
 				Title = idea.Title,
 				Description = idea.Description,
+				CategoryId = idea.CategoryId,
 				SubmissionId = idea.SubmissionId,
 				SubmissionName = idea.Submission?.Name ?? "Unknown Submission",
 				CategoryName = idea.Category?.Name ?? "No Category",
@@ -245,13 +246,16 @@ namespace IdeaCollectionSystem.Service.Services
 			return idea.Id;
 		}
 
-	
+
 
 		// UPDATE IDEA
+		
 		public async Task<bool> UpdateIdeaAsync(Guid ideaId, IdeaUpdateDto dto, string userId)
 		{
+			// 1. Kiểm tra tồn tại & quyền sửa
 			var idea = await _context.Ideas
 				.Include(i => i.Submission)
+				.Include(i => i.IdeaDocuments) 
 				.FirstOrDefaultAsync(i => i.Id == ideaId);
 
 			if (idea == null)
@@ -263,28 +267,43 @@ namespace IdeaCollectionSystem.Service.Services
 			if (idea.Submission == null || DateTime.UtcNow > idea.Submission.ClosureDate)
 				throw new Exception("The submission closure date has passed. You cannot edit this idea anymore.");
 
-
+			// 2. Cập nhật thông tin Idea
 			idea.Title = dto.Title;
 			idea.Description = dto.Description;
 			idea.CategoryId = dto.CategoryId;
 			idea.IsAnonymous = dto.IsAnonymous;
 			idea.UpdatedAt = DateTime.UtcNow;
-
-			idea.ReviewStatus = ReviewStatus.PENDING;
+			idea.ReviewStatus = ReviewStatus.PENDING; 
 
 			_context.Ideas.Update(idea);
 
+	
 			if (dto.UploadedFiles != null && dto.UploadedFiles.Any())
 			{
-				var allowedExtensions = new[] { ".pdf" };
-				var maxFileSize = 5 * 1024 * 1024; 
-
 				var uploadFolder = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads");
+
+
+				if (idea.IdeaDocuments != null && idea.IdeaDocuments.Any())
+				{
+					foreach (var oldDoc in idea.IdeaDocuments)
+					{
+						var oldFileName = Path.GetFileName(oldDoc.StoredPath);
+						var oldPhysicalPath = Path.Combine(uploadFolder, oldFileName);
+						if (File.Exists(oldPhysicalPath))
+						{
+							File.Delete(oldPhysicalPath);
+						}
+					}
+					_context.IdeaDocuments.RemoveRange(idea.IdeaDocuments);
+				}
 
 				if (!Directory.Exists(uploadFolder))
 				{
 					Directory.CreateDirectory(uploadFolder);
 				}
+
+				var allowedExtensions = new[] { ".pdf" };
+				var maxFileSize = 5 * 1024 * 1024; // 5MB
 
 				foreach (var file in dto.UploadedFiles)
 				{
@@ -320,9 +339,10 @@ namespace IdeaCollectionSystem.Service.Services
 				}
 			}
 
+			// 4. Lưu toàn bộ thay đổi vào Database
 			await _context.SaveChangesAsync();
 
-			// 6. Background Task
+			// 5. Gửi Email thông báo (Background Task)
 			var ideaUser = await _userManager.FindByIdAsync(userId);
 			var authorName = dto.IsAnonymous ? "An anonymous employee" : (ideaUser?.Name ?? "An employee");
 			var ideaText = idea.Title;

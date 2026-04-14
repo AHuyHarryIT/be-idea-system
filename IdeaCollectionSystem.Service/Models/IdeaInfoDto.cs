@@ -23,6 +23,8 @@ public class IdeaInfoDto
 
 	public int ViewCount { get; set; }
 
+	public Guid CategoryId { get; set; }
+
 	public Guid? SubmissionId { get; set; }
 	public string SubmissionName { get; set; }
 
